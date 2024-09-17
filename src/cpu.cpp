@@ -29,21 +29,25 @@ void CPU::LoadProgram(const std::vector<_8bit> &data,
 }
 
 void CPU::Reset() {
-  // Clear registers
   A = 0x00;
   X = 0x00;
   Y = 0x00;
-
-  // Clear status register flags
   Status = 0x00 | Unused;
-
-  // Set stack pointer to the default start location (0xFD)
   StackPointer = 0xFD;
-
-  // Set Program Counter to the address stored in (0xFFFC - 0xFFFD)
   _8bit lo = Read(0xFFFC);
   _8bit hi = Read(0xFFFD);
   ProgramCounter = (_16bit(hi) << 8) | lo;
+}
+
+void CPU::Execute() {
+  switch (Read(ProgramCounter++)) {
+  case 0xA9:
+    return LDA();
+  default:
+    std::cout << "Invalid opcode:" << std::hex << std::setw(2)
+              << std::setfill('0') << int(Read(ProgramCounter - 1))
+              << std::endl;
+  }
 }
 
 _8bit CPU::Read(_16bit address) {
@@ -94,4 +98,26 @@ void CPU::PrintRegisters() {
             << std::setfill('0') << int(StackPointer) << std::endl;
   std::cout << "Program Counter: " << std::hex << std::setw(4)
             << std::setfill('0') << int(ProgramCounter) << std::endl;
+}
+
+// Addressing Modes
+_16bit CPU::IMM() { return ProgramCounter++; }
+
+// Opcodes
+void CPU::LDA() {
+  // Address mode, hardcoded to immediate for now
+  _16bit address = IMM();
+
+  // Read data into A
+  A = Read(address);
+
+  // Set flags
+  Status &= ~(Zero | Negative); // Clear Zero and Negative flags
+  if (A == 0) {
+    Status |= Zero; // Set Zero flag if A is zero
+  }
+
+  if (A & 0x80) {
+    Status |= Negative; // Set Negative flag if bit 7 is set
+  }
 }
