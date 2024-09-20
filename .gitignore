@@ -1,3 +1,6 @@
+# Name of my executable
+emu
+
 # Ignore object files and static libraries
 *.o
 *.a

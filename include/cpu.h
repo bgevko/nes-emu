@@ -19,7 +19,7 @@ public:
   _8bit Read(_16bit address);
   int Write(_16bit address, _8bit data);
 
-  void PrintMemory(_16bit start, _16bit end);
+  void PrintMemory(_16bit start, _16bit end = 0x0000);
   void PrintRegisters();
 
   // Registers
@@ -29,7 +29,7 @@ public:
   _16bit ProgramCounter, StackPointer;
 
   // helper globals
-  _16bit AddressAbs;
+  bool halt = false;
 
 private:
   // Statuses
@@ -46,12 +46,12 @@ private:
 
   // Addressing modes
   _16bit IMM(); // Immediate
+  _16bit ZP0(); // Zero Page
+  _16bit ABS(); // Absolute
   /* _8bit IMP(); // Implied */
-  /* _8bit ZP0(); // Zero Page */
   /* _8bit ZPX(); // Zero Page X */
   /* _8bit ZPY(); // Zero Page Y */
   /* _8bit REL(); // Relative */
-  /* _8bit ABS(); // Absolute */
   /* _8bit ABX(); // Absolute X */
   /* _8bit ABY(); // Absolute Y */
   /* _8bit IND(); // Indirect */
@@ -59,7 +59,9 @@ private:
   /* _8bit IZY(); // Indirect Y */
 
   // Opcodes
-  void LDA();
+  void BRK();
+  void LDA(_16bit (CPU::*addressingMode)());
+  void STA(_16bit (CPU::*addressingMode)());
 
   // Status string helper
   std::string GetStatusString();

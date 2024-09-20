@@ -39,17 +39,6 @@ void CPU::Reset() {
   ProgramCounter = (_16bit(hi) << 8) | lo;
 }
 
-void CPU::Execute() {
-  switch (Read(ProgramCounter++)) {
-  case 0xA9:
-    return LDA();
-  default:
-    std::cout << "Invalid opcode:" << std::hex << std::setw(2)
-              << std::setfill('0') << int(Read(ProgramCounter - 1))
-              << std::endl;
-  }
-}
-
 _8bit CPU::Read(_16bit address) {
   if (address >= 0x0000 && address <= 0xFFFF) {
     return RAM[address];
@@ -65,7 +54,7 @@ int CPU::Write(_16bit address, _8bit data) {
   return -1;
 }
 
-void CPU::PrintMemory(_16bit start, _16bit end = 0x0000) {
+void CPU::PrintMemory(_16bit start, _16bit end) {
   end = end == 0x0000 ? start : end;
   int i = 0;
   while (start + i <= end) {
@@ -102,11 +91,22 @@ void CPU::PrintRegisters() {
 
 // Addressing Modes
 _16bit CPU::IMM() { return ProgramCounter++; }
+_16bit CPU::ZP0() { return Read(ProgramCounter++) & 0x00FF; };
+_16bit CPU::ABS() {
+  _16bit lo = Read(ProgramCounter++);
+  _16bit hi = Read(ProgramCounter++);
+  return (hi << 8) | lo;
+}
+// ----------------------------------------------------------------------------
+// Opcodes --------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+void CPU::BRK() {
+  CPU::halt = true;
+}
+void CPU::LDA(_16bit (CPU::*addressingMode)()) {
 
-// Opcodes
-void CPU::LDA() {
-  // Address mode, hardcoded to immediate for now
-  _16bit address = IMM();
+  // Get the address
+  _16bit address = (this->*addressingMode)();
 
   // Read data into A
   A = Read(address);
@@ -119,5 +119,30 @@ void CPU::LDA() {
 
   if (A & 0x80) {
     Status |= Negative; // Set Negative flag if bit 7 is set
+  }
+}
+
+void CPU::STA(_16bit (CPU::*addressingMode)()) {
+  // Get the address
+  _16bit address = (this->*addressingMode)();
+  // Write A to memory
+  Write(address, A);
+}
+
+void CPU::Execute() {
+  switch (Read(ProgramCounter++)) {
+  case 0x00:
+    BRK();
+    break;
+  case 0xA9: // LDA (Immediate)
+    return LDA(&CPU::IMM);
+    break;
+  case 0x8D: // STA (Absolute)
+    return STA(&CPU::ABS);
+    break;
+  default:
+    std::cout << "Invalid opcode:" << std::hex << std::setw(2)
+              << std::setfill('0') << int(Read(ProgramCounter - 1))
+              << std::endl;
   }
 }
