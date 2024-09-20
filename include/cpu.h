@@ -14,7 +14,8 @@ public:
 
   void Reset();
   void Execute();
-  void LoadProgram(const std::vector<_8bit> &data, _16bit startAddress);
+  void LoadProgram(const std::vector<_8bit> &data,
+                   _16bit startAddress = 0x8000);
 
   _8bit Read(_16bit address);
   int Write(_16bit address, _8bit data);

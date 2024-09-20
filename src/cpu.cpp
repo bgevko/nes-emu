@@ -8,8 +8,7 @@ CPU::CPU() { Reset(); }
 
 CPU::~CPU() {}
 
-void CPU::LoadProgram(const std::vector<_8bit> &data,
-                      _16bit startAddress = 0x8000) {
+void CPU::LoadProgram(const std::vector<_8bit> &data, _16bit startAddress) {
   for (size_t i = 0; i < data.size(); i++) {
     if (Write(startAddress + i, data[i]) == -1) {
       std::cerr << "LoadProgram: Failed to write to address: " << std::hex
@@ -100,9 +99,7 @@ _16bit CPU::ABS() {
 // ----------------------------------------------------------------------------
 // Opcodes --------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-void CPU::BRK() {
-  CPU::halt = true;
-}
+void CPU::BRK() { CPU::halt = true; }
 void CPU::LDA(_16bit (CPU::*addressingMode)()) {
 
   // Get the address
