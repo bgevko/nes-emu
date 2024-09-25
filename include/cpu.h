@@ -2,32 +2,45 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
-using _8bit = uint8_t;
-using _16bit = uint16_t;
+using u8 = uint8_t;
+using u16 = uint16_t;
+
+// CPU state with optional values to make testing partial states easier.
+struct CPUState {
+  std::optional<u16> pc = std::nullopt; // Program Counter
+  std::optional<u8> a = std::nullopt;   // Accumulator
+  std::optional<u8> x = std::nullopt;   // X Register
+  std::optional<u8> y = std::nullopt;   // Y Register
+  std::optional<u8> s = std::nullopt;   // Stack Pointer
+  std::optional<u8> p = std::nullopt;   // Status Register
+  std::optional<std::array<u8, 64 * 1024>> ram = std::nullopt; // Memory
+};
 
 class CPU {
 public:
   CPU();
   ~CPU();
 
-  void Reset();
-  void Execute();
-  void LoadProgram(const std::vector<_8bit> &data,
-                   _16bit startAddress = 0x8000);
-
-  _8bit Read(_16bit address);
-  int Write(_16bit address, _8bit data);
-
-  void PrintMemory(_16bit start, _16bit end = 0x0000);
-  void PrintRegisters();
+  // Memory
+  std::array<u8, 64 * 1024> ram;
 
   // Registers
-  _8bit A;      // Accumulator
-  _8bit X, Y;   // Index Registers
-  _8bit Status; // Status Register
-  _16bit ProgramCounter, StackPointer;
+  u16 pc;
+  u8 a, x, y, s, p;
+
+  // Methods
+  void Reset(CPUState state = {});
+  void Execute();
+  void LoadProgram(const std::vector<u8> &data, u16 startAddress = 0x8000);
+
+  u8 Read(u16 address) const;
+  int Write(u16 address, u8 data);
+
+  void PrintMemory(u16 start, u16 end = 0x0000) const;
+  void PrintRegisters() const;
 
   // helper globals
   bool halt = false;
@@ -46,27 +59,25 @@ private:
   };
 
   // Addressing modes
-  _16bit IMM(); // Immediate
-  _16bit ZP0(); // Zero Page
-  _16bit ABS(); // Absolute
-  /* _8bit IMP(); // Implied */
-  /* _8bit ZPX(); // Zero Page X */
-  /* _8bit ZPY(); // Zero Page Y */
-  /* _8bit REL(); // Relative */
-  /* _8bit ABX(); // Absolute X */
-  /* _8bit ABY(); // Absolute Y */
-  /* _8bit IND(); // Indirect */
-  /* _8bit IZX(); // Indirect X */
-  /* _8bit IZY(); // Indirect Y */
+  u16 Immediate(); // Immediate
+  u16 ZeroPage();  // Zero Page
+  u16 Absolute();  // Absolute
+  /* u8 IMP(); // Implied */
+  /* u8 ZPX(); // Zero Page x */
+  /* u8 ZPY(); // Zero Page y */
+  /* u8 REL(); // Relative */
+  /* u8 ABX(); // Absolute x */
+  /* u8 ABY(); // Absolute y */
+  /* u8 IND(); // Indirect */
+  u16 IndirectX(); // Indirect x
+  /* u8 IZY(); // Indirect y */
 
   // Opcodes
   void BRK();
-  void LDA(_16bit (CPU::*addressingMode)());
-  void STA(_16bit (CPU::*addressingMode)());
+  void LDA(u16 (CPU::*addressingMode)());
+  void STA(u16 (CPU::*addressingMode)());
+  void AND(u16 (CPU::*addressingMode)());
 
-  // Status string helper
+  // status string helper
   std::string GetStatusString();
-
-  // Memory
-  std::array<_8bit, 64 * 1024> RAM;
 };

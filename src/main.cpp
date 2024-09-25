@@ -7,14 +7,15 @@ int main() {
   CPU cpu;
 
   // LDA (Immediate)
-  std::vector<_8bit> data = {
+  std::vector<u8> data = {
       0xA9, 0xFF, // LDA #$FF (Load value into the Accumulator)
-      0x8D, 0x00, 0x02, // STA $0200 (Store the Accumulator at memory Address 0200)
-      0x00        // BRK (Break)
+      0x8D, 0x00,
+      0x02, // STA $0200 (Store the Accumulator at memory Address 0200)
+      0x00  // BRK (Break)
   };
 
-  cpu.LoadProgram(data, 0x0600);
   cpu.Reset();
+  cpu.LoadProgram(data, 0x0600);
 
   // For now, run until the BRK instruction is encountered
   while (!cpu.halt) {
