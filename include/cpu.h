@@ -22,7 +22,6 @@ struct CPUState {
 class CPU {
 public:
   CPU();
-  ~CPU();
 
   // Memory
   std::array<u8, 64 * 1024> ram;
@@ -31,14 +30,15 @@ public:
   u16 pc;
   u8 a, x, y, s, p;
 
-  // Methods
+  // CPU Methods
   void Reset(CPUState state = {});
-  void Execute();
-  void LoadProgram(const std::vector<u8> &data, u16 startAddress = 0x8000);
+  void FetchDecodeExecute();
 
   u8 Read(u16 address) const;
-  int Write(u16 address, u8 data);
+  void Write(u16 address, u8 data);
 
+  // Helpers
+  void LoadProgram(const std::vector<u8> &data, u16 startAddress = 0x8000);
   void PrintMemory(u16 start, u16 end = 0x0000) const;
   void PrintRegisters() const;
 
@@ -47,15 +47,15 @@ public:
 
 private:
   // Statuses
-  enum StatusFlag {
-    Carry = 1 << 0,
-    Zero = 1 << 1,
-    InterruptDisable = 1 << 2,
-    Decimal = 1 << 3,
-    Break = 1 << 4,
-    Unused = 1 << 5,
-    Overflow = 1 << 6,
-    Negative = 1 << 7,
+  enum Status : u8 {
+    Carry = 1 << 0,            // 0b00000001
+    Zero = 1 << 1,             // 0b00000010
+    InterruptDisable = 1 << 2, // 0b00000100
+    Decimal = 1 << 3,          // 0b00001000
+    Break = 1 << 4,            // 0b00010000
+    Unused = 1 << 5,           // 0b00100000
+    Overflow = 1 << 6,         // 0b01000000
+    Negative = 1 << 7,         // 0b10000000
   };
 
   // Addressing modes
@@ -78,6 +78,7 @@ private:
   void STA(u16 (CPU::*addressingMode)());
   void AND(u16 (CPU::*addressingMode)());
 
-  // status string helper
+  // helpers
   std::string GetStatusString();
+  void SetZeroAndNegativeFlags(u8 value);
 };

@@ -3,29 +3,20 @@
 #include "cpu.h"
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
 
 CPU::CPU() { Reset(); }
-CPU::~CPU() {}
 
-void CPU::LoadProgram(const std::vector<u8> &data, u16 startAddress) {
-  for (size_t i = 0; i < data.size(); i++) {
-    if (Write(startAddress + i, data[i]) == -1) {
-      std::cerr << "LoadProgram: Failed to write to address: " << std::hex
-                << std::setw(4) << std::setfill('0') << startAddress + i
-                << std::endl;
-    }
-  }
-  pc = startAddress;
-}
-
+// ----------------------------------------------------------------------------
+// ------------------------------- CPU METHODS --------------------------------
+// ----------------------------------------------------------------------------
 void CPU::Reset(CPUState state) {
-  // Reset CPU state from the provided argument, or to default of state isn't
-  // provided.
+  // Reset CPU from the provided state or default
   a = state.a.value_or(0x00);
   x = state.x.value_or(0x00);
   y = state.y.value_or(0x00);
   s = state.s.value_or(0xFD);
-  p = state.p.has_value() ? state.p.value() : 0x00 | Unused;
+  p = state.p.value_or(0x00 | Unused);
 
   if (state.ram.has_value()) {
     ram = state.ram.value();
@@ -40,52 +31,46 @@ void CPU::Reset(CPUState state) {
 }
 
 u8 CPU::Read(u16 address) const {
-  if (address >= 0x0000 && address <= 0xFFFF) {
-    return ram[address];
+  if (!(address >= 0x0000 && address <= 0xFFFF)) {
+    throw std::out_of_range("Read: Invalid read address: " +
+                            std::to_string(address));
   }
-  return -1;
+  return ram[address];
 }
 
-int CPU::Write(u16 address, u8 data) {
-  if (address >= 0x0000 && address <= 0xFFFF) {
-    ram[address] = data;
-    return 0;
+void CPU::Write(u16 address, u8 data) {
+  if (!(address >= 0x0000 && address <= 0xFFFF)) {
+    throw std::out_of_range("Write: Invalid write address: " +
+                            std::to_string(address));
   }
-  return -1;
+  ram[address] = data;
 }
 
-void CPU::PrintMemory(u16 start, u16 end) const {
-  end = end == 0x0000 ? start : end;
-  int i = 0;
-  while (start + i <= end) {
-    std::cout << std::hex << std::setw(4) << std::setfill('0') << start + i
-              << ": " << std::setw(2) << std::setfill('0')
-              << int(Read(start + i)) << std::endl;
-    i++;
+void CPU::FetchDecodeExecute() {
+  switch (Read(pc++)) {
+  case 0x00:
+    BRK();
+    break;
+  case 0x21: // AND (Indirect,X)
+    AND(&CPU::IndirectX);
+    break;
+  case 0xA9: // LDA (Immediate)
+    LDA(&CPU::Immediate);
+    break;
+  case 0x8D: // STA (Absolute)
+    STA(&CPU::Absolute);
+    break;
+  default:
+    std::cout << std::endl;
+    std::cout << "EXECUTE WARNING, Invalid opcode: " << std::hex << std::setw(2)
+              << std::setfill('0') << int(Read(pc - 1)) << std::endl;
+    std::cout << std::endl;
   }
 }
 
-std::string CPU::GetStatusString() {
-  std::string statusLabel = "NV-BDIZC";
-  std::string flags = "";
-  for (int i = 7; i >= 0; i--) {
-    flags += (p & (1 << i)) ? "1" : "0";
-  }
-  return statusLabel + " " + flags;
-}
-
-void CPU::PrintRegisters() const {
-  std::cout << "pc: " << std::hex << std::setw(4) << std::setfill('0')
-            << int(pc) << std::endl;
-  std::cout << "s: " << std::dec << int(s) << std::endl;
-  std::cout << "a: " << int(a) << std::endl;
-  std::cout << "x: " << int(x) << std::endl;
-  std::cout << "y: " << int(y) << std::endl;
-  std::cout << "p: " << int(p) << std::endl;
-  /* std::cout << "p: " << GetStatusString() << std::endl; */
-}
-
-// Addressing Modes
+// -----------------------------------------------------------------------------
+// ------------------------------- ADDRESSING MODES ----------------------------
+// -----------------------------------------------------------------------------
 u16 CPU::Immediate() {
   // Immediate addressing
   // Returns address of the next byte in memory (the operand itself)
@@ -121,44 +106,23 @@ u16 CPU::IndirectX() {
 }
 
 // ----------------------------------------------------------------------------
-// Opcodes --------------------------------------------------------------------
+// -------------------------------- OPCODES -----------------------------------
 // ----------------------------------------------------------------------------
-void CPU::BRK() { CPU::halt = true; }
+void CPU::BRK() {
+  // Sets the break flag and halts the CPU
+  CPU::halt = true;
+}
 void CPU::LDA(u16 (CPU::*addressingMode)()) {
-
-  // Get the address
+  // Loads the accumulator with a value and sets the zero and negative flags
   u16 address = (this->*addressingMode)();
-
-  // Read data into a
   a = Read(address);
-
-  // Set status flags
-  p &= ~(Zero | Negative); // Clear Zero and Negative flags
-  if (a == 0) {
-    p |= Zero; // Set Zero flag if a is zero
-  }
-
-  if (a & 0x80) {
-    p |= Negative; // Set Negative flag if bit 7 is set
-  }
+  SetZeroAndNegativeFlags(a);
 }
 void CPU::AND(u16 (CPU::*addressingMode)()) {
   // AND (bitwise AND with accumulator)
   u16 address = (this->*addressingMode)();
   a &= Read(address);
-
-  // Clear Zero and Negative flags
-  p &= ~(Zero | Negative);
-
-  // Set Zero flag if a is zero
-  if (a == 0) {
-    p |= Zero;
-  }
-
-  // Set Negative flag if bit 7 is set
-  if (a & 0x80) {
-    p |= Negative;
-  }
+  SetZeroAndNegativeFlags(a);
 };
 
 void CPU::STA(u16 (CPU::*addressingMode)()) {
@@ -166,24 +130,63 @@ void CPU::STA(u16 (CPU::*addressingMode)()) {
   Write(address, a);
 }
 
-void CPU::Execute() {
-  switch (Read(pc++)) {
-  case 0x00:
-    BRK();
-    break;
-  case 0x21: // AND (Indirect,X)
-    AND(&CPU::IndirectX);
-    break;
-  case 0xA9: // LDA (Immediate)
-    LDA(&CPU::Immediate);
-    break;
-  case 0x8D: // STA (Absolute)
-    STA(&CPU::Absolute);
-    break;
-  default:
-    std::cout << std::endl;
-    std::cout << "EXECUTE WARNING, Invalid opcode: " << std::hex << std::setw(2)
-              << std::setfill('0') << int(Read(pc - 1)) << std::endl;
-    std::cout << std::endl;
+// ----------------------------------------------------------------------------
+// ------------------------------- HELPERS ------------------------------------
+// ----------------------------------------------------------------------------
+void CPU::LoadProgram(const std::vector<u8> &data, u16 startAddress) {
+  for (size_t i = 0; i < data.size(); i++) {
+    try {
+      Write(startAddress + i, data[i]);
+    } catch (const std::out_of_range &e) {
+      std::cerr << "LoadProgram: Failed to write to address: " << std::hex
+                << std::setw(4) << std::setfill('0') << startAddress + i
+                << std::endl;
+    }
   }
+  pc = startAddress;
+}
+
+void CPU::PrintRegisters() const {
+  std::cout << "pc: " << std::hex << std::setw(4) << std::setfill('0')
+            << int(pc) << std::endl;
+  std::cout << "s: " << std::dec << int(s) << std::endl;
+  std::cout << "a: " << int(a) << std::endl;
+  std::cout << "x: " << int(x) << std::endl;
+  std::cout << "y: " << int(y) << std::endl;
+  std::cout << "p: " << int(p) << std::endl;
+}
+
+void CPU::PrintMemory(u16 start, u16 end) const {
+  end = end == 0x0000 ? start : end;
+  int i = 0;
+  while (start + i <= end) {
+    std::cout << std::hex << std::setw(4) << std::setfill('0') << start + i
+              << ": " << std::setw(2) << std::setfill('0')
+              << int(Read(start + i)) << std::endl;
+    i++;
+  }
+}
+
+std::string CPU::GetStatusString() {
+  // N: Negative, V: Overflow, -: Unused, B: Break, D: Decimal, I: Interrupt
+  // Z: Zero, C: Carry
+  std::string statusLabel = "NV-BDIZC";
+  std::string flags = "";
+  for (int i = 7; i >= 0; i--) {
+    flags += (p & (1 << i)) ? "1" : "0";
+  }
+  return statusLabel + " " + flags;
+}
+
+void CPU::SetZeroAndNegativeFlags(u8 value) {
+  // Create a mask to clear the Zero and Negative flags (0b01111101)
+  p &= ~(Status::Zero | Status::Negative);
+
+  // Set the Zero flag if the value is zero
+  if (value == 0)
+    p |= Status::Zero;
+
+  // Set the Negative flag if bit 7 is set
+  if (value & 0x80) // Equivalent to (value & 0b10000000)
+    p |= Status::Negative;
 }

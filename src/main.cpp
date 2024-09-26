@@ -19,7 +19,7 @@ int main() {
 
   // For now, run until the BRK instruction is encountered
   while (!cpu.halt) {
-    cpu.Execute();
+    cpu.FetchDecodeExecute();
   }
 
   // print the affected memory locations
