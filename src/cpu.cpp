@@ -109,9 +109,44 @@ u16 CPU::IndirectX() {
 // -------------------------------- OPCODES -----------------------------------
 // ----------------------------------------------------------------------------
 void CPU::BRK() {
-  // Sets the break flag and halts the CPU
-  CPU::halt = true;
+  /*
+    BRK
+    Force Break
+
+    BRK initiates a software interrupt similar to a hardware
+    interrupt (IRQ). The return address pushed to the stack is
+    PC+2, providing an extra byte of spacing for a break mark
+    (identifying a reason for the break.)
+    The status register will be pushed to the stack with the break
+    flag set to 1. However, when retrieved during RTI or by a PLP
+    instruction, the break flag will be ignored.
+    The interrupt disable flag is not set automatically.
+
+    interrupt,
+    push PC+2, push SR
+    N	Z	C	I	D	V
+    -	-	-	1	-	-
+    addressing	assembler	opc	bytes	cycles
+    implied	BRK	00	1	7
+   */
+  pc++; // Padding byte, ignored by the CPU
+
+  // Push program counter to the stack
+  Push(pc >> 8);     // High byte
+  Push(pc & 0x00FF); // Low byte
+
+  // Push the status register to the stack with the break flag
+  // B flag and unused flag are pushed to the stack, but ignored when popped.
+  u8 status = p | Status::Break | Status::Unused;
+  Push(status);
+
+  // Set PC to the address at the interrupt vector (0xFFFE)
+  pc = (Read(0xFFFF) << 8) | Read(0xFFFE);
+
+  // Set the interrupt flag
+  p |= Status::InterruptDisable;
 }
+
 void CPU::LDA(u16 (CPU::*addressingMode)()) {
   // Loads the accumulator with a value and sets the zero and negative flags
   u16 address = (this->*addressingMode)();
@@ -133,6 +168,7 @@ void CPU::STA(u16 (CPU::*addressingMode)()) {
 // ----------------------------------------------------------------------------
 // ------------------------------- HELPERS ------------------------------------
 // ----------------------------------------------------------------------------
+
 void CPU::LoadProgram(const std::vector<u8> &data, u16 startAddress) {
   for (size_t i = 0; i < data.size(); i++) {
     try {
@@ -189,4 +225,19 @@ void CPU::SetZeroAndNegativeFlags(u8 value) {
   // Set the Negative flag if bit 7 is set
   if (value & 0x80) // Equivalent to (value & 0b10000000)
     p |= Status::Negative;
+}
+
+void CPU::Push(u8 value) {
+  // Memory is written to the designated stack addresses, 0x0100 - 0x01FF
+  // The stack pointer (sp) points to the next free location on the stack,
+  // starting at the last address if the stack is empty (0x01FD)
+
+  // The stack pointer is an 8-bit value, so it wraps around if decremented
+  // below 0x0100 (0x00FF -> 0x01FF)
+  Write(0x0100 + s--, value);
+}
+
+u8 CPU::Pop() {
+  // The stack pointer is incremented before reading from the stack
+  return Read(0x0100 + ++s);
 }

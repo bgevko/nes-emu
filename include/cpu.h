@@ -81,4 +81,6 @@ private:
   // helpers
   std::string GetStatusString();
   void SetZeroAndNegativeFlags(u8 value);
+  void Push(u8 value);
+  u8 Pop();
 };
