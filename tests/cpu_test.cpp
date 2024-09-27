@@ -29,7 +29,7 @@ TEST(_00, Break) {
   PrintTestEndMsg(test_name);
 }
 
-TEST(_8D, STAAbsolute) {
+TEST(_8D, STA_Absolute) {
   std::string test_name = "8D STA Absolute";
   PrintTestStartMsg(test_name);
   json test_cases = ExtractTestsFromJson("tests/HARTE/8d.json");
@@ -39,7 +39,97 @@ TEST(_8D, STAAbsolute) {
   PrintTestEndMsg(test_name);
 }
 
-TEST(_A9, LDAImmediate) {
+TEST(_A0, LDY_Immediate) {
+  std::string test_name = "A0 LDY Immediate";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a0.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A1, LDA_Xindirect) {
+  std::string test_name = "A1 LDA X-Indirect";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a1.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A2, LDX_Immediate) {
+  std::string test_name = "A2 LDX Immediate";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a2.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A4, LDY_ZeroPage) {
+  std::string test_name = "A4 LDY ZeroPage";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a4.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A5, LDA_ZeroPage) {
+  std::string test_name = "A5 LDA ZeroPage";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a5.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A6, LDX_ZeroPage) {
+  std::string test_name = "A6 LDX ZeroPage";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/a6.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_AC, LDY_Absolute) {
+  std::string test_name = "AC LDY Absolute";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/ac.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_AD, LDA_Absolute) {
+  std::string test_name = "AD LDA Absolute";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/ad.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_AE, LDX_Absolute) {
+  std::string test_name = "AE LDX Absolute";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/ae.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
+TEST(_A9, LDA_Immediate) {
   std::string test_name = "A9 LDA Immediate";
   PrintTestStartMsg(test_name);
   json test_cases = ExtractTestsFromJson("tests/HARTE/a9.json");
@@ -137,13 +227,24 @@ void RunTestCase(const json &test_case) {
       << "PC mismatch: Expected " << std::hex << std::setw(4)
       << std::setfill('0') << u16(test_case["final"]["pc"]) << ", but got "
       << cpu.pc;
-  EXPECT_EQ(cpu.a, test_case["final"]["a"]);
-  EXPECT_EQ(cpu.x, test_case["final"]["x"]);
-  EXPECT_EQ(cpu.y, test_case["final"]["y"]);
-  EXPECT_EQ(cpu.s, test_case["final"]["s"]);
+  EXPECT_EQ(cpu.a, u8(test_case["final"]["a"]))
+      << "A mismatch: Expected " << u8(test_case["final"]["a"]) << ", but got "
+      << cpu.a;
+  EXPECT_EQ(cpu.x, u8(test_case["final"]["x"]))
+      << "X mismatch: Expected " << std::hex << std::setw(2)
+      << std::setfill('0') << u8(test_case["final"]["x"]) << ", but got "
+      << cpu.x;
+  EXPECT_EQ(cpu.y, u8(test_case["final"]["y"]))
+      << "Y mismatch: Expected " << std::hex << std::setw(2)
+      << std::setfill('0') << u8(test_case["final"]["y"]) << ", but got "
+      << cpu.y;
+  EXPECT_EQ(cpu.s, u8(test_case["final"]["s"]))
+      << "S mismatch: Expected " << std::hex << std::setw(2)
+      << std::setfill('0') << u8(test_case["final"]["s"]) << ", but got "
+      << cpu.s;
   EXPECT_EQ(cpu.p, u8(test_case["final"]["p"]))
       << "PC mismatch: Expected " << ParseStatus(u8(test_case["final"]["p"]))
-      << ", but got " << ParseStatus(cpu.pc);
+      << ", but got " << ParseStatus(cpu.p);
 
   for (const auto &ram_entry : test_case["final"]["ram"]) {
     uint16_t address = ram_entry[0];

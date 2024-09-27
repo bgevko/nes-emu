@@ -54,8 +54,35 @@ void CPU::FetchDecodeExecute() {
   case 0x21: // AND (Indirect,X)
     AND(&CPU::IndirectX);
     break;
+  case 0xA0: // LDY (Immediate)
+    LD(&CPU::Immediate, y);
+    break;
+  case 0xA1: // LDA (X-indirect)
+    LD(&CPU::IndirectX, a);
+    break;
+  case 0xA2: // LDX (Immediate)
+    LD(&CPU::Immediate, x);
+    break;
+  case 0xA4: // LDY (ZeroPage)
+    LD(&CPU::ZeroPage, y);
+    break;
+  case 0xA5: // LDA (ZeroPage)
+    LD(&CPU::ZeroPage, a);
+    break;
+  case 0xA6: // LDX (ZeroPage)
+    LD(&CPU::ZeroPage, x);
+    break;
   case 0xA9: // LDA (Immediate)
-    LDA(&CPU::Immediate);
+    LD(&CPU::Immediate, a);
+    break;
+  case 0xAC: // LDY (Absolute)
+    LD(&CPU::Absolute, y);
+    break;
+  case 0xAD: // LDA (Absolute)
+    LD(&CPU::Absolute, a);
+    break;
+  case 0xAE: // LDX (Absolute)
+    LD(&CPU::Absolute, x);
     break;
   case 0x8D: // STA (Absolute)
     STA(&CPU::Absolute);
@@ -147,12 +174,13 @@ void CPU::BRK() {
   p |= Status::InterruptDisable;
 }
 
-void CPU::LDA(u16 (CPU::*addressingMode)()) {
-  // Loads the accumulator with a value and sets the zero and negative flags
+void CPU::LD(u16 (CPU::*addressingMode)(), u8 &reg) {
+  // Loads a register with a value and sets the zero and negative flags
   u16 address = (this->*addressingMode)();
-  a = Read(address);
-  SetZeroAndNegativeFlags(a);
+  reg = Read(address);
+  SetZeroAndNegativeFlags(reg);
 }
+
 void CPU::AND(u16 (CPU::*addressingMode)()) {
   // AND (bitwise AND with accumulator)
   u16 address = (this->*addressingMode)();

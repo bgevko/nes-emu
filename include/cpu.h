@@ -74,6 +74,7 @@ private:
 
   // Opcodes
   void BRK();
+  void LD(u16 (CPU::*addressingMode)(), u8 &reg);
   void LDA(u16 (CPU::*addressingMode)());
   void STA(u16 (CPU::*addressingMode)());
   void AND(u16 (CPU::*addressingMode)());
