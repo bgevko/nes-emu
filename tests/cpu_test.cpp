@@ -29,6 +29,16 @@ TEST(_00, Break) {
   PrintTestEndMsg(test_name);
 }
 
+TEST(_8D, STAAbsolute) {
+  std::string test_name = "8D STA Absolute";
+  PrintTestStartMsg(test_name);
+  json test_cases = ExtractTestsFromJson("tests/HARTE/8d.json");
+  for (const auto &test_case : test_cases) {
+    RunTestCase(test_case);
+  }
+  PrintTestEndMsg(test_name);
+}
+
 TEST(_A9, LDAImmediate) {
   std::string test_name = "A9 LDA Immediate";
   PrintTestStartMsg(test_name);
