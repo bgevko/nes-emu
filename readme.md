@@ -3,3 +3,157 @@
 - Format verbose test output to be two columns: expected and actual.
 - Implement a `--verbose` flag to show verbose test output.
 - Implement tests for STA instruction.
+
+### Implemented Instructions
+
+- [x] 0x00 BRK
+- [ ] 0x01 ORA X-indexed indirect
+- [ ] 0x05 ORA Zero page
+- [ ] 0x06 ASL Zero page
+- [ ] 0x08 PHP
+- [ ] 0x09 ORA Immediate
+- [ ] 0x0A ASL Accumulator
+- [ ] 0x0D ORA Absolute
+- [ ] 0x0E ASL Absolute
+- [ ] 0x10 BPL Relative
+- [ ] 0x11 ORA Indirect Y-indexed
+- [ ] 0x15 ORA Zero page X-indexed
+- [ ] 0x16 ASL Zero page X-indexed
+- [ ] 0x18 CLC
+- [ ] 0x19 ORA Absolute Y-indexed
+- [ ] 0x1D ORA Absolute X-indexed
+- [ ] 0x1E ASL Absolute X-indexed
+- [ ] 0x20 JSR Absolute
+- [x] 0x21 AND X-indexed indirect
+- [ ] 0x24 BIT Zero page
+- [ ] 0x25 AND Zero page
+- [ ] 0x26 ROL Zero page
+- [ ] 0x28 PLP
+- [ ] 0x29 AND Immediate
+- [ ] 0x2A ROL Accumulator
+- [ ] 0x2C BIT Absolute
+- [ ] 0x2D AND Absolute
+- [ ] 0x2E ROL Absolute
+- [ ] 0x30 BMI Relative
+- [ ] 0x31 AND Indirect Y-indexed
+- [ ] 0x35 AND Zero page X-indexed
+- [ ] 0x36 ROL Zero page X-indexed
+- [ ] 0x38 SEC
+- [ ] 0x39 AND Absolute Y-indexed
+- [ ] 0x3D AND Absolute X-indexed
+- [ ] 0x3E ROL Absolute X-indexed
+- [ ] 0x40 RTI
+- [ ] 0x41 EOR X-indexed indirect
+- [ ] 0x45 EOR Zero page
+- [ ] 0x46 LSR Zero page
+- [ ] 0x48 PHA
+- [ ] 0x49 EOR Immediate
+- [ ] 0x4A LSR Accumulator
+- [ ] 0x4C JMP Absolute
+- [ ] 0x4D EOR Absolute
+- [ ] 0x4E LSR Absolute
+- [ ] 0x50 BVC Relative
+- [ ] 0x51 EOR Indirect Y-indexed
+- [ ] 0x55 EOR Zero page X-indexed
+- [ ] 0x56 LSR Zero page X-indexed
+- [ ] 0x58 CLI
+- [ ] 0x59 EOR Absolute Y-indexed
+- [ ] 0x5D EOR Absolute X-indexed
+- [ ] 0x5E LSR Absolute X-indexed
+- [ ] 0x60 RTS
+- [ ] 0x61 ADC X-indexed indirect
+- [ ] 0x65 ADC Zero page
+- [ ] 0x66 ROR Zero page
+- [ ] 0x68 PLA
+- [ ] 0x69 ADC Immediate
+- [ ] 0x6A ROR Accumulator
+- [ ] 0x6C JMP Indirect
+- [ ] 0x6D ADC Absolute
+- [ ] 0x6E ROR Absolute
+- [ ] 0x70 BVS Relative
+- [ ] 0x71 ADC Indirect Y-indexed
+- [ ] 0x75 ADC Zero page X-indexed
+- [ ] 0x76 ROR Zero page X-indexed
+- [ ] 0x78 SEI
+- [ ] 0x79 ADC Absolute Y-indexed
+- [ ] 0x7D ADC Absolute X-indexed
+- [ ] 0x7E ROR Absolute X-indexed
+- [ ] 0x81 STA X-indexed indirect
+- [ ] 0x84 STY Zero page
+- [ ] 0x85 STA Zero page
+- [ ] 0x86 STX Zero page
+- [ ] 0x88 DEY
+- [ ] 0x8A TXA
+- [ ] 0x8C STY Absolute
+- [x] 0x8D STA Absolute
+- [ ] 0x8E STX Absolute
+- [ ] 0x90 BCC Relative
+- [ ] 0x91 STA Indirect Y-indexed
+- [ ] 0x94 STY Zero page X-indexed
+- [ ] 0x95 STA Zero page X-indexed
+- [ ] 0x96 STX Zero page Y-indexed
+- [ ] 0x98 TYA
+- [ ] 0x99 STA Absolute Y-indexed
+- [ ] 0x9A TXS
+- [ ] 0x9D STA Absolute X-indexed
+- [x] 0xA0 LDY Immediate
+- [x] 0xA1 LDA X-indexed indirect
+- [x] 0xA2 LDX Immediate
+- [x] 0xA4 LDY Zero page
+- [x] 0xA5 LDA Zero page
+- [x] 0xA6 LDX Zero page
+- [ ] 0xA8 TAY
+- [x] 0xA9 LDA Immediate
+- [ ] 0xAA TAX
+- [x] 0xAC LDY Absolute
+- [x] 0xAD LDA Absolute
+- [x] 0xAE LDX Absolute
+- [ ] 0xB0 BCS Relative
+- [ ] 0xB1 LDA Indirect Y-indexed
+- [ ] 0xB4 LDY Zero page X-indexed
+- [ ] 0xB5 LDA Zero page X-indexed
+- [ ] 0xB6 LDX Zero page Y-indexed
+- [ ] 0xB8 CLV
+- [ ] 0xB9 LDA Absolute Y-indexed
+- [ ] 0xBA TSX
+- [ ] 0xBC LDY Absolute X-indexed
+- [ ] 0xBD LDA Absolute X-indexed
+- [ ] 0xBE LDX Absolute Y-indexed
+- [ ] 0xC0 CPY Immediate
+- [ ] 0xC1 CMP X-indexed indirect
+- [ ] 0xC4 CPY Zero page
+- [ ] 0xC5 CMP Zero page
+- [ ] 0xC6 DEC Zero page
+- [ ] 0xC8 INY
+- [ ] 0xC9 CMP Immediate
+- [ ] 0xCA DEX
+- [ ] 0xCC CPY Absolute
+- [ ] 0xCD CMP Absolute
+- [ ] 0xCE DEC Absolute
+- [ ] 0xD0 BNE Relative
+- [ ] 0xD1 CMP Indirect Y-indexed
+- [ ] 0xD5 CMP Zero page X-indexed
+- [ ] 0xD6 DEC Zero page X-indexed
+- [ ] 0xD8 CLD
+- [ ] 0xD9 CMP Absolute Y-indexed
+- [ ] 0xDD CMP Absolute X-indexed
+- [ ] 0xDE DEC Absolute X-indexed
+- [ ] 0xE0 CPX Immediate
+- [ ] 0xE1 SBC X-indexed indirect
+- [ ] 0xE4 CPX Zero page
+- [ ] 0xE5 SBC Zero page
+- [ ] 0xE6 INC Zero page
+- [ ] 0xE8 INX
+- [ ] 0xE9 SBC Immediate
+- [ ] 0xEA NOP
+- [ ] 0xEC CPX Absolute
+- [ ] 0xED SBC Absolute
+- [ ] 0xEE INC Absolute
+- [ ] 0xF0 BEQ Relative
+- [ ] 0xF1 SBC Indirect Y-indexed
+- [ ] 0xF5 SBC Zero page X-indexed
+- [ ] 0xF6 INC Zero page X-indexed
+- [ ] 0xF8 SED
+- [ ] 0xF9 SBC Absolute Y-indexed
+- [ ] 0xFD SBC Absolute X-indexed
+- [ ] 0xFE INC Absolute X-indexed
