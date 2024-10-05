@@ -4,6 +4,20 @@
 - Implement a `--verbose` flag to show verbose test output.
 - Implement tests for STA instruction.
 
+### Implemented Addressing Modes
+
+- [x] Immediate
+- [x] Zero Page
+- [ ] Zero Page X
+- [ ] Zero Page Y
+- [ ] Relative
+- [x] Absolute
+- [ ] Absolute X
+- [ ] Absolute Y
+- [ ] Indirect
+- [x] Indirect X
+- [ ] Indirect Y
+
 ### Implemented Instructions
 
 - [x] 0x00 BRK
