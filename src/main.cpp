@@ -1,33 +1,36 @@
 // cpu.cpp
 
-#include "cpu.h"
 #include <vector>
 
-int main() {
-  CPU cpu;
+#include "cpu.h"
 
-  // LDA (Immediate)
-  std::vector<u8> data = {
-      0xA9, 0xFF, // LDA #$FF (Load value into the Accumulator)
-      0x8D, 0x00,
-      0x02, // STA $0200 (Store the Accumulator at memory Address 0200)
-      0x00  // BRK (Break)
-  };
+int main()
+{
+    CPU cpu;
 
-  cpu.Reset();
-  cpu.LoadProgram(data, 0x0600);
+    // LDA (Immediate)
+    std::vector<u8> data = {
+        0xA9, 0xFF,  // LDA #$FF (Load value into the Accumulator)
+        0x8D, 0x00,
+        0x02,  // STA $0200 (Store the Accumulator at memory Address 0200)
+        0x00   // BRK (Break)
+    };
 
-  // For now, run until the BRK instruction is encountered
-  while (!cpu.halt) {
-    cpu.FetchDecodeExecute();
-  }
+    cpu.Reset();
+    cpu.LoadProgram( data, 0x0600 );
 
-  // print the affected memory locations
-  cpu.PrintMemory(0x0200);
-  cpu.PrintMemory(0x0600, 0x0600 + data.size() - 1);
+    // For now, run until the BRK instruction is encountered
+    while ( !cpu.halt )
+    {
+        cpu.FetchDecodeExecute();
+    }
 
-  // Print the registers
-  cpu.PrintRegisters();
+    // print the affected memory locations
+    cpu.PrintMemory( 0x0200 );
+    cpu.PrintMemory( 0x0600, 0x0600 + data.size() - 1 );
 
-  return 0;
+    // Print the registers
+    cpu.PrintRegisters();
+
+    return 0;
 }

@@ -5,7 +5,29 @@
 
 #include "cpu.h"
 
-CPU::CPU() { Reset(); }
+CPU::CPU()
+{
+    Reset();
+
+    // Initialize the opcode table with nullptr
+    opcodeTable.fill( nullptr );
+
+// Initialize the opcode table with the appropriate function pointers
+#define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }  // Macro to simplify table initialization
+    opcodeTable[0x00] = SET_OP( BRK() );                   // BRK
+    opcodeTable[0x21] = SET_OP( AND( &CPU::INX ) );        // AND (Indirect,X)
+    opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu.y ) );  // LDY (IMM)
+    opcodeTable[0xA1] = SET_OP( LD( &CPU::INX, cpu.a ) );  // LDA (X-indirect)
+    opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu.x ) );  // LDX (IMM)
+    opcodeTable[0xA4] = SET_OP( LD( &CPU::ZPG, cpu.y ) );  // LDY (ZPG)
+    opcodeTable[0xA5] = SET_OP( LD( &CPU::ZPG, cpu.a ) );  // LDA (ZPG)
+    opcodeTable[0xA6] = SET_OP( LD( &CPU::ZPG, cpu.x ) );  // LDX (ZPG)
+    opcodeTable[0xA9] = SET_OP( LD( &CPU::IMM, cpu.a ) );  // LDA (IMM)
+    opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu.y ) );  // LDY (ABS)
+    opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu.a ) );  // LDA (ABS)
+    opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu.x ) );  // LDX (ABS)
+    opcodeTable[0x8D] = SET_OP( STA( &CPU::ABS ) );        // STA (ABS)
+}
 
 // ----------------------------------------------------------------------------
 // ------------------------------- CPU METHODS --------------------------------
@@ -54,59 +76,27 @@ void CPU::Write( u16 address, u8 data )
 
 void CPU::FetchDecodeExecute()
 {
-    switch ( Read( pc++ ) )
+    // Fetch the opcode from memory
+    u8 opcode = Read( pc++ );
+    // If the opcode is not implemented, print a warning
+    if ( opcodeTable[opcode] == nullptr )
     {
-        case 0x00:
-            BRK();
-            break;
-        case 0x21:  // AND (Indirect,X)
-            AND( &CPU::IndirectX );
-            break;
-        case 0xA0:  // LDY (Immediate)
-            LD( &CPU::Immediate, y );
-            break;
-        case 0xA1:  // LDA (X-indirect)
-            LD( &CPU::IndirectX, a );
-            break;
-        case 0xA2:  // LDX (Immediate)
-            LD( &CPU::Immediate, x );
-            break;
-        case 0xA4:  // LDY (ZeroPage)
-            LD( &CPU::ZeroPage, y );
-            break;
-        case 0xA5:  // LDA (ZeroPage)
-            LD( &CPU::ZeroPage, a );
-            break;
-        case 0xA6:  // LDX (ZeroPage)
-            LD( &CPU::ZeroPage, x );
-            break;
-        case 0xA9:  // LDA (Immediate)
-            LD( &CPU::Immediate, a );
-            break;
-        case 0xAC:  // LDY (Absolute)
-            LD( &CPU::Absolute, y );
-            break;
-        case 0xAD:  // LDA (Absolute)
-            LD( &CPU::Absolute, a );
-            break;
-        case 0xAE:  // LDX (Absolute)
-            LD( &CPU::Absolute, x );
-            break;
-        case 0x8D:  // STA (Absolute)
-            STA( &CPU::Absolute );
-            break;
-        default:
-            std::cout << std::endl;
-            std::cout << "EXECUTE WARNING, Invalid opcode: " << std::hex << std::setw( 2 )
-                      << std::setfill( '0' ) << int( Read( pc - 1 ) ) << std::endl;
-            std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << "EXECUTE WARNING, Invalid opcode: " << std::hex << std::setw( 2 )
+                  << std::setfill( '0' ) << int( opcode ) << std::endl;
+        std::cout << std::endl;
+    }
+    else
+    {
+        // Execute the opcode
+        opcodeTable[opcode]( *this );
     }
 }
 
 // -----------------------------------------------------------------------------
 // ------------------------------- ADDRESSING MODES ----------------------------
 // -----------------------------------------------------------------------------
-u16 CPU::Immediate()
+u16 CPU::IMM()
 {
     // Immediate addressing
     // Returns address of the next byte in memory (the operand itself)
@@ -114,14 +104,14 @@ u16 CPU::Immediate()
     // The program counter is incremented to point to the operand
     return pc++;
 }
-u16 CPU::ZeroPage()
+u16 CPU::ZPG()
 {
     // Zero page addressing
     // Returns the address from the zero page (0x0000 - 0x00FF).
     // The value of the next byte (operand) is the address in zero page memory
     return Read( pc++ ) & 0x00FF;
 };
-u16 CPU::Absolute()
+u16 CPU::ABS()
 {
     // Absolute addressing
     // Constructs a 16 bit address from the next two bytes
@@ -131,7 +121,7 @@ u16 CPU::Absolute()
     u16 hi = Read( pc++ );
     return ( hi << 8 ) | lo;
 }
-u16 CPU::IndirectX()
+u16 CPU::INX()
 {
     // Indirect X addressing
     // Reads the next byte, which is a zero page address,
@@ -187,20 +177,20 @@ void CPU::BRK()
     p |= Status::InterruptDisable;
 }
 
-void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
-{
-    // Loads a register with a value and sets the zero and negative flags
-    u16 address = ( this->*addressingMode )();
-    reg = Read( address );
-    SetZeroAndNegativeFlags( reg );
-}
-
 void CPU::AND( u16 ( CPU::*addressingMode )() )
 {
     // AND (bitwise AND with accumulator)
     u16 address = ( this->*addressingMode )();
     a &= Read( address );
     SetZeroAndNegativeFlags( a );
+};
+
+void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
+{
+    // Loads a register with a value and sets the zero and negative flags
+    u16 address = ( this->*addressingMode )();
+    reg = Read( address );
+    SetZeroAndNegativeFlags( reg );
 };
 
 void CPU::STA( u16 ( CPU::*addressingMode )() )
