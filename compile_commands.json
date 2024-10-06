@@ -8,20 +8,6 @@
       "-Iinclude",
       "-I/opt/homebrew/opt/googletest/include",
       "-c",
-      "src/main.cpp"
-    ],
-    "directory": "/Users/bgevko/Projects/nes-emu",
-    "file": "/Users/bgevko/Projects/nes-emu/src/main.cpp"
-  },
-  {
-    "arguments": [
-      "/usr/bin/g++",
-      "-Wall",
-      "-Wextra",
-      "-std=c++17",
-      "-Iinclude",
-      "-I/opt/homebrew/opt/googletest/include",
-      "-c",
       "src/cpu.cpp"
     ],
     "directory": "/Users/bgevko/Projects/nes-emu",
@@ -36,9 +22,9 @@
       "-Iinclude",
       "-I/opt/homebrew/opt/googletest/include",
       "-c",
-      "tests/test_cpu.cpp"
+      "tests/cpu_test.cpp"
     ],
     "directory": "/Users/bgevko/Projects/nes-emu",
-    "file": "/Users/bgevko/Projects/nes-emu/tests/test_cpu.cpp"
+    "file": "/Users/bgevko/Projects/nes-emu/tests/cpu_test.cpp"
   }
 ]

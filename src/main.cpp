@@ -4,7 +4,7 @@
 
 #include "cpu.h"
 
-int main()
+auto main() -> int
 {
     CPU cpu;
 
@@ -20,10 +20,10 @@ int main()
     cpu.LoadProgram( data, 0x0600 );
 
     // For now, run until the BRK instruction is encountered
-    while ( !cpu.halt )
-    {
-        cpu.FetchDecodeExecute();
-    }
+    /* while ( !cpu.IsHalted() ) */
+    /* { */
+    /*     cpu.FetchDecodeExecute(); */
+    /* } */
 
     // print the affected memory locations
     cpu.PrintMemory( 0x0200 );

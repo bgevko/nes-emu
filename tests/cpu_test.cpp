@@ -1,3 +1,5 @@
+// NOLINTBEGIN(cppcoreguidelines-owning-memory, cppcoreguidelines-avoid-non-const-global-variables,
+// modernize-use-trailing-return-type)
 #include <gtest/gtest.h>
 
 #include <fstream>
@@ -9,112 +11,110 @@
 #include "json.hpp"
 
 using json = nlohmann::json;
+constexpr bool verbose = false;
 
-void        LoadStateFromJson( CPU& cpu, const json& j, const std::string& state );
-void        PrintCPUState( const CPU& cpu, const json& j, const std::string& state );
-void        RunTestCase( const json& test_case );
-void        PrintTestStartMsg( const std::string& test_name );
-void        PrintTestEndMsg( const std::string& test_name );
-json        ExtractTestsFromJson( const std::string& path );
-std::string ParseStatus( u8 status );
-
-// TODO: Set as directive later..
-bool VERBOSE = false;
-
-TEST( ImmediateAddressing, IMM )
+class CPUTest : public ::testing::Test
 {
-    std::string test_name = "Immediate Addressing Mode IMM";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x8000;
-    EXPECT_EQ( cpu.pc, 0x8000 );
+   protected:
+    CPU cpu;  // NOLINT
+    // Helper methods
+    void        LoadStateFromJson( const json& jsonData, const std::string& state );
+    void        PrintCPUState( const json& jsonData, const std::string& state );
+    void        RunTestCase( const json& testCase );
+    static void PrintTestStartMsg( const std::string& testName );
+    static void PrintTestEndMsg( const std::string& testName );
+    static auto ExtractTestsFromJson( const std::string& path ) -> json;
+    static auto ParseStatus( u8 status ) -> std::string;
+};
+
+TEST_F( CPUTest, IMM )
+{
+    std::string testName = "Immediate Addressing Mode IMM";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x8000 );
+    EXPECT_EQ( cpu.GetPC(), 0x8000 );
     u16 addr = cpu.IMM();
     EXPECT_EQ( addr, 0x8000 );
-    EXPECT_EQ( cpu.pc, 0x8001 );
-    PrintTestEndMsg( test_name );
+    EXPECT_EQ( cpu.GetPC(), 0x8001 );
+    PrintTestEndMsg( testName );
 }
 
-TEST( ZeroPageAddressing, ZPG )
+TEST_F( CPUTest, ZPG )
 {
-    std::string test_name = "Zero Page Addressing Mode ZPG";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
+    std::string testName = "Zero Page Addressing Mode ZPG";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
     cpu.Write( 0x0000, 0x42 );
     u16 addr = cpu.ZPG();
     EXPECT_EQ( addr, 0x42 );
-    EXPECT_EQ( cpu.pc, 0x0001 );
-    PrintTestEndMsg( test_name );
+    EXPECT_EQ( cpu.GetPC(), 0x0001 );
+    PrintTestEndMsg( testName );
 }
 
-TEST( ZeroPageXAddressing, ZPGX )
+TEST_F( CPUTest, ZPGX )
 {
-    std::string test_name = "Zero Page X Addressing Mode ZPGX";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
-    cpu.x = 0x1;
+    std::string testName = "Zero Page X Addressing Mode ZPGX";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
+    cpu.SetX( 0x1 );
 
     // Write the zero page address at the pc location
-    cpu.Write( cpu.pc, 0x80 );  // Zero page address 0x80
-    u8 zp_addr = cpu.Read( cpu.pc );
-    u8 expected_addr = ( zp_addr + cpu.x ) & 0xFF;
+    cpu.Write( cpu.GetPC(), 0x80 );  // Zero page address 0x80
+    u8 zeroPageAddr = cpu.Read( cpu.GetPC() );
+    u8 expectedAddr = ( zeroPageAddr + cpu.GetX() ) & 0xFF;
 
     // Write a test value at the expected address
-    cpu.Write( expected_addr, 0x42 );
+    cpu.Write( expectedAddr, 0x42 );
 
     u16 addr = cpu.ZPGX();
-    EXPECT_EQ( addr, expected_addr )
-        << "Expected " << int( expected_addr ) << ", but got " << int( addr );
+    EXPECT_EQ( addr, expectedAddr )
+        << "Expected " << int( expectedAddr ) << ", but got " << int( addr );
     EXPECT_EQ( cpu.Read( addr ), 0x42 ) << "Expected 0x42, but got " << int( cpu.Read( addr ) );
-    EXPECT_EQ( cpu.pc, 0x0001 );
-    PrintTestEndMsg( test_name );
+    EXPECT_EQ( cpu.GetPC(), 0x0001 );
+    PrintTestEndMsg( testName );
 }
 
-TEST( ZeroPageYAddressing, ZPGY )
+TEST_F( CPUTest, ZPGY )
 {
-    std::string test_name = "Zero Page Y Addressing Mode ZPGY";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
-    cpu.y = 0x1;
+    std::string testName = "Zero Page Y Addressing Mode ZPGY";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
+    cpu.SetY( 0x1 );
 
     // Write the zero page address at the pc location
-    cpu.Write( cpu.pc, 0x80 );  // Zero page address 0x80
-    u8 zp_addr = cpu.Read( cpu.pc );
-    u8 expected_addr = ( zp_addr + cpu.x ) & 0xFF;
+    cpu.Write( cpu.GetPC(), 0x80 );  // Zero page address 0x80
+    u8 zeroPageAddr = cpu.Read( cpu.GetPC() );
+    u8 expectedAddr = ( zeroPageAddr + cpu.GetY() ) & 0xFF;
 
     // Write a test value at the expected address
-    cpu.Write( expected_addr, 0x42 );
+    cpu.Write( expectedAddr, 0x42 );
 
-    u16 addr = cpu.ZPGX();
-    EXPECT_EQ( addr, expected_addr )
-        << "Expected " << int( expected_addr ) << ", but got " << int( addr );
+    u16 addr = cpu.ZPGY();
+    EXPECT_EQ( addr, expectedAddr )
+        << "Expected " << int( expectedAddr ) << ", but got " << int( addr );
     EXPECT_EQ( cpu.Read( addr ), 0x42 ) << "Expected 0x42, but got " << int( cpu.Read( addr ) );
-    EXPECT_EQ( cpu.pc, 0x0001 );
-    PrintTestEndMsg( test_name );
+    EXPECT_EQ( cpu.GetPC(), 0x0001 );
+    PrintTestEndMsg( testName );
 }
 
-TEST( AbsoluteAddressing, ABS )
+TEST_F( CPUTest, ABS )
 {
-    std::string test_name = "Absolute Addressing Mode ABS";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
+    std::string testName = "Absolute Addressing Mode ABS";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
     cpu.Write( 0x0000, 0x42 );
     cpu.Write( 0x0001, 0x24 );
     u16 addr = cpu.ABS();
     EXPECT_EQ( addr, 0x2442 );
-    EXPECT_EQ( cpu.pc, 0x0002 );
-    PrintTestEndMsg( test_name );
+    EXPECT_EQ( cpu.GetPC(), 0x0002 );
+    PrintTestEndMsg( testName );
 }
 
-TEST( IndirectAddressing, IND )
+TEST_F( CPUTest, IND )
 {
-    std::string test_name = "Indirect Addressing Mode IND";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
+    std::string testName = "Indirect Addressing Mode IND";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
 
     // Write the low and high byte of the pointer to the pc location
     cpu.Write( 0x0000, 0xCD );
@@ -136,17 +136,16 @@ TEST( IndirectAddressing, IND )
     EXPECT_EQ( cpu.Read( addr ), 0xEF ) << "Expected 0xEF, but got " << int( cpu.Read( addr ) );
 
     // Ensure the pc is incremented by 2
-    EXPECT_EQ( cpu.pc, 0x0002 );
+    EXPECT_EQ( cpu.GetPC(), 0x0002 );
 
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( IndirectAddressingBug, IND )
+TEST_F( CPUTest, IND_Bug )
 {
-    std::string test_name = "Indirect Addressing Mode Bug IND";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
+    std::string testName = "Indirect Addressing Mode Bug IND";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
 
     cpu.Write( 0x0000, 0xFF );
     cpu.Write( 0x0001, 0x02 );
@@ -169,26 +168,25 @@ TEST( IndirectAddressingBug, IND )
     EXPECT_EQ( effectiveAddr, bugAddr ) << "Expected 0x1234, but got " << std::hex << effectiveAddr;
     EXPECT_EQ( cpu.Read( effectiveAddr ), 0xEF )
         << "Expected 0xEF, but got " << int( cpu.Read( effectiveAddr ) );
-    EXPECT_EQ( cpu.pc, 0x0002 );
+    EXPECT_EQ( cpu.GetPC(), 0x0002 );
 
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( IndirectXAddressing, INDX )
+TEST_F( CPUTest, INDX )
 {
-    std::string test_name = "Indirect X Addressing Mode INDX";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x0000;
-    cpu.x = 0x10;
+    std::string testName = "Indirect X Addressing Mode INDX";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x0000 );
+    cpu.SetX( 0x10 );
 
     // Write the operand at the pc location
     u8 operand = 0x23;
     cpu.Write( 0x0000, operand );
-    u8  ptr = ( operand + cpu.x ) & 0xFF;
+    u8  ptr = ( operand + cpu.GetX() ) & 0xFF;
     u16 effectiveAddr = 0xABCD;
 
-    // Write the effective addressto zero-page memory
+    // Write the effective address to zero-page memory
     cpu.Write( ptr, effectiveAddr & 0xFF );               // Low byte
     cpu.Write( ( ptr + 1 ) & 0xFF, effectiveAddr >> 8 );  // High byte
 
@@ -199,19 +197,18 @@ TEST( IndirectXAddressing, INDX )
     EXPECT_EQ( addr, effectiveAddr )
         << "Expected " << std::hex << effectiveAddr << ", but got " << addr;
     EXPECT_EQ( cpu.Read( addr ), 0x42 ) << "Expected 0x42, but got " << int( cpu.Read( addr ) );
-    EXPECT_EQ( cpu.pc, 0x0001 );
+    EXPECT_EQ( cpu.GetPC(), 0x0001 );
 
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( IndirectYAddressing, INDY )
+TEST_F( CPUTest, INDY )
 {
-    std::string test_name = "Indirect Y Addressing Mode INDY";
-    PrintTestStartMsg( test_name );
+    std::string testName = "Indirect Y Addressing Mode INDY";
+    PrintTestStartMsg( testName );
 
-    CPU cpu;
-    cpu.pc = 0x0000;
-    cpu.y = 0x10;
+    cpu.SetPC( 0x0000 );
+    cpu.SetY( 0x10 );
 
     u8 operand = 0x23;
     cpu.Write( 0x0000, operand );
@@ -222,194 +219,192 @@ TEST( IndirectYAddressing, INDY )
     cpu.Write( ptr, effectiveAddr & 0xFF );    // Low byte
     cpu.Write( ptr + 1, effectiveAddr >> 8 );  // High byte
 
-    u16 finalAddr = effectiveAddr + cpu.y;
+    u16 finalAddr = effectiveAddr + cpu.GetY();
     cpu.Write( finalAddr, 0x42 );  // Write a test value at the final address
     u16 addr = cpu.INDY();
     EXPECT_EQ( addr, finalAddr ) << "Expected " << std::hex << finalAddr << ", but got " << addr;
     EXPECT_EQ( cpu.Read( addr ), 0x42 ) << "Expected 0x42, but got " << int( cpu.Read( addr ) );
-    EXPECT_EQ( cpu.pc, 0x0001 );
+    EXPECT_EQ( cpu.GetPC(), 0x0001 );
 
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( RelativeAddressing, REL )
+TEST_F( CPUTest, REL )
 {
-    std::string test_name = "Relative Addressing Mode REL";
-    PrintTestStartMsg( test_name );
-    CPU cpu;
-    cpu.pc = 0x1000;
+    std::string testName = "Relative Addressing Mode REL";
+    PrintTestStartMsg( testName );
+    cpu.SetPC( 0x1000 );
 
     // Write a relative address of -5 at the pc location
-    cpu.Write( cpu.pc, 0xFB );
+    cpu.Write( cpu.GetPC(), 0xFB );
     u16 backBranch = cpu.REL();
     EXPECT_EQ( backBranch, 0x0FFB ) << "Expected 0x0FFB, but got " << std::hex << backBranch;
-    EXPECT_EQ( cpu.pc, 0x1001 );
+    EXPECT_EQ( cpu.GetPC(), 0x1001 );
 
     // Write a relative address of +5 at the pc location
-    /* cpu.pc = 0x1000; */
-    /* cpu.Write( cpu.pc, 0x05 ); */
-    /* u16 forwardBranch = cpu.REL(); */
-    /* EXPECT_EQ( forwardBranch, 0x1005 ) << "Expected 0x1005, but got " << std::hex <<
-     * forwardBranch; */
-    /* EXPECT_EQ( cpu.pc, 0x1001 ); */
+    cpu.SetPC( 0x1000 );
+    cpu.Write( cpu.GetPC(), 0x05 );
+    u16 forwardBranch = cpu.REL();
+    EXPECT_EQ( forwardBranch, 0x1005 ) << "Expected 0x1005, but got " << std::hex << forwardBranch;
+    EXPECT_EQ( cpu.GetPC(), 0x1001 );
 }
 
-TEST( x00, Break )
+TEST_F( CPUTest, x00_Break )
 {
-    std::string test_name = "00 BRK";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "00 BRK";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( x8D, STA_Absolute )
+TEST_F( CPUTest, x8D_STA_Absolute )
 {
-    std::string test_name = "8D STA Absolute";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/8d.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "8D STA Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/8d.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA0, LDY_Immediate )
+TEST_F( CPUTest, xA0_LDY_Immediate )
 {
-    std::string test_name = "A0 LDY Immediate";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a0.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A0 LDY Immediate";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a0.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA1, LDA_Xindirect )
+TEST_F( CPUTest, xA1_LDA_Xindirect )
 {
-    std::string test_name = "A1 LDA X-Indirect";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a1.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A1 LDA X-Indirect";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a1.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA2, LDX_Immediate )
+TEST_F( CPUTest, xA2_LDX_Immediate )
 {
-    std::string test_name = "A2 LDX Immediate";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a2.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A2 LDX Immediate";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a2.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA4, LDY_ZeroPage )
+TEST_F( CPUTest, xA4_LDY_ZeroPage )
 {
-    std::string test_name = "A4 LDY ZeroPage";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a4.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A4 LDY ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a4.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA5, LDA_ZeroPage )
+TEST_F( CPUTest, xA5_LDA_ZeroPage )
 {
-    std::string test_name = "A5 LDA ZeroPage";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a5.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A5 LDA ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a5.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA6, LDX_ZeroPage )
+TEST_F( CPUTest, xA6_LDX_ZeroPage )
 {
-    std::string test_name = "A6 LDX ZeroPage";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a6.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A6 LDX ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a6.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xAC, LDY_Absolute )
+TEST_F( CPUTest, xAC_LDY_Absolute )
 {
-    std::string test_name = "AC LDY Absolute";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/ac.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "AC LDY Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/ac.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xAD, LDA_Absolute )
+TEST_F( CPUTest, xAD_LDA_Absolute )
 {
-    std::string test_name = "AD LDA Absolute";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/ad.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "AD LDA Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/ad.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xAE, LDX_Absolute )
+TEST_F( CPUTest, xAE_LDX_Absolute )
 {
-    std::string test_name = "AE LDX Absolute";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/ae.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "AE LDX Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/ae.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xA9, LDA_Immediate )
+TEST_F( CPUTest, xA9_LDA_Immediate )
 {
-    std::string test_name = "A9 LDA Immediate";
-    PrintTestStartMsg( test_name );
-    json test_cases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
-    for ( const auto& test_case : test_cases )
+    std::string testName = "A9 LDA Immediate";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
-TEST( xB6, LDX_ZeroPageY )
+TEST_F( CPUTest, xB6_LDX_ZeroPageY )
 {
-    std::string test_name = "B6 LDX ZeroPageY";
-    PrintTestStartMsg( test_name );
-    /* json test_cases = ExtractTestsFromJson( "tests/HARTE/b6.json" ); */
-    json test_cases = ExtractTestsFromJson( "tests/small.json" );
+    std::string testName = "B6 LDX ZeroPageY";
+    PrintTestStartMsg( testName );
+    /* json testCases = ExtractTestsFromJson( "tests/HARTE/b6.json" ); */
+    json testCases = ExtractTestsFromJson( "tests/small.json" );
 
-    for ( const auto& test_case : test_cases )
+    for ( const auto& testCase : testCases )
     {
-        RunTestCase( test_case );
+        RunTestCase( testCase );
     }
-    PrintTestEndMsg( test_name );
+    PrintTestEndMsg( testName );
 }
 
 int main( int argc, char** argv )
@@ -422,151 +417,149 @@ int main( int argc, char** argv )
 // ----------------------- Helper Functions -----------------------
 // ----------------------------------------------------------------
 
-// Load CPU state from JSON
-void LoadStateFromJson( CPU& cpu, const json& j, const std::string& state )
+void CPUTest::LoadStateFromJson( const json& jsonData, const std::string& state )
 {
-    cpu.pc = u16( j[state]["pc"] );
-    cpu.a = j[state]["a"];
-    cpu.x = j[state]["x"];
-    cpu.y = j[state]["y"];
-    cpu.s = j[state]["s"];
-    cpu.p = j[state]["p"];
-    for ( const auto& ram_entry : j[state]["ram"] )
+    cpu.SetPC( u16( jsonData[state]["pc"] ) );
+    cpu.SetA( jsonData[state]["a"] );
+    cpu.SetX( jsonData[state]["x"] );
+    cpu.SetY( jsonData[state]["y"] );
+    cpu.SetS( jsonData[state]["s"] );
+    cpu.SetP( jsonData[state]["p"] );
+    for ( const auto& ramEntry : jsonData[state]["ram"] )
     {
-        uint16_t address = ram_entry[0];
-        uint8_t  value = ram_entry[1];
+        uint16_t address = ramEntry[0];
+        uint8_t  value = ramEntry[1];
         cpu.Write( address, value );
     }
 }
 
 // Helper function to print CPU state
-void PrintCPUState( const CPU& cpu, const json& j, const std::string& state )
+void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
 {
-    std::cout << "----------" << state << " State----------" << std::endl;
-    std::cout << "pc: " << std::hex << std::setw( 4 ) << std::setfill( '0' ) << cpu.pc << std::endl;
-    std::cout << "s: " << std::dec << int( cpu.s ) << std::endl;
-    std::cout << "a: " << int( cpu.a ) << std::endl;
-    std::cout << "x: " << int( cpu.x ) << std::endl;
-    std::cout << "y: " << int( cpu.y ) << std::endl;
-    std::cout << "p: " << int( cpu.p ) << std::endl;
-    std::cout << std::endl;
-    std::cout << "RAM:" << std::endl;
-    for ( const auto& ram_entry : j[state]["ram"] )
+    std::cout << "----------" << state << " State----------" << '\n';
+    std::cout << "pc: " << std::hex << std::setw( 4 ) << std::setfill( '0' ) << cpu.GetPC() << '\n';
+    std::cout << "s: " << std::dec << int( cpu.GetS() ) << '\n';
+    std::cout << "a: " << int( cpu.GetA() ) << '\n';
+    std::cout << "x: " << int( cpu.GetX() ) << '\n';
+    std::cout << "y: " << int( cpu.GetY() ) << '\n';
+    std::cout << "p: " << int( cpu.GetP() ) << '\n';
+    std::cout << '\n';
+    std::cout << "RAM:" << '\n';
+    for ( const auto& ramEntry : jsonData[state]["ram"] )
     {
-        uint16_t address = ram_entry[0];
+        uint16_t address = ramEntry[0];
         uint8_t  value = cpu.Read( address );
         std::cout << std::hex << std::setw( 4 ) << std::setfill( '0' ) << address << ": "
-                  << std::hex << std::setw( 2 ) << std::setfill( '0' ) << int( value ) << std::endl;
+                  << std::hex << std::setw( 2 ) << std::setfill( '0' ) << int( value ) << '\n';
     }
-    std::cout << "--------------------------------" << std::endl;
-    std::cout << std::endl;
+    std::cout << "--------------------------------" << '\n';
+    std::cout << '\n';
 }
 
 // Test case function for each test in the JSON array
-void RunTestCase( const json& test_case )
+
+void CPUTest::RunTestCase( const json& testCase )  // NOLINT
 {
     // Initialize CPU
-    CPU cpu;
     cpu.Reset();
 
     // Load initial state from JSON
-    LoadStateFromJson( cpu, test_case, "initial" );
+    LoadStateFromJson( testCase, "initial" );
 
     // Ensure loaded values match JSON values
-    EXPECT_EQ( cpu.pc, u16( test_case["initial"]["pc"] ) );
-    EXPECT_EQ( cpu.a, test_case["initial"]["a"] );
-    EXPECT_EQ( cpu.x, test_case["initial"]["x"] );
-    EXPECT_EQ( cpu.y, test_case["initial"]["y"] );
-    EXPECT_EQ( cpu.s, test_case["initial"]["s"] );
-    EXPECT_EQ( cpu.p, test_case["initial"]["p"] );
-    for ( const auto& ram_entry : test_case["initial"]["ram"] )
+    EXPECT_EQ( cpu.GetPC(), u16( testCase["initial"]["pc"] ) );
+    EXPECT_EQ( cpu.GetA(), testCase["initial"]["a"] );
+    EXPECT_EQ( cpu.GetX(), testCase["initial"]["x"] );
+    EXPECT_EQ( cpu.GetY(), testCase["initial"]["y"] );
+    EXPECT_EQ( cpu.GetS(), testCase["initial"]["s"] );
+    EXPECT_EQ( cpu.GetP(), testCase["initial"]["p"] );
+    for ( const auto& ramEntry : testCase["initial"]["ram"] )
     {
-        uint16_t address = ram_entry[0];
-        uint8_t  value = ram_entry[1];
+        uint16_t address = ramEntry[0];
+        uint8_t  value = ramEntry[1];
         EXPECT_EQ( cpu.Read( address ), value );
     }
 
     // Print initial state
-    if ( VERBOSE )
+    if ( verbose )
     {
-        std::cout << "Running Test: " << test_case["name"] << std::endl;
-        PrintCPUState( cpu, test_case, "initial" );
+        std::cout << "Running Test: " << testCase["name"] << '\n';
+        PrintCPUState( testCase, "initial" );
     }
 
     // Execute instructions
     cpu.FetchDecodeExecute();
 
     // Print final state
-    if ( VERBOSE )
+    if ( verbose )
     {
-        PrintCPUState( cpu, test_case, "final" );
+        PrintCPUState( testCase, "final" );
     }
 
     // Ensure final values match JSON values
-    EXPECT_EQ( cpu.pc, u16( test_case["final"]["pc"] ) )
+    EXPECT_EQ( cpu.GetPC(), u16( testCase["final"]["pc"] ) )
         << "PC mismatch: Expected " << std::hex << std::setw( 4 ) << std::setfill( '0' )
-        << u16( test_case["final"]["pc"] ) << ", but got " << cpu.pc;
-    EXPECT_EQ( cpu.a, u8( test_case["final"]["a"] ) )
-        << "A mismatch: Expected " << u8( test_case["final"]["a"] ) << ", but got " << cpu.a;
-    EXPECT_EQ( cpu.x, u8( test_case["final"]["x"] ) )
-        << "X mismatch: Expected " << std::hex << std::setw( 2 ) << std::setfill( '0' )
-        << u8( test_case["final"]["x"] ) << ", but got " << cpu.x;
-    EXPECT_EQ( cpu.y, u8( test_case["final"]["y"] ) )
-        << "Y mismatch: Expected " << std::hex << std::setw( 2 ) << std::setfill( '0' )
-        << u8( test_case["final"]["y"] ) << ", but got " << cpu.y;
-    EXPECT_EQ( cpu.s, u8( test_case["final"]["s"] ) )
-        << "S mismatch: Expected " << std::hex << std::setw( 2 ) << std::setfill( '0' )
-        << u8( test_case["final"]["s"] ) << ", but got " << cpu.s;
-    EXPECT_EQ( cpu.p, u8( test_case["final"]["p"] ) )
-        << "PC mismatch: Expected " << ParseStatus( u8( test_case["final"]["p"] ) ) << ", but got "
-        << ParseStatus( cpu.p );
+        << u16( testCase["final"]["pc"] ) << ", but got " << cpu.GetPC();
+    EXPECT_EQ( cpu.GetA(), u8( testCase["final"]["a"] ) )
+        << "A mismatch: Expected " << u8( testCase["final"]["a"] ) << ", but got " << cpu.GetA();
+    EXPECT_EQ( cpu.GetX(), u8( testCase["final"]["x"] ) )
+        << "X mismatch: Expected " << u8( testCase["final"]["x"] ) << ", but got " << cpu.GetX();
+    EXPECT_EQ( cpu.GetY(), u8( testCase["final"]["y"] ) )
+        << "Y mismatch: Expected " << u8( testCase["final"]["y"] ) << ", but got " << cpu.GetY();
+    EXPECT_EQ( cpu.GetS(), u8( testCase["final"]["s"] ) )
+        << "S mismatch: Expected " << u8( testCase["final"]["s"] ) << ", but got " << cpu.GetS();
+    EXPECT_EQ( cpu.GetP(), u8( testCase["final"]["p"] ) )
+        << "P mismatch: Expected " << ParseStatus( u8( testCase["final"]["p"] ) ) << ", but got "
+        << ParseStatus( cpu.GetP() );
 
-    for ( const auto& ram_entry : test_case["final"]["ram"] )
+    for ( const auto& ramEntry : testCase["final"]["ram"] )
     {
-        uint16_t address = ram_entry[0];
-        uint8_t  expected_value = ram_entry[1];
-        uint8_t  actual_value = cpu.Read( address );
-        EXPECT_EQ( actual_value, expected_value )
+        uint16_t address = ramEntry[0];
+        uint8_t  expectedValue = ramEntry[1];
+        uint8_t  actualValue = cpu.Read( address );
+        EXPECT_EQ( actualValue, expectedValue )
             << "RAM mismatch at address " << std::hex << address << ": Expected "
-            << int( expected_value ) << ", but got " << int( actual_value );
+            << int( expectedValue ) << ", but got " << int( actualValue );
     }
 }
 
-json ExtractTestsFromJson( const std::string& path )
+auto CPUTest::ExtractTestsFromJson( const std::string& path ) -> json
 {
-    std::ifstream json_file( path );
-    if ( !json_file.is_open() )
+    std::ifstream jsonFile( path );
+    if ( !jsonFile.is_open() )
     {
         throw std::runtime_error( "Could not open test file: " + path );
     }
-    json test_cases;
-    json_file >> test_cases;
+    json testCases;
+    jsonFile >> testCases;
 
-    if ( !test_cases.is_array() )
+    if ( !testCases.is_array() )
     {
         throw std::runtime_error( "Expected an array of test cases in JSON file" );
     }
-    return test_cases;
+    return testCases;
 }
 
-void PrintTestStartMsg( const std::string& test_name )
+void CPUTest::PrintTestStartMsg( const std::string& testName )
 {
-    std::cout << "---------- " << test_name << " Tests ---------" << std::endl;
+    std::cout << "---------- " << testName << " Tests ---------" << '\n';
 }
 
-void PrintTestEndMsg( const std::string& test_name )
+void CPUTest::PrintTestEndMsg( const std::string& testName )
 {
-    std::cout << "---------- " << test_name << " Tests Complete ---------" << std::endl;
-    std::cout << std::endl;
+    std::cout << "---------- " << testName << " Tests Complete ---------" << '\n';
+    std::cout << '\n';
 }
 
-std::string ParseStatus( u8 status )
+auto CPUTest::ParseStatus( u8 status ) -> std::string
 {
     std::string statusLabel = "NV-BDIZC";
-    std::string flags = "";
+    std::string flags;
     for ( int i = 7; i >= 0; i-- )
     {
-        flags += ( status & ( 1 << i ) ) ? "1" : "0";
+        flags += ( status & ( 1 << i ) ) != 0 ? "1" : "0";
     }
     return statusLabel + " " + flags;
 }
+// NOLINTEND(cppcoreguidelines-owning-memory, cppcoreguidelines-avoid-non-const-global-variables,
+// modernize-use-trailing-return-type)
