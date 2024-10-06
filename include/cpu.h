@@ -7,6 +7,7 @@
 
 using u8 = uint8_t;
 using u16 = uint16_t;
+using s8 = int8_t;
 
 // CPU state with optional values to make testing partial states easier.
 struct CPUState
@@ -62,6 +63,19 @@ class CPU
     // helper globals
     bool halt = false;
 
+    // Addressing modes
+    u16 IMM();   // IMM
+    u16 ZPG();   // Zero Page
+    u16 ABS();   // ABS
+    u16 ABSX();  // Absolute x
+    u16 ABSY();  // Absolute y
+    u16 ZPGX();  // Zero Page x
+    u16 ZPGY();  // Zero Page y
+    u16 IND();   // Indirect
+    u16 INDX();  // Indirect x
+    u16 INDY();  // Indirect y
+    u16 REL();   // Relative
+
    private:
     // Statuses
     enum Status : u8
@@ -75,20 +89,6 @@ class CPU
         Overflow = 1 << 6,          // 0b01000000
         Negative = 1 << 7,          // 0b10000000
     };
-
-    // Addressing modes
-    u16 IMM();  // IMM
-    u16 ZPG();  // Zero Page
-    u16 ABS();  // ABS
-    /* u8 IMP(); // Implied */
-    /* u8 ZPX(); // Zero Page x */
-    /* u8 ZPY(); // Zero Page y */
-    /* u8 REL(); // Relative */
-    /* u8 ABX(); // ABS x */
-    /* u8 ABY(); // ABS y */
-    /* u8 IND(); // Indirect */
-    u16 INX();  // Indirect x
-    /* u8 IZY(); // Indirect y */
 
     // Opcodes
     void BRK();

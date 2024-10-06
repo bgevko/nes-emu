@@ -15,18 +15,19 @@ CPU::CPU()
 // Initialize the opcode table with the appropriate function pointers
 #define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }  // Macro to simplify table initialization
     opcodeTable[0x00] = SET_OP( BRK() );                   // BRK
-    opcodeTable[0x21] = SET_OP( AND( &CPU::INX ) );        // AND (Indirect,X)
-    opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu.y ) );  // LDY (IMM)
-    opcodeTable[0xA1] = SET_OP( LD( &CPU::INX, cpu.a ) );  // LDA (X-indirect)
-    opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu.x ) );  // LDX (IMM)
-    opcodeTable[0xA4] = SET_OP( LD( &CPU::ZPG, cpu.y ) );  // LDY (ZPG)
-    opcodeTable[0xA5] = SET_OP( LD( &CPU::ZPG, cpu.a ) );  // LDA (ZPG)
-    opcodeTable[0xA6] = SET_OP( LD( &CPU::ZPG, cpu.x ) );  // LDX (ZPG)
-    opcodeTable[0xA9] = SET_OP( LD( &CPU::IMM, cpu.a ) );  // LDA (IMM)
-    opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu.y ) );  // LDY (ABS)
-    opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu.a ) );  // LDA (ABS)
-    opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu.x ) );  // LDX (ABS)
-    opcodeTable[0x8D] = SET_OP( STA( &CPU::ABS ) );        // STA (ABS)
+    opcodeTable[0x21] = SET_OP( AND( &CPU::INDX ) );       // AND Indirect X
+    opcodeTable[0x8D] = SET_OP( STA( &CPU::ABS ) );        // STA Absolute
+    opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu.y ) );  // LDY Immediate
+    opcodeTable[0xA1] = SET_OP( LD( &CPU::INDX, cpu.a ) );  // LDA Indirect X
+    opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu.x ) );   // LDX Immediate
+    opcodeTable[0xA4] = SET_OP( LD( &CPU::ZPG, cpu.y ) );   // LDY Zero Page
+    opcodeTable[0xA5] = SET_OP( LD( &CPU::ZPG, cpu.a ) );   // LDA Zero Page
+    opcodeTable[0xA6] = SET_OP( LD( &CPU::ZPG, cpu.x ) );   // LDX Zero Page
+    opcodeTable[0xA9] = SET_OP( LD( &CPU::IMM, cpu.a ) );   // LDA Immediate
+    opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu.y ) );   // LDY Absolute
+    opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu.a ) );   // LDA Absolute
+    opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu.x ) );   // LDX Absolute
+    opcodeTable[0xB6] = SET_OP( LD( &CPU::ZPGX, cpu.x ) );  // LDX Zero Page Y
 }
 
 // ----------------------------------------------------------------------------
@@ -111,6 +112,18 @@ u16 CPU::ZPG()
     // The value of the next byte (operand) is the address in zero page memory
     return Read( pc++ ) & 0x00FF;
 };
+u16 CPU::ZPGX()
+{
+    // Zero page addressing with X offset
+    // Returns the address from the zero page (0x0000 - 0x00FF) with the X register offset
+    // The value of the next byte (operand) is the address in zero page memory
+    return ( Read( pc++ ) + x ) & 0x00FF;
+}
+u16 CPU::ZPGY()
+{
+    // Zero page addressing with Y offset
+    return ( Read( pc++ ) + y ) & 0x00FF;
+}
 u16 CPU::ABS()
 {
     // Absolute addressing
@@ -121,17 +134,99 @@ u16 CPU::ABS()
     u16 hi = Read( pc++ );
     return ( hi << 8 ) | lo;
 }
-u16 CPU::INX()
+
+u16 CPU::ABSX()
+{
+    // Absolute addressing with X offset
+    // Constructs a 16 bit address from the next two bytes
+    // Adds the value of the X register to the address
+    u16 lo = Read( pc++ );
+    u16 hi = Read( pc++ );
+    u16 address = ( hi << 8 ) | lo;
+    u16 finalAddress = address + x;
+
+    // NOTE: Boundary crossing will add an extra cycle (Not implemented yet)
+    return finalAddress;
+}
+
+u16 CPU::ABSY()
+{
+    // Absolute addressing with Y offset
+    // Constructs a 16 bit address from the next two bytes
+    // Adds the value of the Y register to the address
+    u16 lo = Read( pc++ );
+    u16 hi = Read( pc++ );
+    u16 address = ( hi << 8 ) | lo;
+    u16 finalAddress = address + y;
+    // NOTE: Boundary crossing will add an extra cycle (Not implemented yet)
+    return finalAddress;
+}
+
+u16 CPU::IND()
+{
+    // Read two bytes to form the pointer address
+    u16 ptr_lo = Read( pc++ );
+    u16 ptr_hi = Read( pc++ );
+    u16 ptr = ( ptr_hi << 8 ) | ptr_lo;
+
+    u8 eff_lo = Read( ptr );
+    u8 eff_hi;
+
+    // 6502 Bug: If the pointer address wraps around a page boundary (e.g. 0x01FF),
+    // the CPU reads the low byte from 0x01FF and the high byte from the start of
+    // the same page (0x0100) instead of the start of the next page (0x0200).
+    if ( ptr_lo == 0xFF )
+    {
+        eff_hi = Read( ptr & 0xFF00 );
+    }
+    else
+    {
+        eff_hi = Read( ptr + 1 );
+    }
+
+    return ( eff_hi << 8 ) | eff_lo;
+}
+
+u16 CPU::INDX()
 {
     // Indirect X addressing
-    // Reads the next byte, which is a zero page address,
-    // and adds the value of the x register to it.
-    // The next two bytes form the 16 bit address.
+    // Takes the next two bytes as a zero page address
+    // Adds the value of the X register to get the pointer address
+    // Reads the effective address from the pointer address
     u8  zpAddress = Read( pc++ );
     u8  offsetAddress = ( zpAddress + x ) & 0x00FF;
     u16 lo = Read( offsetAddress );
     u16 hi = Read( ( offsetAddress + 1 ) & 0x00FF );
     return ( hi << 8 ) | lo;
+}
+
+u16 CPU::INDY()
+{
+    // Indirect Y addressing
+    // Fetches the pointer address in the zero page
+    // Reads the effective address from the pointer address
+    // Adds the value of the Y register to the effective address
+    u8  zpAddress = Read( pc++ );
+    u16 lo = Read( zpAddress );
+    u16 hi = Read( ( zpAddress + 1 ) & 0x00FF );
+
+    u16 effAddress = ( hi << 8 ) | lo;
+    u16 finalAddress = effAddress + y;
+
+    // NOTE: Boundary crossing will add an extra cycle (Not implemented yet)
+
+    return finalAddress;
+}
+
+u16 CPU::REL()
+{
+    // Relative addressing
+    // The next byte is a signed offset from the current program counter
+    // The offset is between -128 and 127 bytes
+    s8  offset = static_cast<s8>( Read( pc ) );
+    u16 address = pc + offset;
+    pc++;
+    return address;
 }
 
 // ----------------------------------------------------------------------------
