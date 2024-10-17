@@ -1,0 +1,6 @@
+- [x] `0xAA` TAX
+- [x] `0xA8` TAY
+- [x] `0xBA` TSX
+- [x] `0x8A` TXA
+- [x] `0x9A` TXS
+- [x] `0x98` TYA

@@ -15,40 +15,46 @@ CPU::CPU()  // NOLINT
     _opcodeTable.fill( nullptr );
 
 // Initialize the opcode table with the appropriate function pointers
-#define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }     // NOLINT
-    _opcodeTable[0x00] = SET_OP( BRK() );                     // BRK
-    _opcodeTable[0x21] = SET_OP( AND( &CPU::INDX ) );         // AND Indirect X
-    _opcodeTable[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );  // STA Indirect X
-    _opcodeTable[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );   // STY Zero Page
-    _opcodeTable[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );   // STA Zero Page
-    _opcodeTable[0x86] = SET_OP( ST( &CPU::ZPG, cpu._x ) );   // STX Zero Page
-    _opcodeTable[0x8C] = SET_OP( ST( &CPU::ABS, cpu._y ) );   // STY Absolute
-    _opcodeTable[0x8D] = SET_OP( ST( &CPU::ABS, cpu._a ) );   // STA Absolute
-    _opcodeTable[0x8E] = SET_OP( ST( &CPU::ABS, cpu._x ) );   // STX Absolute
-    _opcodeTable[0x91] = SET_OP( ST( &CPU::INDY, cpu._a ) );  // STA Indirect Y
-    _opcodeTable[0x94] = SET_OP( ST( &CPU::ZPGX, cpu._y ) );  // STY Zero Page X
-    _opcodeTable[0x95] = SET_OP( ST( &CPU::ZPGX, cpu._a ) );  // STA Zero Page X
-    _opcodeTable[0x96] = SET_OP( ST( &CPU::ZPGY, cpu._x ) );  // STX Zero Page Y
-    _opcodeTable[0x99] = SET_OP( ST( &CPU::ABSY, cpu._a ) );  // STA Absolute Y
-    _opcodeTable[0x9D] = SET_OP( ST( &CPU::ABSX, cpu._a ) );  // STA Absolute X
-    _opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu._y ) );   // LDY Immediate
-    _opcodeTable[0xA1] = SET_OP( LD( &CPU::INDX, cpu._a ) );  // LDA Indirect X
-    _opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu._x ) );   // LDX Immediate
-    _opcodeTable[0xA4] = SET_OP( LD( &CPU::ZPG, cpu._y ) );   // LDY Zero Page
-    _opcodeTable[0xA5] = SET_OP( LD( &CPU::ZPG, cpu._a ) );   // LDA Zero Page
-    _opcodeTable[0xA6] = SET_OP( LD( &CPU::ZPG, cpu._x ) );   // LDX Zero Page
-    _opcodeTable[0xA9] = SET_OP( LD( &CPU::IMM, cpu._a ) );   // LDA Immediate
-    _opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu._y ) );   // LDY Absolute
-    _opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu._a ) );   // LDA Absolute
-    _opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu._x ) );   // LDX Absolute
-    _opcodeTable[0xB1] = SET_OP( LD( &CPU::INDY, cpu._a ) );  // LDA Indirect Y
-    _opcodeTable[0xB4] = SET_OP( LD( &CPU::ZPGX, cpu._y ) );  // LDY Zero Page X
-    _opcodeTable[0xB5] = SET_OP( LD( &CPU::ZPGX, cpu._a ) );  // LDA Zero Page X
-    _opcodeTable[0xB6] = SET_OP( LD( &CPU::ZPGY, cpu._x ) );  // LDX Zero Page Y
-    _opcodeTable[0xB9] = SET_OP( LD( &CPU::ABSY, cpu._a ) );  // LDA Absolute Y
-    _opcodeTable[0xBC] = SET_OP( LD( &CPU::ABSX, cpu._y ) );  // LDY Absolute X
-    _opcodeTable[0xBD] = SET_OP( LD( &CPU::ABSX, cpu._a ) );  // LDA Absolute X
-    _opcodeTable[0xBE] = SET_OP( LD( &CPU::ABSY, cpu._x ) );  // LDX Absolute Y
+#define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }              // NOLINT
+    _opcodeTable[0x00] = SET_OP( BRK() );                              // BRK
+    _opcodeTable[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
+    _opcodeTable[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );           // STA Indirect X
+    _opcodeTable[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );            // STY Zero Page
+    _opcodeTable[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );            // STA Zero Page
+    _opcodeTable[0x86] = SET_OP( ST( &CPU::ZPG, cpu._x ) );            // STX Zero Page
+    _opcodeTable[0x8A] = SET_OP( Transfer( cpu._x, cpu._a ) );         // TXA
+    _opcodeTable[0x8C] = SET_OP( ST( &CPU::ABS, cpu._y ) );            // STY Absolute
+    _opcodeTable[0x8D] = SET_OP( ST( &CPU::ABS, cpu._a ) );            // STA Absolute
+    _opcodeTable[0x8E] = SET_OP( ST( &CPU::ABS, cpu._x ) );            // STX Absolute
+    _opcodeTable[0x91] = SET_OP( ST( &CPU::INDY, cpu._a ) );           // STA Indirect Y
+    _opcodeTable[0x94] = SET_OP( ST( &CPU::ZPGX, cpu._y ) );           // STY Zero Page X
+    _opcodeTable[0x95] = SET_OP( ST( &CPU::ZPGX, cpu._a ) );           // STA Zero Page X
+    _opcodeTable[0x96] = SET_OP( ST( &CPU::ZPGY, cpu._x ) );           // STX Zero Page Y
+    _opcodeTable[0x98] = SET_OP( Transfer( cpu._y, cpu._a ) );         // TYA
+    _opcodeTable[0x99] = SET_OP( ST( &CPU::ABSY, cpu._a ) );           // STA Absolute Y
+    _opcodeTable[0x9A] = SET_OP( Transfer( cpu._x, cpu._s, false ) );  // TXS
+    _opcodeTable[0x9D] = SET_OP( ST( &CPU::ABSX, cpu._a ) );           // STA Absolute X
+    _opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu._y ) );            // LDY Immediate
+    _opcodeTable[0xA1] = SET_OP( LD( &CPU::INDX, cpu._a ) );           // LDA Indirect X
+    _opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu._x ) );            // LDX Immediate
+    _opcodeTable[0xA4] = SET_OP( LD( &CPU::ZPG, cpu._y ) );            // LDY Zero Page
+    _opcodeTable[0xA5] = SET_OP( LD( &CPU::ZPG, cpu._a ) );            // LDA Zero Page
+    _opcodeTable[0xA6] = SET_OP( LD( &CPU::ZPG, cpu._x ) );            // LDX Zero Page
+    _opcodeTable[0xA8] = SET_OP( Transfer( cpu._a, cpu._y ) );         // TAY
+    _opcodeTable[0xA9] = SET_OP( LD( &CPU::IMM, cpu._a ) );            // LDA Immediate
+    _opcodeTable[0xAA] = SET_OP( Transfer( cpu._a, cpu._x ) );         // TAX
+    _opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu._y ) );            // LDY Absolute
+    _opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu._a ) );            // LDA Absolute
+    _opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu._x ) );            // LDX Absolute
+    _opcodeTable[0xB1] = SET_OP( LD( &CPU::INDY, cpu._a ) );           // LDA Indirect Y
+    _opcodeTable[0xB4] = SET_OP( LD( &CPU::ZPGX, cpu._y ) );           // LDY Zero Page X
+    _opcodeTable[0xB5] = SET_OP( LD( &CPU::ZPGX, cpu._a ) );           // LDA Zero Page X
+    _opcodeTable[0xB6] = SET_OP( LD( &CPU::ZPGY, cpu._x ) );           // LDX Zero Page Y
+    _opcodeTable[0xB9] = SET_OP( LD( &CPU::ABSY, cpu._a ) );           // LDA Absolute Y
+    _opcodeTable[0xBA] = SET_OP( Transfer( cpu._s, cpu._x ) );         // TSX
+    _opcodeTable[0xBC] = SET_OP( LD( &CPU::ABSX, cpu._y ) );           // LDY Absolute X
+    _opcodeTable[0xBD] = SET_OP( LD( &CPU::ABSX, cpu._a ) );           // LDA Absolute X
+    _opcodeTable[0xBE] = SET_OP( LD( &CPU::ABSY, cpu._x ) );           // LDX Absolute Y
 }
 
 // ----------------------------------------------------------------------------
@@ -362,10 +368,14 @@ void CPU::ST( u16 ( CPU::*addressingMode )(), u8 reg )
         std::cout << "\n";
     }
 }
-void CPU::STA( u16 ( CPU::*addressingMode )() )
+
+void CPU::Transfer( u8& src, u8& dest, bool updateFlags )
 {
-    u16 address = ( this->*addressingMode )();
-    Write( address, _a );
+    dest = src;
+    if ( updateFlags )
+    {
+        SetZeroAndNegativeFlags( dest );
+    }
 }
 
 // ----------------------------------------------------------------------------

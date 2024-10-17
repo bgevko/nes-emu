@@ -634,6 +634,79 @@ TEST_F( CPUTest, xBE_LDX_AbsoluteY )
     PrintTestEndMsg( testName );
 }
 
+TEST_F( CPUTest, xAA_TAX )
+{
+    std::string testName = "AA TAX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/aa.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xA8_TAY )
+{
+    std::string testName = "A8 TAY";
+    PrintTestStartMsg( testName );
+    /* json testCases = ExtractTestsFromJson( "tests/HARTE/a8.json" ); */
+    json testCases = ExtractTestsFromJson( "tests/small.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xBA_TSX )
+{
+    std::string testName = "BA TSX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/ba.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x8A_TXA )
+{
+    std::string testName = "8A TXA";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/8a.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x9A_TXS )
+{
+    std::string testName = "9A TXS";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/9a.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x98_TYA )
+{
+    std::string testName = "98 TYA";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/98.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
 int main( int argc, char** argv )
 {
     for ( int i = 1; i < argc; ++i )

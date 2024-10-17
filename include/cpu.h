@@ -115,11 +115,11 @@ class CPU
     }
     std::array<OpcodeHandler, numOpcodes> _opcodeTable;
 
-    // Opcodes
+    // Instruction Helpers
     void BRK();
     void LD( u16 ( CPU::*addressingMode )(), u8& reg );
     void ST( u16 ( CPU::*addressingMode )(), u8 reg );
-    void STA( u16 ( CPU::*addressingMode )() );
+    void Transfer( u8& src, u8& dest, bool updateFlags = true );
     void AND( u16 ( CPU::*addressingMode )() );
 
     // helpers

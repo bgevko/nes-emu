@@ -99,7 +99,7 @@
 - [x] `0x85` STA Zero page
 - [x] `0x86` STX Zero page
 - [ ] `0x88` DEY
-- [ ] `0x8A` TXA
+- [x] `0x8A` TXA
 - [x] `0x8C` STY Absolute
 - [x] `0x8D` STA Absolute
 - [x] `0x8E` STX Absolute
@@ -108,9 +108,9 @@
 - [x] `0x94` STY Zero page X-indexed
 - [x] `0x95` STA Zero page X-indexed
 - [x] `0x96` STX Zero page Y-indexed
-- [ ] `0x98` TYA
+- [x] `0x98` TYA
 - [x] `0x99` STA Absolute Y-indexed
-- [ ] `0x9A` TXS
+- [x] `0x9A` TXS
 - [x] `0x9D` STA Absolute X-indexed
 - [x] `0xA0` LDY Immediate
 - [x] `0xA1` LDA X-indexed indirect
@@ -118,9 +118,9 @@
 - [x] `0xA4` LDY Zero page
 - [x] `0xA5` LDA Zero page
 - [x] `0xA6` LDX Zero page
-- [ ] `0xA8` TAY
+- [x] `0xA8` TAY
 - [x] `0xA9` LDA Immediate
-- [ ] `0xAA` TAX
+- [x] `0xAA` TAX
 - [x] `0xAC` LDY Absolute
 - [x] `0xAD` LDA Absolute
 - [x] `0xAE` LDX Absolute
@@ -131,7 +131,7 @@
 - [x] `0xB6` LDX Zero page Y-indexed
 - [ ] `0xB8` CLV
 - [x] `0xB9` LDA Absolute Y-indexed
-- [ ] `0xBA` TSX
+- [x] `0xBA` TSX
 - [x] `0xBC` LDY Absolute X-indexed
 - [x] `0xBD` LDA Absolute X-indexed
 - [x] `0xBE` LDX Absolute Y-indexed
