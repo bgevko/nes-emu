@@ -18,7 +18,19 @@ CPU::CPU()  // NOLINT
 #define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }     // NOLINT
     _opcodeTable[0x00] = SET_OP( BRK() );                     // BRK
     _opcodeTable[0x21] = SET_OP( AND( &CPU::INDX ) );         // AND Indirect X
-    _opcodeTable[0x8D] = SET_OP( STA( &CPU::ABS ) );          // STA Absolute
+    _opcodeTable[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );  // STA Indirect X
+    _opcodeTable[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );   // STY Zero Page
+    _opcodeTable[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );   // STA Zero Page
+    _opcodeTable[0x86] = SET_OP( ST( &CPU::ZPG, cpu._x ) );   // STX Zero Page
+    _opcodeTable[0x8C] = SET_OP( ST( &CPU::ABS, cpu._y ) );   // STY Absolute
+    _opcodeTable[0x8D] = SET_OP( ST( &CPU::ABS, cpu._a ) );   // STA Absolute
+    _opcodeTable[0x8E] = SET_OP( ST( &CPU::ABS, cpu._x ) );   // STX Absolute
+    _opcodeTable[0x91] = SET_OP( ST( &CPU::INDY, cpu._a ) );  // STA Indirect Y
+    _opcodeTable[0x94] = SET_OP( ST( &CPU::ZPGX, cpu._y ) );  // STY Zero Page X
+    _opcodeTable[0x95] = SET_OP( ST( &CPU::ZPGX, cpu._a ) );  // STA Zero Page X
+    _opcodeTable[0x96] = SET_OP( ST( &CPU::ZPGY, cpu._x ) );  // STX Zero Page Y
+    _opcodeTable[0x99] = SET_OP( ST( &CPU::ABSY, cpu._a ) );  // STA Absolute Y
+    _opcodeTable[0x9D] = SET_OP( ST( &CPU::ABSX, cpu._a ) );  // STA Absolute X
     _opcodeTable[0xA0] = SET_OP( LD( &CPU::IMM, cpu._y ) );   // LDY Immediate
     _opcodeTable[0xA1] = SET_OP( LD( &CPU::INDX, cpu._a ) );  // LDA Indirect X
     _opcodeTable[0xA2] = SET_OP( LD( &CPU::IMM, cpu._x ) );   // LDX Immediate
@@ -332,6 +344,24 @@ void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
     }
 };
 
+void CPU::ST( u16 ( CPU::*addressingMode )(), u8 reg )
+{
+    // Get the address from the specified addressing mode
+    u16 address = ( this->*addressingMode )();
+
+    // Store the register value into memory at the address
+    Write( address, reg );
+
+    if ( debug )
+    {
+        std::cout << std::hex << std::setfill( '0' );
+        std::cout << "ST Instruction Debug:\n";
+        std::cout << "Address: 0x" << std::setw( 4 ) << address << "\n";
+        std::cout << "Reg:     0x" << std::setw( 2 ) << int( reg ) << "\n";
+        std::cout << std::dec;
+        std::cout << "\n";
+    }
+}
 void CPU::STA( u16 ( CPU::*addressingMode )() )
 {
     u16 address = ( this->*addressingMode )();

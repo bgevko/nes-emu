@@ -118,6 +118,7 @@ class CPU
     // Opcodes
     void BRK();
     void LD( u16 ( CPU::*addressingMode )(), u8& reg );
+    void ST( u16 ( CPU::*addressingMode )(), u8 reg );
     void STA( u16 ( CPU::*addressingMode )() );
     void AND( u16 ( CPU::*addressingMode )() );
 

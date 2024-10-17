@@ -261,11 +261,155 @@ TEST_F( CPUTest, x00_Break )
     PrintTestEndMsg( testName );
 }
 
+TEST_F( CPUTest, x81_STA_IndirectX )
+{
+    std::string testName = "81 STA IndirectX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/81.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x84_STY_ZeroPage )
+{
+    std::string testName = "84 STY ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/84.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x85_STA_ZeroPage )
+{
+    std::string testName = "85 STA ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/85.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x86_STX_ZeroPage )
+{
+    std::string testName = "86 STX ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/86.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x8C_STY_Absolute )
+{
+    std::string testName = "8C STY Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/8c.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
 TEST_F( CPUTest, x8D_STA_Absolute )
 {
     std::string testName = "8D STA Absolute";
     PrintTestStartMsg( testName );
     json testCases = ExtractTestsFromJson( "tests/HARTE/8d.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x8E_STX_Absolute )
+{
+    std::string testName = "8E STX Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/8e.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x91_STA_IndirectY )
+{
+    std::string testName = "91 STA IndirectY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/91.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x94_STY_ZeroPageX )
+{
+    std::string testName = "94 STY ZeroPageX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/94.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x95_STA_ZeroPageX )
+{
+    std::string testName = "95 STA ZeroPageX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/95.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x96_STX_ZeroPageY )
+{
+    std::string testName = "96 STX ZeroPageY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/96.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x99_STA_AbsoluteY )
+{
+    std::string testName = "99 STA AbsoluteY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/99.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x9D_STA_AbsoluteX )
+{
+    std::string testName = "9D STA AbsoluteX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/9d.json" );
     for ( const auto& testCase : testCases )
     {
         RunTestCase( testCase );
