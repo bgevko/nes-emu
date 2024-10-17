@@ -125,16 +125,16 @@
 - [x] 0xAD LDA Absolute
 - [x] 0xAE LDX Absolute
 - [ ] 0xB0 BCS Relative
-- [ ] 0xB1 LDA Indirect Y-indexed
-- [ ] 0xB4 LDY Zero page X-indexed
-- [ ] 0xB5 LDA Zero page X-indexed
-- [ ] 0xB6 LDX Zero page Y-indexed
+- [x] 0xB1 LDA Indirect Y-indexed
+- [x] 0xB4 LDY Zero page X-indexed
+- [x] 0xB5 LDA Zero page X-indexed
+- [x] 0xB6 LDX Zero page Y-indexed
 - [ ] 0xB8 CLV
-- [ ] 0xB9 LDA Absolute Y-indexed
+- [x] 0xB9 LDA Absolute Y-indexed
 - [ ] 0xBA TSX
-- [ ] 0xBC LDY Absolute X-indexed
-- [ ] 0xBD LDA Absolute X-indexed
-- [ ] 0xBE LDX Absolute Y-indexed
+- [x] 0xBC LDY Absolute X-indexed
+- [x] 0xBD LDA Absolute X-indexed
+- [x] 0xBE LDX Absolute Y-indexed
 - [ ] 0xC0 CPY Immediate
 - [ ] 0xC1 CMP X-indexed indirect
 - [ ] 0xC4 CPY Zero page

@@ -5,6 +5,8 @@
 
 #include "cpu.h"
 
+constexpr bool debug = false;
+
 CPU::CPU()  // NOLINT
 {
     Reset();
@@ -27,7 +29,14 @@ CPU::CPU()  // NOLINT
     _opcodeTable[0xAC] = SET_OP( LD( &CPU::ABS, cpu._y ) );   // LDY Absolute
     _opcodeTable[0xAD] = SET_OP( LD( &CPU::ABS, cpu._a ) );   // LDA Absolute
     _opcodeTable[0xAE] = SET_OP( LD( &CPU::ABS, cpu._x ) );   // LDX Absolute
-    _opcodeTable[0xB6] = SET_OP( LD( &CPU::ZPGX, cpu._x ) );  // LDX Zero Page Y
+    _opcodeTable[0xB1] = SET_OP( LD( &CPU::INDY, cpu._a ) );  // LDA Indirect Y
+    _opcodeTable[0xB4] = SET_OP( LD( &CPU::ZPGX, cpu._y ) );  // LDY Zero Page X
+    _opcodeTable[0xB5] = SET_OP( LD( &CPU::ZPGX, cpu._a ) );  // LDA Zero Page X
+    _opcodeTable[0xB6] = SET_OP( LD( &CPU::ZPGY, cpu._x ) );  // LDX Zero Page Y
+    _opcodeTable[0xB9] = SET_OP( LD( &CPU::ABSY, cpu._a ) );  // LDA Absolute Y
+    _opcodeTable[0xBC] = SET_OP( LD( &CPU::ABSX, cpu._y ) );  // LDY Absolute X
+    _opcodeTable[0xBD] = SET_OP( LD( &CPU::ABSX, cpu._a ) );  // LDA Absolute X
+    _opcodeTable[0xBE] = SET_OP( LD( &CPU::ABSY, cpu._x ) );  // LDX Absolute Y
 }
 
 // ----------------------------------------------------------------------------
@@ -307,8 +316,20 @@ void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
 {
     // Loads a register with a value and sets the zero and negative flags
     u16 address = ( this->*addressingMode )();
-    reg = Read( address );
+    u8  value = Read( address );
+    reg = value;
     SetZeroAndNegativeFlags( reg );
+
+    if ( debug )
+    {
+        std::cout << std::hex << std::setfill( '0' );
+        std::cout << "LD Instruction Debug:\n";
+        std::cout << "Address: 0x" << std::setw( 4 ) << address << "\n";
+        std::cout << "Value:   0x" << std::setw( 2 ) << int( value ) << "\n";
+        std::cout << "Reg:     0x" << std::setw( 2 ) << int( reg ) << "\n";
+        std::cout << std::dec;
+        std::cout << "\n";
+    }
 };
 
 void CPU::STA( u16 ( CPU::*addressingMode )() )

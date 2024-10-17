@@ -11,7 +11,7 @@
 #include "json.hpp"
 
 using json = nlohmann::json;
-constexpr bool verbose = false;
+bool verbose = false;
 
 class CPUTest : public ::testing::Test
 {
@@ -393,13 +393,96 @@ TEST_F( CPUTest, xA9_LDA_Immediate )
     PrintTestEndMsg( testName );
 }
 
+TEST_F( CPUTest, xB1_LDA_IndirectY )
+{
+    std::string testName = "B1 LDA IndirectY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/b1.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xB4_LDY_ZeroPageX )
+{
+    std::string testName = "B4 LDY ZeroPageX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/b4.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xB5_LDA_ZeroPageX )
+{
+    std::string testName = "B5 LDA ZeroPageX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/b5.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
 TEST_F( CPUTest, xB6_LDX_ZeroPageY )
 {
     std::string testName = "B6 LDX ZeroPageY";
     PrintTestStartMsg( testName );
-    /* json testCases = ExtractTestsFromJson( "tests/HARTE/b6.json" ); */
-    json testCases = ExtractTestsFromJson( "tests/small.json" );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/b6.json" );
 
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xB9_LDA_AbsoluteY )
+{
+    std::string testName = "B9 LDA AbsoluteY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/b9.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xBC_LDY_AbsoluteX )
+{
+    std::string testName = "BC LDY AbsoluteX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/bc.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xBD_LDA_AbsoluteX )
+{
+    std::string testName = "BD LDA AbsoluteX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/bd.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, xBE_LDX_AbsoluteY )
+{
+    std::string testName = "BE LDX AbsoluteY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/be.json" );
     for ( const auto& testCase : testCases )
     {
         RunTestCase( testCase );
@@ -409,6 +492,15 @@ TEST_F( CPUTest, xB6_LDX_ZeroPageY )
 
 int main( int argc, char** argv )
 {
+    for ( int i = 1; i < argc; ++i )
+    {
+        if ( std::string( argv[i] ) == "--v" )
+        {
+            verbose = true;
+            std::cout << "Verbose mode enabled.\n";
+            break;
+        }
+    }
     testing::InitGoogleTest( &argc, argv );
     return RUN_ALL_TESTS();
 }
@@ -436,26 +528,99 @@ void CPUTest::LoadStateFromJson( const json& jsonData, const std::string& state 
 // Helper function to print CPU state
 void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
 {
+    // Expected values
+    u16 expectedPC = u16( jsonData[state]["pc"] );
+    u8  expectedA = jsonData[state]["a"];
+    u8  expectedX = jsonData[state]["x"];
+    u8  expectedY = jsonData[state]["y"];
+    u8  expectedS = jsonData[state]["s"];
+    u8  expectedP = jsonData[state]["p"];
+
+    // Actual values
+    u16 actualPC = cpu.GetPC();
+    u8  actualA = cpu.GetA();
+    u8  actualX = cpu.GetX();
+    u8  actualY = cpu.GetY();
+    u8  actualS = cpu.GetS();
+    u8  actualP = cpu.GetP();
+
+    // Column Widths
+    const int labelWidth = 6;
+    const int valueWidth = 12;
+
+    // Print header
     std::cout << "----------" << state << " State----------" << '\n';
-    std::cout << "pc: " << std::hex << std::setw( 4 ) << std::setfill( '0' ) << cpu.GetPC() << '\n';
-    std::cout << "s: " << std::dec << int( cpu.GetS() ) << '\n';
-    std::cout << "a: " << int( cpu.GetA() ) << '\n';
-    std::cout << "x: " << int( cpu.GetX() ) << '\n';
-    std::cout << "y: " << int( cpu.GetY() ) << '\n';
-    std::cout << "p: " << int( cpu.GetP() ) << '\n';
-    std::cout << '\n';
-    std::cout << "RAM:" << '\n';
+    std::cout << std::left << std::setw( labelWidth ) << "" << std::setw( valueWidth ) << "EXPECTED"
+              << std::setw( valueWidth ) << "ACTUAL" << '\n';
+
+    // Function to format and print a line
+    auto printLine =
+        [&]( const std::string& label, const std::string& expected, const std::string& actual )
+    {
+        std::cout << std::left << std::setw( labelWidth ) << label;
+        std::cout << std::setw( valueWidth ) << expected;
+        std::cout << std::setw( valueWidth ) << actual << '\n';
+    };
+
+    // Convert values to strings with proper formatting
+    std::ostringstream oss;
+    oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << expectedPC;
+    std::string expectedPCStr = oss.str();
+    oss.str( "" );
+    oss.clear();
+    oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << actualPC;
+    std::string actualPCStr = oss.str();
+    oss.str( "" );
+    oss.clear();
+
+    // Reset formatting
+    std::cout << std::dec << std::setfill( ' ' );
+
+    // Print registers
+    printLine( "pc:", expectedPCStr, actualPCStr );
+    printLine( "s:", std::to_string( expectedS ), std::to_string( actualS ) );
+    printLine( "a:", std::to_string( expectedA ), std::to_string( actualA ) );
+    printLine( "x:", std::to_string( expectedX ), std::to_string( actualX ) );
+    printLine( "y:", std::to_string( expectedY ), std::to_string( actualY ) );
+    printLine( "p:", std::to_string( expectedP ), std::to_string( actualP ) );
+
+    // Blank line and RAM header
+    std::cout << '\n' << "RAM" << '\n';
+
+    // Print RAM entries
     for ( const auto& ramEntry : jsonData[state]["ram"] )
     {
         uint16_t address = ramEntry[0];
-        uint8_t  value = cpu.Read( address );
-        std::cout << std::hex << std::setw( 4 ) << std::setfill( '0' ) << address << ": "
-                  << std::hex << std::setw( 2 ) << std::setfill( '0' ) << int( value ) << '\n';
+        uint8_t  expectedValue = ramEntry[1];
+        uint8_t  actualValue = cpu.Read( address );
+
+        // Format address
+        oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << address;
+        std::string addressStr = oss.str();
+        oss.str( "" );
+        oss.clear();
+
+        // Format expected value
+        oss << std::hex << std::setw( 2 ) << std::setfill( '0' ) << int( expectedValue );
+        std::string expectedValueStr = oss.str();
+        oss.str( "" );
+        oss.clear();
+
+        // Format actual value
+        oss << std::hex << std::setw( 2 ) << std::setfill( '0' ) << int( actualValue );
+        std::string actualValueStr = oss.str();
+        oss.str( "" );
+        oss.clear();
+
+        // Print RAM line
+        std::cout << addressStr << ": ";
+        std::cout << std::setw( valueWidth ) << expectedValueStr;
+        std::cout << std::setw( valueWidth ) << actualValueStr << '\n';
     }
+
     std::cout << "--------------------------------" << '\n';
     std::cout << '\n';
 }
-
 // Test case function for each test in the JSON array
 
 void CPUTest::RunTestCase( const json& testCase )  // NOLINT
