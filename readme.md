@@ -1,7 +1,6 @@
 # NES Emulator in C++
 
-I'm building a A Nintendo Entertainment System (NES) emulator in C++ for fun!
-My purpose is to just have fun and learn more about how the NES, and computers in general, work.
+I'm building a A Nintendo Entertainment System (NES) emulator in C++ to learn more about the NES, computer architecture, and emulation.
 
 ## Table of Contents
 
