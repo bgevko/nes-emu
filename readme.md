@@ -40,6 +40,14 @@ I'm currently working on the CPU. I have implemented the following features:
 ### Implemented Instructions
 
 - [x] `0x00` BRK
+- [x] `0x01` ORA Indirect X
+- [x] `0x05` ORA Zero Page
+- [x] `0x09` ORA Immediate
+- [x] `0x0D` ORA Absolute
+- [x] `0x11` ORA Indirect Y
+- [x] `0x15` ORA Zero Page X
+- [x] `0x19` ORA Absolute Y
+- [x] `0x1D` ORA Absolute X
 - [x] `0x21` AND X-indexed indirect
 - [x] `0x81` STA X-indexed indirect
 - [x] `0x84` STY Zero page

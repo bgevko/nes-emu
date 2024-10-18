@@ -261,6 +261,102 @@ TEST_F( CPUTest, x00_Break )
     PrintTestEndMsg( testName );
 }
 
+TEST_F( CPUTest, x01_ORA_IndirectX )
+{
+    std::string testName = "01 ORA IndirectX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/01.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x05_ORA_ZeroPage )
+{
+    std::string testName = "05 ORA ZeroPage";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/05.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x09_ORA_Immediate )
+{
+    std::string testName = "09 ORA Immediate";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/09.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x0D_ORA_Absolute )
+{
+    std::string testName = "0D ORA Absolute";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/0d.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x11_ORA_IndirectY )
+{
+    std::string testName = "11 ORA IndirectY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/11.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x15_ORA_ZeroPageX )
+{
+    std::string testName = "15 ORA ZeroPageX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/15.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x19_ORA_AbsoluteY )
+{
+    std::string testName = "19 ORA AbsoluteY";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/19.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
+TEST_F( CPUTest, x1D_ORA_AbsoluteX )
+{
+    std::string testName = "1D ORA AbsoluteX";
+    PrintTestStartMsg( testName );
+    json testCases = ExtractTestsFromJson( "tests/HARTE/1d.json" );
+    for ( const auto& testCase : testCases )
+    {
+        RunTestCase( testCase );
+    }
+    PrintTestEndMsg( testName );
+}
+
 TEST_F( CPUTest, x81_STA_IndirectX )
 {
     std::string testName = "81 STA IndirectX";

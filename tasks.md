@@ -23,21 +23,21 @@
 ### Implemented Instructions
 
 - [x] `0x00` BRK
-- [ ] `0x01` ORA X-indexed indirect
-- [ ] `0x05` ORA Zero page
+- [x] `0x01` ORA Indirect X
+- [x] `0x05` ORA Zero Page
 - [ ] `0x06` ASL Zero page
 - [ ] `0x08` PHP
-- [ ] `0x09` ORA Immediate
+- [x] `0x09` ORA Immediate
 - [ ] `0x0A` ASL Accumulator
-- [ ] `0x0D` ORA Absolute
+- [x] `0x0D` ORA Absolute
 - [ ] `0x0E` ASL Absolute
 - [ ] `0x10` BPL Relative
-- [ ] `0x11` ORA Indirect Y-indexed
-- [ ] `0x15` ORA Zero page X-indexed
+- [x] `0x11` ORA Indirect Y
+- [x] `0x15` ORA Zero Page X
 - [ ] `0x16` ASL Zero page X-indexed
 - [ ] `0x18` CLC
-- [ ] `0x19` ORA Absolute Y-indexed
-- [ ] `0x1D` ORA Absolute X-indexed
+- [x] `0x19` ORA Absolute Y
+- [x] `0x1D` ORA Absolute X
 - [ ] `0x1E` ASL Absolute X-indexed
 - [ ] `0x20` JSR Absolute
 - [x] `0x21` AND X-indexed indirect
