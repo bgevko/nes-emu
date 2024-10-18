@@ -27,6 +27,10 @@ class CPUTest : public ::testing::Test
     static auto ParseStatus( u8 status ) -> std::string;
 };
 
+//------------------------------------------------------------------
+//-------------------- ADRRESSING MODE TESTS -----------------------
+//------------------------------------------------------------------
+
 TEST_F( CPUTest, IMM )
 {
     std::string testName = "Immediate Addressing Mode IMM";
@@ -249,560 +253,178 @@ TEST_F( CPUTest, REL )
     EXPECT_EQ( cpu.GetPC(), 0x1001 );
 }
 
-TEST_F( CPUTest, x00_Break )
-{
-    std::string testName = "00 BRK";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
+//------------------------------------------------------------------
+//-------------------- INSTRUCTION TESTS ---------------------------
+//------------------------------------------------------------------
+
+#define CPU_TEST( opcode_hex, mnemonic, addr_mode, filename )             \
+    TEST_F( CPUTest, x##opcode_hex##_##mnemonic##_##addr_mode )           \
+    {                                                                     \
+        std::string testName = #opcode_hex " " #mnemonic " " #addr_mode;  \
+        PrintTestStartMsg( testName );                                    \
+        json testCases = ExtractTestsFromJson( "tests/HARTE/" filename ); \
+        for ( const auto& testCase : testCases )                          \
+        {                                                                 \
+            RunTestCase( testCase );                                      \
+        }                                                                 \
+        PrintTestEndMsg( testName );                                      \
     }
-    PrintTestEndMsg( testName );
-}
 
-TEST_F( CPUTest, x01_ORA_IndirectX )
-{
-    std::string testName = "01 ORA IndirectX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/01.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
+CPU_TEST( 00, BRK, Implied, "00.json" );
+CPU_TEST( 01, ORA, IndirectX, "01.json" );
+CPU_TEST( 05, ORA, ZeroPage, "05.json" );
+CPU_TEST( 06, ASL, ZeroPage, "06.json" );
+CPU_TEST( 08, PHP, Implied, "08.json" );
+CPU_TEST( 09, ORA, Immediate, "09.json" );
+CPU_TEST( 0A, ASL, Accumulator, "0a.json" );
+CPU_TEST( 0D, ORA, Absolute, "0d.json" );
+CPU_TEST( 0E, ASL, Absolute, "0e.json" );
+CPU_TEST( 10, BPL, Relative, "10.json" );
+CPU_TEST( 11, ORA, IndirectY, "11.json" );
+CPU_TEST( 15, ORA, ZeroPageX, "15.json" );
+CPU_TEST( 16, ASL, ZeroPageX, "16.json" );
+CPU_TEST( 18, CLC, Implied, "18.json" );
+CPU_TEST( 19, ORA, AbsoluteY, "19.json" );
+CPU_TEST( 1D, ORA, AbsoluteX, "1d.json" );
+CPU_TEST( 1E, ASL, AbsoluteX, "1e.json" );
+CPU_TEST( 20, JSR, Absolute, "20.json" );
+CPU_TEST( 21, AND, IndirectX, "21.json" );
+CPU_TEST( 24, BIT, ZeroPage, "24.json" );
+CPU_TEST( 25, AND, ZeroPage, "25.json" );
+CPU_TEST( 26, ROL, ZeroPage, "26.json" );
+CPU_TEST( 28, PLP, Implied, "28.json" );
+CPU_TEST( 29, AND, Immediate, "29.json" );
+CPU_TEST( 2A, ROL, Accumulator, "2a.json" );
+CPU_TEST( 2C, BIT, Absolute, "2c.json" );
+CPU_TEST( 2D, AND, Absolute, "2d.json" );
+CPU_TEST( 2E, ROL, Absolute, "2e.json" );
+CPU_TEST( 30, BMI, Relative, "30.json" );
+CPU_TEST( 31, AND, IndirectY, "31.json" );
+CPU_TEST( 35, AND, ZeroPageX, "35.json" );
+CPU_TEST( 36, ROL, ZeroPageX, "36.json" );
+CPU_TEST( 38, SEC, Implied, "38.json" );
+CPU_TEST( 39, AND, AbsoluteY, "39.json" );
+CPU_TEST( 3D, AND, AbsoluteX, "3d.json" );
+CPU_TEST( 3E, ROL, AbsoluteX, "3e.json" );
+CPU_TEST( 40, RTI, Implied, "40.json" );
+CPU_TEST( 41, EOR, IndirectX, "41.json" );
+CPU_TEST( 45, EOR, ZeroPage, "45.json" );
+CPU_TEST( 46, LSR, ZeroPage, "46.json" );
+CPU_TEST( 48, PHA, Implied, "48.json" );
+CPU_TEST( 49, EOR, Immediate, "49.json" );
+CPU_TEST( 4A, LSR, Accumulator, "4a.json" );
+CPU_TEST( 4C, JMP, Absolute, "4c.json" );
+CPU_TEST( 4D, EOR, Absolute, "4d.json" );
+CPU_TEST( 4E, LSR, Absolute, "4e.json" );
+CPU_TEST( 50, BVC, Relative, "50.json" );
+CPU_TEST( 51, EOR, IndirectY, "51.json" );
+CPU_TEST( 55, EOR, ZeroPageX, "55.json" );
+CPU_TEST( 56, LSR, ZeroPageX, "56.json" );
+CPU_TEST( 58, CLI, Implied, "58.json" );
+CPU_TEST( 59, EOR, AbsoluteY, "59.json" );
+CPU_TEST( 5D, EOR, AbsoluteX, "5d.json" );
+CPU_TEST( 5E, LSR, AbsoluteX, "5e.json" );
+CPU_TEST( 60, RTS, Implied, "60.json" );
+CPU_TEST( 61, ADC, IndirectX, "61.json" );
+CPU_TEST( 65, ADC, ZeroPage, "65.json" );
+CPU_TEST( 66, ROR, ZeroPage, "66.json" );
+CPU_TEST( 68, PLA, Implied, "68.json" );
+CPU_TEST( 69, ADC, Immediate, "69.json" );
+CPU_TEST( 6A, ROR, Accumulator, "6a.json" );
+CPU_TEST( 6C, JMP, Indirect, "6c.json" );
+CPU_TEST( 6D, ADC, Absolute, "6d.json" );
+CPU_TEST( 6E, ROR, Absolute, "6e.json" );
+CPU_TEST( 70, BVS, Relative, "70.json" );
+CPU_TEST( 71, ADC, IndirectY, "71.json" );
+CPU_TEST( 75, ADC, ZeroPageX, "75.json" );
+CPU_TEST( 76, ROR, ZeroPageX, "76.json" );
+CPU_TEST( 78, SEI, Implied, "78.json" );
+CPU_TEST( 79, ADC, AbsoluteY, "79.json" );
+CPU_TEST( 7D, ADC, AbsoluteX, "7d.json" );
+CPU_TEST( 7E, ROR, AbsoluteX, "7e.json" );
+CPU_TEST( 81, STA, IndirectX, "81.json" );
+CPU_TEST( 84, STY, ZeroPage, "84.json" );
+CPU_TEST( 85, STA, ZeroPage, "85.json" );
+CPU_TEST( 86, STX, ZeroPage, "86.json" );
+CPU_TEST( 88, DEY, Implied, "88.json" );
+CPU_TEST( 8A, TXA, Implied, "8a.json" );
+CPU_TEST( 8C, STY, Absolute, "8c.json" );
+CPU_TEST( 8D, STA, Absolute, "8d.json" );
+CPU_TEST( 8E, STX, Absolute, "8e.json" );
+CPU_TEST( 90, BCC, Relative, "90.json" );
+CPU_TEST( 91, STA, IndirectY, "91.json" );
+CPU_TEST( 94, STY, ZeroPageX, "94.json" );
+CPU_TEST( 95, STA, ZeroPageX, "95.json" );
+CPU_TEST( 96, STX, ZeroPageY, "96.json" );
+CPU_TEST( 98, TYA, Implied, "98.json" );
+CPU_TEST( 99, STA, AbsoluteY, "99.json" );
+CPU_TEST( 9A, TXS, Implied, "9a.json" );
+CPU_TEST( 9D, STA, AbsoluteX, "9d.json" );
+CPU_TEST( A0, LDY, Immediate, "a0.json" );
+CPU_TEST( A1, LDA, IndirectX, "a1.json" );
+CPU_TEST( A2, LDX, Immediate, "a2.json" );
+CPU_TEST( A4, LDY, ZeroPage, "a4.json" );
+CPU_TEST( A5, LDA, ZeroPage, "a5.json" );
+CPU_TEST( A6, LDX, ZeroPage, "a6.json" );
+CPU_TEST( A8, TAY, Implied, "a8.json" );
+CPU_TEST( A9, LDA, Immediate, "a9.json" );
+CPU_TEST( AA, TAX, Implied, "aa.json" );
+CPU_TEST( AC, LDY, Absolute, "ac.json" );
+CPU_TEST( AD, LDA, Absolute, "ad.json" );
+CPU_TEST( AE, LDX, Absolute, "ae.json" );
+CPU_TEST( B0, BCS, Relative, "b0.json" );
+CPU_TEST( B1, LDA, IndirectY, "b1.json" );
+CPU_TEST( B4, LDY, ZeroPageX, "b4.json" );
+CPU_TEST( B5, LDA, ZeroPageX, "b5.json" );
+CPU_TEST( B6, LDX, ZeroPageY, "b6.json" );
+CPU_TEST( B8, CLV, Implied, "b8.json" );
+CPU_TEST( B9, LDA, AbsoluteY, "b9.json" );
+CPU_TEST( BA, TSX, Implied, "ba.json" );
+CPU_TEST( BC, LDY, AbsoluteX, "bc.json" );
+CPU_TEST( BD, LDA, AbsoluteX, "bd.json" );
+CPU_TEST( BE, LDX, AbsoluteY, "be.json" );
+CPU_TEST( C0, CPY, Immediate, "c0.json" );
+CPU_TEST( C1, CMP, IndirectX, "c1.json" );
+CPU_TEST( C4, CPY, ZeroPage, "c4.json" );
+CPU_TEST( C5, CMP, ZeroPage, "c5.json" );
+CPU_TEST( C6, DEC, ZeroPage, "c6.json" );
+CPU_TEST( C8, INY, Implied, "c8.json" );
+CPU_TEST( C9, CMP, Immediate, "c9.json" );
+CPU_TEST( CA, DEX, Implied, "ca.json" );
+CPU_TEST( CC, CPY, Absolute, "cc.json" );
+CPU_TEST( CD, CMP, Absolute, "cd.json" );
+CPU_TEST( CE, DEC, Absolute, "ce.json" );
+CPU_TEST( D0, BNE, Relative, "d0.json" );
+CPU_TEST( D1, CMP, IndirectY, "d1.json" );
+CPU_TEST( D5, CMP, ZeroPageX, "d5.json" );
+CPU_TEST( D6, DEC, ZeroPageX, "d6.json" );
+CPU_TEST( D8, CLD, Implied, "d8.json" );
+CPU_TEST( D9, CMP, AbsoluteY, "d9.json" );
+CPU_TEST( DD, CMP, AbsoluteX, "dd.json" );
+CPU_TEST( DE, DEC, AbsoluteX, "de.json" );
+CPU_TEST( E0, CPX, Immediate, "e0.json" );
+CPU_TEST( E1, SBC, IndirectX, "e1.json" );
+CPU_TEST( E4, CPX, ZeroPage, "e4.json" );
+CPU_TEST( E5, SBC, ZeroPage, "e5.json" );
+CPU_TEST( E6, INC, ZeroPage, "e6.json" );
+CPU_TEST( E8, INX, Implied, "e8.json" );
+CPU_TEST( E9, SBC, Immediate, "e9.json" );
+CPU_TEST( EA, NOP, Implied, "ea.json" );
+CPU_TEST( EC, CPX, Absolute, "ec.json" );
+CPU_TEST( ED, SBC, Absolute, "ed.json" );
+CPU_TEST( EE, INC, Absolute, "ee.json" );
+CPU_TEST( F0, BEQ, Relative, "f0.json" );
+CPU_TEST( F1, SBC, IndirectY, "f1.json" );
+CPU_TEST( F5, SBC, ZeroPageX, "f5.json" );
+CPU_TEST( F6, INC, ZeroPageX, "f6.json" );
+CPU_TEST( F8, SED, Implied, "f8.json" );
+CPU_TEST( F9, SBC, AbsoluteY, "f9.json" );
+CPU_TEST( FD, SBC, AbsoluteX, "fd.json" );
+CPU_TEST( FE, INC, AbsoluteX, "fe.json" );
 
-TEST_F( CPUTest, x05_ORA_ZeroPage )
-{
-    std::string testName = "05 ORA ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/05.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x09_ORA_Immediate )
-{
-    std::string testName = "09 ORA Immediate";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/09.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x0D_ORA_Absolute )
-{
-    std::string testName = "0D ORA Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/0d.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x11_ORA_IndirectY )
-{
-    std::string testName = "11 ORA IndirectY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/11.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x15_ORA_ZeroPageX )
-{
-    std::string testName = "15 ORA ZeroPageX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/15.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x19_ORA_AbsoluteY )
-{
-    std::string testName = "19 ORA AbsoluteY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/19.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x1D_ORA_AbsoluteX )
-{
-    std::string testName = "1D ORA AbsoluteX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/1d.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x81_STA_IndirectX )
-{
-    std::string testName = "81 STA IndirectX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/81.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x84_STY_ZeroPage )
-{
-    std::string testName = "84 STY ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/84.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x85_STA_ZeroPage )
-{
-    std::string testName = "85 STA ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/85.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x86_STX_ZeroPage )
-{
-    std::string testName = "86 STX ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/86.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x8C_STY_Absolute )
-{
-    std::string testName = "8C STY Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/8c.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x8D_STA_Absolute )
-{
-    std::string testName = "8D STA Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/8d.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x8E_STX_Absolute )
-{
-    std::string testName = "8E STX Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/8e.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x91_STA_IndirectY )
-{
-    std::string testName = "91 STA IndirectY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/91.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x94_STY_ZeroPageX )
-{
-    std::string testName = "94 STY ZeroPageX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/94.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x95_STA_ZeroPageX )
-{
-    std::string testName = "95 STA ZeroPageX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/95.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x96_STX_ZeroPageY )
-{
-    std::string testName = "96 STX ZeroPageY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/96.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x99_STA_AbsoluteY )
-{
-    std::string testName = "99 STA AbsoluteY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/99.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x9D_STA_AbsoluteX )
-{
-    std::string testName = "9D STA AbsoluteX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/9d.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA0_LDY_Immediate )
-{
-    std::string testName = "A0 LDY Immediate";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a0.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA1_LDA_Xindirect )
-{
-    std::string testName = "A1 LDA X-Indirect";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a1.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA2_LDX_Immediate )
-{
-    std::string testName = "A2 LDX Immediate";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a2.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA4_LDY_ZeroPage )
-{
-    std::string testName = "A4 LDY ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a4.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA5_LDA_ZeroPage )
-{
-    std::string testName = "A5 LDA ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a5.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA6_LDX_ZeroPage )
-{
-    std::string testName = "A6 LDX ZeroPage";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a6.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xAC_LDY_Absolute )
-{
-    std::string testName = "AC LDY Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/ac.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xAD_LDA_Absolute )
-{
-    std::string testName = "AD LDA Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/ad.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xAE_LDX_Absolute )
-{
-    std::string testName = "AE LDX Absolute";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/ae.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA9_LDA_Immediate )
-{
-    std::string testName = "A9 LDA Immediate";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/a9.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xB1_LDA_IndirectY )
-{
-    std::string testName = "B1 LDA IndirectY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/b1.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xB4_LDY_ZeroPageX )
-{
-    std::string testName = "B4 LDY ZeroPageX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/b4.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xB5_LDA_ZeroPageX )
-{
-    std::string testName = "B5 LDA ZeroPageX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/b5.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xB6_LDX_ZeroPageY )
-{
-    std::string testName = "B6 LDX ZeroPageY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/b6.json" );
-
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xB9_LDA_AbsoluteY )
-{
-    std::string testName = "B9 LDA AbsoluteY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/b9.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xBC_LDY_AbsoluteX )
-{
-    std::string testName = "BC LDY AbsoluteX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/bc.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xBD_LDA_AbsoluteX )
-{
-    std::string testName = "BD LDA AbsoluteX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/bd.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xBE_LDX_AbsoluteY )
-{
-    std::string testName = "BE LDX AbsoluteY";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/be.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xAA_TAX )
-{
-    std::string testName = "AA TAX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/aa.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xA8_TAY )
-{
-    std::string testName = "A8 TAY";
-    PrintTestStartMsg( testName );
-    /* json testCases = ExtractTestsFromJson( "tests/HARTE/a8.json" ); */
-    json testCases = ExtractTestsFromJson( "tests/small.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, xBA_TSX )
-{
-    std::string testName = "BA TSX";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/ba.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x8A_TXA )
-{
-    std::string testName = "8A TXA";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/8a.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x9A_TXS )
-{
-    std::string testName = "9A TXS";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/9a.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
-TEST_F( CPUTest, x98_TYA )
-{
-    std::string testName = "98 TYA";
-    PrintTestStartMsg( testName );
-    json testCases = ExtractTestsFromJson( "tests/HARTE/98.json" );
-    for ( const auto& testCase : testCases )
-    {
-        RunTestCase( testCase );
-    }
-    PrintTestEndMsg( testName );
-}
-
+//------------------------------------------------------------------
+//-------------------- MAIN FUNCTION ------------------------------
+//------------------------------------------------------------------
 int main( int argc, char** argv )
 {
     for ( int i = 1; i < argc; ++i )

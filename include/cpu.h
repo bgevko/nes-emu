@@ -119,14 +119,15 @@ class CPU
     void BRK();
     void LD( u16 ( CPU::*addressingMode )(), u8& reg );
     void ST( u16 ( CPU::*addressingMode )(), u8 reg );
-    void ORA( u16 ( CPU::*addressingMode )() );
     void Transfer( u8& src, u8& dest, bool updateFlags = true );
     void ModifyRegister( u8& reg, u8 value );
     void AND( u16 ( CPU::*addressingMode )() );
+    void ORA( u16 ( CPU::*addressingMode )() );
+    void EOR( u16 ( CPU::*addressingMode )() );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;
-    void               SetZeroAndNegativeFlags( u8 value );
+    [[nodiscard]] auto Pop() -> u8;
     void               Push( u8 value );
-    auto               Pop() -> u8;
+    void               SetZeroAndNegativeFlags( u8 value );
 };

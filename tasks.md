@@ -42,10 +42,10 @@
 - [ ] `0x20` JSR Absolute
 - [x] `0x21` AND X-indexed indirect
 - [ ] `0x24` BIT Zero page
-- [ ] `0x25` AND Zero page
+- [x] `0x25` AND Zero page
 - [ ] `0x26` ROL Zero page
 - [ ] `0x28` PLP
-- [ ] `0x29` AND Immediate
+- [x] `0x29` AND Immediate
 - [ ] `0x2A` ROL Accumulator
 - [ ] `0x2C` BIT Absolute
 - [ ] `0x2D` AND Absolute
@@ -123,7 +123,7 @@
 - [x] `0xAA` TAX
 - [x] `0xAC` LDY Absolute
 - [x] `0xAD` LDA Absolute
-- [x] `0xAE` LDX Absolute
+- [x] `0xAE` LDX
 - [ ] `0xB0` BCS Relative
 - [x] `0xB1` LDA Indirect Y-indexed
 - [x] `0xB4` LDY Zero page X-indexed

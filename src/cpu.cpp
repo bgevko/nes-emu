@@ -27,6 +27,13 @@ CPU::CPU()  // NOLINT
     _op[0x1D] = SET_OP( ORA( &CPU::ABSX ) );                  // ORA Absolute X
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
+    _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                   // AND Zero Page
+    _op[0x29] = SET_OP( AND( &CPU::IMM ) );                   // AND Immediate
+    _op[0x2D] = SET_OP( AND( &CPU::ABS ) );                   // AND Absolute
+    _op[0x31] = SET_OP( AND( &CPU::INDY ) );                  // AND Indirect Y
+    _op[0x35] = SET_OP( AND( &CPU::ZPGX ) );                  // AND Zero Page X
+    _op[0x39] = SET_OP( AND( &CPU::ABSY ) );                  // AND Absolute Y
+    _op[0x3D] = SET_OP( AND( &CPU::ABSX ) );                  // AND Absolute X
     _op[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );           // STA Indirect X
     _op[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );            // STY Zero Page
     _op[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );            // STA Zero Page
@@ -331,14 +338,6 @@ void CPU::BRK()
     _p |= Status::InterruptDisable;
 }
 
-void CPU::AND( u16 ( CPU::*addressingMode )() )
-{
-    // AND (bitwise AND with accumulator)
-    u16 address = ( this->*addressingMode )();
-    _a &= Read( address );
-    SetZeroAndNegativeFlags( _a );
-};
-
 void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
 {
     // Loads a register with a value and sets the zero and negative flags
@@ -378,6 +377,14 @@ void CPU::ST( u16 ( CPU::*addressingMode )(), u8 reg )
     }
 }
 
+void CPU::AND( u16 ( CPU::*addressingMode )() )
+{
+    // AND (bitwise AND with accumulator)
+    u16 address = ( this->*addressingMode )();
+    _a &= Read( address );
+    SetZeroAndNegativeFlags( _a );
+};
+
 void CPU::ORA( u16 ( CPU::*addressingMode )() )
 {
     u16 address = ( this->*addressingMode )();
@@ -397,6 +404,15 @@ void CPU::ORA( u16 ( CPU::*addressingMode )() )
         std::cout << "\n";
     }
 }
+
+void CPU::EOR( u16 ( CPU::*addressingMode )() )
+{
+    u16 address = ( this->*addressingMode )();
+    u8  value = Read( address );
+    _a ^= value;
+    SetZeroAndNegativeFlags( _a );
+}
+
 void CPU::Transfer( u8& src, u8& dest, bool updateFlags )
 {
     dest = src;
