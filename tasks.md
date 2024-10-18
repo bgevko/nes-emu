@@ -25,20 +25,20 @@
 - [x] `0x00` BRK
 - [x] `0x01` ORA Indirect X
 - [x] `0x05` ORA Zero Page
-- [ ] `0x06` ASL Zero page
+- [x] `0x06` ASL Zero page
 - [ ] `0x08` PHP
 - [x] `0x09` ORA Immediate
-- [ ] `0x0A` ASL Accumulator
+- [x] `0x0A` ASL Accumulator
 - [x] `0x0D` ORA Absolute
-- [ ] `0x0E` ASL Absolute
+- [x] `0x0E` ASL Absolute
 - [ ] `0x10` BPL Relative
 - [x] `0x11` ORA Indirect Y
 - [x] `0x15` ORA Zero Page X
-- [ ] `0x16` ASL Zero page X-indexed
+- [x] `0x16` ASL Zero page X-indexed
 - [ ] `0x18` CLC
 - [x] `0x19` ORA Absolute Y
 - [x] `0x1D` ORA Absolute X
-- [ ] `0x1E` ASL Absolute X-indexed
+- [x] `0x1E` ASL Absolute X-indexed
 - [ ] `0x20` JSR Absolute
 - [x] `0x21` AND X-indexed indirect
 - [ ] `0x24` BIT Zero page
@@ -48,15 +48,15 @@
 - [x] `0x29` AND Immediate
 - [ ] `0x2A` ROL Accumulator
 - [ ] `0x2C` BIT Absolute
-- [ ] `0x2D` AND Absolute
+- [x] `0x2D` AND Absolute
 - [ ] `0x2E` ROL Absolute
 - [ ] `0x30` BMI Relative
-- [ ] `0x31` AND Indirect Y-indexed
-- [ ] `0x35` AND Zero page X-indexed
+- [x] `0x31` AND Indirect Y-indexed
+- [x] `0x35` AND Zero page X-indexed
 - [ ] `0x36` ROL Zero page X-indexed
 - [ ] `0x38` SEC
-- [ ] `0x39` AND Absolute Y-indexed
-- [ ] `0x3D` AND Absolute X-indexed
+- [x] `0x39` AND Absolute Y-indexed
+- [x] `0x3D` AND Absolute X-indexed
 - [ ] `0x3E` ROL Absolute X-indexed
 - [ ] `0x40` RTI
 - [ ] `0x41` EOR X-indexed indirect

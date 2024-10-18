@@ -63,6 +63,7 @@ class CPU
     void PrintRegisters() const;
 
     // Addressing modes
+    auto IMP() -> u16;   // Implied
     auto IMM() -> u16;   // IMM
     auto ZPG() -> u16;   // Zero Page
     auto ABS() -> u16;   // ABS
@@ -124,6 +125,8 @@ class CPU
     void AND( u16 ( CPU::*addressingMode )() );
     void ORA( u16 ( CPU::*addressingMode )() );
     void EOR( u16 ( CPU::*addressingMode )() );
+    void LeftShift( u16 ( CPU::*addressingMode )() );
+    void LeftShiftAccumulator();
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

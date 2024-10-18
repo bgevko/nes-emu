@@ -19,12 +19,18 @@ CPU::CPU()  // NOLINT
     _op[0x00] = SET_OP( BRK() );                              // BRK
     _op[0x01] = SET_OP( ORA( &CPU::INDX ) );                  // ORA Indirect X
     _op[0x05] = SET_OP( ORA( &CPU::ZPG ) );                   // ORA Zero Page
+    _op[0x06] = SET_OP( LeftShift( &CPU::ZPG ) );             // ASL Zero Page
     _op[0x09] = SET_OP( ORA( &CPU::IMM ) );                   // ORA Immediate
+    _op[0x0A] = SET_OP( LeftShift( &CPU::IMP ) );             // ASL Accumulator
     _op[0x0D] = SET_OP( ORA( &CPU::ABS ) );                   // ORA Absolute
+    _op[0x0E] = SET_OP( LeftShift( &CPU::ABS ) );             // ASL Absolute
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x15] = SET_OP( ORA( &CPU::ZPGX ) );                  // ORA Zero Page X
+    _op[0x16] = SET_OP( LeftShift( &CPU::ZPGX ) );            // ASL Zero Page X
     _op[0x19] = SET_OP( ORA( &CPU::ABSY ) );                  // ORA Absolute Y
     _op[0x1D] = SET_OP( ORA( &CPU::ABSX ) );                  // ORA Absolute X
+    _op[0x1E] = SET_OP( LeftShift( &CPU::ABSX ) );            // ASL Absolute X
+    _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
     _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                   // AND Zero Page
@@ -164,6 +170,16 @@ void CPU::FetchDecodeExecute()
 // -----------------------------------------------------------------------------
 // ------------------------------- ADDRESSING MODES ----------------------------
 // -----------------------------------------------------------------------------
+
+auto CPU::IMP() -> u16
+{
+    // Implied addressing
+    // No operand is required for the instruction
+    // The instruction operates on the accumulator or the status register
+    // The program counter is not incremented
+    return 0;
+}
+
 auto CPU::IMM() -> u16
 {
     // Immediate addressing
@@ -427,6 +443,46 @@ void CPU::ModifyRegister( u8& reg, u8 value )
     // Used for inc / dec, adds / subtracts value to register
     reg += value;
     SetZeroAndNegativeFlags( reg );
+}
+
+void CPU::LeftShift( u16 ( CPU::*addressingMode )() )
+{
+    // Left Shift, used by ASL
+    u16 address = 0;
+    u16 value = 0;  // value is 16 bit in case of overflow
+
+    // When the instruction is implied, the value is the accumulator
+    if ( addressingMode == &CPU::IMP )
+    {
+        value = _a;
+    }
+    else
+    {
+        address = ( this->*addressingMode )();
+        value = static_cast<u16>( Read( address ) );
+    }
+
+    // Shift left by one bit
+    u16 temp = value << 1;
+
+    // Set the carry flag if bit 7 is set
+    _p = ( temp & 0x100 ) != 0 ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // Get the low byte
+    u8 result = static_cast<u8>( temp & 0x00FF );
+
+    // Set the zero and negative flags
+    SetZeroAndNegativeFlags( result );
+
+    // Write the result back to memory or the accumulator
+    if ( addressingMode == &CPU::IMP )
+    {
+        _a = result;
+    }
+    else
+    {
+        Write( address, result );
+    }
 }
 
 // ----------------------------------------------------------------------------
