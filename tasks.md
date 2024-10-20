@@ -1,10 +1,6 @@
-# NES Emulator
+# Tasks
 
-### TODO
-
-- Format verbose test output to be two columns: expected and actual.
-- Implement a `--verbose` flag to show verbose test output.
-- Implement tests for STA instruction.
+This document tracks my progress as I implement and test the full set of 6502 instructions. It serves as both a roadmap and status report, outlining the completed addressing modes and instructions.
 
 ### Implemented Addressing Modes
 
