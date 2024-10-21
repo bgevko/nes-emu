@@ -37,13 +37,13 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x1E` ASL Absolute X-indexed
 - [ ] `0x20` JSR Absolute
 - [x] `0x21` AND X-indexed indirect
-- [ ] `0x24` BIT Zero page
+- [x] `0x24` BIT Zero page
 - [x] `0x25` AND Zero page
 - [x] `0x26` ROL Zero page
 - [ ] `0x28` PLP
 - [x] `0x29` AND Immediate
 - [x] `0x2A` ROL Accumulator
-- [ ] `0x2C` BIT Absolute
+- [x] `0x2C` BIT Absolute
 - [x] `0x2D` AND Absolute
 - [x] `0x2E` ROL Absolute
 - [ ] `0x30` BMI Relative

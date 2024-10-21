@@ -124,6 +124,7 @@ class CPU
     void AND( u16 ( CPU::*addressingMode )() );
     void ORA( u16 ( CPU::*addressingMode )() );
     void EOR( u16 ( CPU::*addressingMode )() );
+    void BIT( u16 ( CPU::*addressingMode )() );
     void ASL( u16 ( CPU::*addressingMode )() );
     void LSR( u16 ( CPU::*addressingMode )() );
     void ROL( u16 ( CPU::*addressingMode )() );

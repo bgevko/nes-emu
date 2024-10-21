@@ -33,10 +33,12 @@ CPU::CPU()  // NOLINT
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
+    _op[0x24] = SET_OP( BIT( &CPU::ZPG ) );                   // BIT Zero Page
     _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                   // AND Zero Page
     _op[0x26] = SET_OP( ROL( &CPU::ZPG ) );                   // ROL Zero Page
     _op[0x29] = SET_OP( AND( &CPU::IMM ) );                   // AND Immediate
     _op[0x2A] = SET_OP( ROL( &CPU::IMP ) );                   // ROL Accumulator
+    _op[0x2C] = SET_OP( BIT( &CPU::ABS ) );                   // BIT Absolute
     _op[0x2D] = SET_OP( AND( &CPU::ABS ) );                   // AND Absolute
     _op[0x2E] = SET_OP( ROL( &CPU::ABS ) );                   // ROL Absolute
     _op[0x31] = SET_OP( AND( &CPU::INDY ) );                  // AND Indirect Y
@@ -479,6 +481,28 @@ void CPU::EOR( u16 ( CPU::*addressingMode )() )
     u8  value = Read( address );
     _a ^= value;
     SetZeroAndNegativeFlags( _a );
+}
+
+void CPU::BIT( u16 ( CPU::*addressingMode )() )
+{
+    /*
+      BIT (bit test)
+      Performs an AND operation between the accumulator and a memory location and updates the status
+      flags accordingly. The actual result is not stored anywhere.
+    */
+    u16 address = ( this->*addressingMode )();
+    u8  value = Read( address );
+
+    // Set the zero and negative flags based on the result
+    SetZeroAndNegativeFlags( _a & value );
+
+    // Set overflow flag to bit 6 of the memory value
+    u8 sixBit = ( value & 0x40 ) >> 6;
+    _p = sixBit == 1 ? _p | Status::Overflow : _p & ~Status::Overflow;
+
+    // Set the negative flag to bit 7 of the memory value
+    u8 sevenBit = ( value & 0x80 ) >> 7;
+    _p = sevenBit == 1 ? _p | Status::Negative : _p & ~Status::Negative;
 }
 
 void CPU::Transfer( u8& src, u8& dest, bool updateFlags )
