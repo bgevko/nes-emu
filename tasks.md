@@ -22,7 +22,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x01` ORA Indirect X
 - [x] `0x05` ORA Zero Page
 - [x] `0x06` ASL Zero page
-- [ ] `0x08` PHP
+- [x] `0x08` PHP
 - [x] `0x09` ORA Immediate
 - [x] `0x0A` ASL Accumulator
 - [x] `0x0D` ORA Absolute
@@ -40,7 +40,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x24` BIT Zero page
 - [x] `0x25` AND Zero page
 - [x] `0x26` ROL Zero page
-- [ ] `0x28` PLP
+- [x] `0x28` PLP
 - [x] `0x29` AND Immediate
 - [x] `0x2A` ROL Accumulator
 - [x] `0x2C` BIT Absolute
@@ -58,7 +58,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x41` EOR X-indexed indirect
 - [x] `0x45` EOR Zero page
 - [x] `0x46` LSR Zero page
-- [ ] `0x48` PHA
+- [x] `0x48` PHA
 - [x] `0x49` EOR Immediate
 - [x] `0x4A` LSR Accumulator
 - [ ] `0x4C` JMP Absolute
@@ -76,7 +76,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0x61` ADC X-indexed indirect
 - [ ] `0x65` ADC Zero page
 - [x] `0x66` ROR Zero page
-- [ ] `0x68` PLA
+- [x] `0x68` PLA
 - [ ] `0x69` ADC Immediate
 - [x] `0x6A` ROR Accumulator
 - [ ] `0x6C` JMP Indirect

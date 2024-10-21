@@ -129,6 +129,8 @@ class CPU
     void LSR( u16 ( CPU::*addressingMode )() );
     void ROL( u16 ( CPU::*addressingMode )() );
     void ROR( u16 ( CPU::*addressingMode )() );
+    void PLA();
+    void PLP();
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

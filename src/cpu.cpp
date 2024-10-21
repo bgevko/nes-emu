@@ -20,6 +20,7 @@ CPU::CPU()  // NOLINT
     _op[0x01] = SET_OP( ORA( &CPU::INDX ) );                  // ORA Indirect X
     _op[0x05] = SET_OP( ORA( &CPU::ZPG ) );                   // ORA Zero Page
     _op[0x06] = SET_OP( ASL( &CPU::ZPG ) );                   // ASL Zero Page
+    _op[0x08] = SET_OP( Push( cpu._p | 0x30 ) );              // PHP (bits 4 and 5 are always set)
     _op[0x09] = SET_OP( ORA( &CPU::IMM ) );                   // ORA Immediate
     _op[0x0A] = SET_OP( ASL( &CPU::IMP ) );                   // ASL Accumulator
     _op[0x0D] = SET_OP( ORA( &CPU::ABS ) );                   // ORA Absolute
@@ -36,6 +37,7 @@ CPU::CPU()  // NOLINT
     _op[0x24] = SET_OP( BIT( &CPU::ZPG ) );                   // BIT Zero Page
     _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                   // AND Zero Page
     _op[0x26] = SET_OP( ROL( &CPU::ZPG ) );                   // ROL Zero Page
+    _op[0x28] = SET_OP( PLP() );                              // PLP
     _op[0x29] = SET_OP( AND( &CPU::IMM ) );                   // AND Immediate
     _op[0x2A] = SET_OP( ROL( &CPU::IMP ) );                   // ROL Accumulator
     _op[0x2C] = SET_OP( BIT( &CPU::ABS ) );                   // BIT Absolute
@@ -50,6 +52,7 @@ CPU::CPU()  // NOLINT
     _op[0x41] = SET_OP( EOR( &CPU::INDX ) );                  // EOR Indirect X
     _op[0x45] = SET_OP( EOR( &CPU::ZPG ) );                   // EOR Zero Page
     _op[0x46] = SET_OP( LSR( &CPU::ZPG ) );                   // LSR Zero Page
+    _op[0x48] = SET_OP( Push( cpu._a ) );                     // PHA
     _op[0x49] = SET_OP( EOR( &CPU::IMM ) );                   // EOR Immediate
     _op[0x4A] = SET_OP( LSR( &CPU::IMP ) );                   // LSR Accumulator
     _op[0x4D] = SET_OP( EOR( &CPU::ABS ) );                   // EOR Absolute
@@ -63,6 +66,7 @@ CPU::CPU()  // NOLINT
     _op[0x66] = SET_OP( ROR( &CPU::ZPG ) );                   // ROR Zero Page
     _op[0x6A] = SET_OP( ROR( &CPU::IMP ) );                   // ROR Accumulator
     _op[0x6E] = SET_OP( ROR( &CPU::ABS ) );                   // ROR Absolute
+    _op[0x68] = SET_OP( PLA() );                              // PLA
     _op[0x76] = SET_OP( ROR( &CPU::ZPGX ) );                  // ROR Zero Page X
     _op[0x7E] = SET_OP( ROR( &CPU::ABSX ) );                  // ROR Absolute X
     _op[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );           // STA Indirect X
@@ -653,6 +657,27 @@ void CPU::ROR( u16 ( CPU::*addressingMode )() )
     {
         Write( address, value );
     }
+}
+
+void CPU::PLA()
+{
+    /* Pull Accumulator
+      Pulls value from the stack into the accumulator, sets the zero and negative flags based on the
+    */
+    _a = Pop();
+    SetZeroAndNegativeFlags( _a );
+}
+
+void CPU::PLP()
+{
+    /* Pull Processor Status
+      Pulls value from the stack into the status register, ignores the break flag and sets the
+      unused flag.
+    */
+    u8 value = Pop();
+
+    // Ignore the Break flag (bit 4) and ensure the Unused flag (bit 5) is set
+    _p = ( value & 0xEF ) | 0x20;
 }
 
 // ----------------------------------------------------------------------------
