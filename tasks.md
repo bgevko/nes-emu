@@ -31,7 +31,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x11` ORA Indirect Y
 - [x] `0x15` ORA Zero Page X
 - [x] `0x16` ASL Zero page X-indexed
-- [ ] `0x18` CLC
+- [x] `0x18` CLC
 - [x] `0x19` ORA Absolute Y
 - [x] `0x1D` ORA Absolute X
 - [x] `0x1E` ASL Absolute X-indexed
@@ -50,7 +50,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x31` AND Indirect Y-indexed
 - [x] `0x35` AND Zero page X-indexed
 - [x] `0x36` ROL Zero page X-indexed
-- [ ] `0x38` SEC
+- [x] `0x38` SEC
 - [x] `0x39` AND Absolute Y-indexed
 - [x] `0x3D` AND Absolute X-indexed
 - [x] `0x3E` ROL Absolute X-indexed
@@ -68,7 +68,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x51` EOR Indirect Y-indexed
 - [x] `0x55` EOR Zero page X-indexed
 - [x] `0x56` LSR Zero page X-indexed
-- [ ] `0x58` CLI
+- [x] `0x58` CLI
 - [x] `0x59` EOR Absolute Y-indexed
 - [x] `0x5D` EOR Absolute X-indexed
 - [x] `0x5E` LSR Absolute X-indexed
@@ -86,7 +86,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0x71` ADC Indirect Y-indexed
 - [ ] `0x75` ADC Zero page X-indexed
 - [x] `0x76` ROR Zero page X-indexed
-- [ ] `0x78` SEI
+- [x] `0x78` SEI
 - [ ] `0x79` ADC Absolute Y-indexed
 - [ ] `0x7D` ADC Absolute X-indexed
 - [x] `0x7E` ROR Absolute X-indexed
@@ -125,7 +125,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0xB4` LDY Zero page X-indexed
 - [x] `0xB5` LDA Zero page X-indexed
 - [x] `0xB6` LDX Zero page Y-indexed
-- [ ] `0xB8` CLV
+- [x] `0xB8` CLV
 - [x] `0xB9` LDA Absolute Y-indexed
 - [x] `0xBA` TSX
 - [x] `0xBC` LDY Absolute X-indexed
@@ -146,7 +146,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0xD1` CMP Indirect Y-indexed
 - [ ] `0xD5` CMP Zero page X-indexed
 - [x] `0xD6` DEC Zero page X-indexed
-- [ ] `0xD8` CLD
+- [x] `0xD8` CLD
 - [ ] `0xD9` CMP Absolute Y-indexed
 - [ ] `0xDD` CMP Absolute X-indexed
 - [x] `0xDE` DEC Absolute X-indexed
@@ -165,7 +165,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0xF1` SBC Indirect Y-indexed
 - [ ] `0xF5` SBC Zero page X-indexed
 - [x] `0xF6` INC Zero page X-indexed
-- [ ] `0xF8` SED
+- [x] `0xF8` SED
 - [ ] `0xF9` SBC Absolute Y-indexed
 - [ ] `0xFD` SBC Absolute X-indexed
 - [x] `0xFE` INC Absolute X-indexed

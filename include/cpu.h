@@ -133,6 +133,8 @@ class CPU
     void PLP();
     void AddToReg( u8& reg, u8 value );
     void AddToMemory( u16 ( CPU::*addressingMode )(), u8 value );
+    void SetFlags( u8 flag );
+    void ClearFlags( u8 flag );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;
