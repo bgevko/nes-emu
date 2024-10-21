@@ -131,6 +131,8 @@ class CPU
     void ROR( u16 ( CPU::*addressingMode )() );
     void PLA();
     void PLP();
+    void AddToReg( u8& reg, u8 value );
+    void AddToMemory( u16 ( CPU::*addressingMode )(), u8 value );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

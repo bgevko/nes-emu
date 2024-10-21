@@ -73,6 +73,7 @@ CPU::CPU()  // NOLINT
     _op[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );            // STY Zero Page
     _op[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );            // STA Zero Page
     _op[0x86] = SET_OP( ST( &CPU::ZPG, cpu._x ) );            // STX Zero Page
+    _op[0x88] = SET_OP( AddToReg( cpu._y, -1 ) );             // DEY
     _op[0x8A] = SET_OP( Transfer( cpu._x, cpu._a ) );         // TXA
     _op[0x8C] = SET_OP( ST( &CPU::ABS, cpu._y ) );            // STY Absolute
     _op[0x8D] = SET_OP( ST( &CPU::ABS, cpu._a ) );            // STA Absolute
@@ -106,6 +107,17 @@ CPU::CPU()  // NOLINT
     _op[0xBC] = SET_OP( LD( &CPU::ABSX, cpu._y ) );           // LDY Absolute X
     _op[0xBD] = SET_OP( LD( &CPU::ABSX, cpu._a ) );           // LDA Absolute X
     _op[0xBE] = SET_OP( LD( &CPU::ABSY, cpu._x ) );           // LDX Absolute Y
+    _op[0xCA] = SET_OP( AddToReg( cpu._x, -1 ) );             // DEX
+    _op[0xC6] = SET_OP( AddToMemory( &CPU::ZPG, -1 ) );       // DEC Zero Page
+    _op[0xC8] = SET_OP( AddToReg( cpu._y, 1 ) );              // INY
+    _op[0xCE] = SET_OP( AddToMemory( &CPU::ABS, -1 ) );       // DEC Absolute
+    _op[0xD6] = SET_OP( AddToMemory( &CPU::ZPGX, -1 ) );      // DEC Zero Page X
+    _op[0xDE] = SET_OP( AddToMemory( &CPU::ABSX, -1 ) );      // DEC Absolute X
+    _op[0xE6] = SET_OP( AddToMemory( &CPU::ZPG, 1 ) );        // INC Zero Page
+    _op[0xE8] = SET_OP( AddToReg( cpu._x, 1 ) );              // INX
+    _op[0xEE] = SET_OP( AddToMemory( &CPU::ABS, 1 ) );        // INC Absolute
+    _op[0xF6] = SET_OP( AddToMemory( &CPU::ZPGX, 1 ) );       // INC Zero Page X
+    _op[0xFE] = SET_OP( AddToMemory( &CPU::ABSX, 1 ) );       // INC Absolute X
 }
 
 // ----------------------------------------------------------------------------
@@ -678,6 +690,27 @@ void CPU::PLP()
 
     // Ignore the Break flag (bit 4) and ensure the Unused flag (bit 5) is set
     _p = ( value & 0xEF ) | 0x20;
+}
+
+void CPU::AddToReg( u8& reg, u8 value )
+{
+    /* Modify Register
+      Used by the INC and DEC instructions to increment or decrement a register.
+    */
+    reg += value;
+    SetZeroAndNegativeFlags( reg );
+}
+
+void CPU::AddToMemory( u16 ( CPU::*addressingMode )(), u8 value )
+{
+    /* Modify Memory
+      Used by the INC and DEC instructions to increment or decrement a memory location.
+    */
+    u16 address = ( this->*addressingMode )();
+    u8  memValue = Read( address );
+    memValue += value;
+    SetZeroAndNegativeFlags( memValue );
+    Write( address, memValue );
 }
 
 // ----------------------------------------------------------------------------
