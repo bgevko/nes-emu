@@ -39,21 +39,21 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x21` AND X-indexed indirect
 - [ ] `0x24` BIT Zero page
 - [x] `0x25` AND Zero page
-- [ ] `0x26` ROL Zero page
+- [x] `0x26` ROL Zero page
 - [ ] `0x28` PLP
 - [x] `0x29` AND Immediate
-- [ ] `0x2A` ROL Accumulator
+- [x] `0x2A` ROL Accumulator
 - [ ] `0x2C` BIT Absolute
 - [x] `0x2D` AND Absolute
-- [ ] `0x2E` ROL Absolute
+- [x] `0x2E` ROL Absolute
 - [ ] `0x30` BMI Relative
 - [x] `0x31` AND Indirect Y-indexed
 - [x] `0x35` AND Zero page X-indexed
-- [ ] `0x36` ROL Zero page X-indexed
+- [x] `0x36` ROL Zero page X-indexed
 - [ ] `0x38` SEC
 - [x] `0x39` AND Absolute Y-indexed
 - [x] `0x3D` AND Absolute X-indexed
-- [ ] `0x3E` ROL Absolute X-indexed
+- [x] `0x3E` ROL Absolute X-indexed
 - [ ] `0x40` RTI
 - [ ] `0x41` EOR X-indexed indirect
 - [ ] `0x45` EOR Zero page
@@ -75,21 +75,21 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0x60` RTS
 - [ ] `0x61` ADC X-indexed indirect
 - [ ] `0x65` ADC Zero page
-- [ ] `0x66` ROR Zero page
+- [x] `0x66` ROR Zero page
 - [ ] `0x68` PLA
 - [ ] `0x69` ADC Immediate
-- [ ] `0x6A` ROR Accumulator
+- [x] `0x6A` ROR Accumulator
 - [ ] `0x6C` JMP Indirect
 - [ ] `0x6D` ADC Absolute
-- [ ] `0x6E` ROR Absolute
+- [x] `0x6E` ROR Absolute
 - [ ] `0x70` BVS Relative
 - [ ] `0x71` ADC Indirect Y-indexed
 - [ ] `0x75` ADC Zero page X-indexed
-- [ ] `0x76` ROR Zero page X-indexed
+- [x] `0x76` ROR Zero page X-indexed
 - [ ] `0x78` SEI
 - [ ] `0x79` ADC Absolute Y-indexed
 - [ ] `0x7D` ADC Absolute X-indexed
-- [ ] `0x7E` ROR Absolute X-indexed
+- [x] `0x7E` ROR Absolute X-indexed
 - [x] `0x81` STA X-indexed indirect
 - [x] `0x84` STY Zero page
 - [x] `0x85` STA Zero page

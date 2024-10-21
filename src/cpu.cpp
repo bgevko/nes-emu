@@ -34,17 +34,27 @@ CPU::CPU()  // NOLINT
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
     _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                   // AND Zero Page
+    _op[0x26] = SET_OP( ROL( &CPU::ZPG ) );                   // ROL Zero Page
     _op[0x29] = SET_OP( AND( &CPU::IMM ) );                   // AND Immediate
+    _op[0x2A] = SET_OP( ROL( &CPU::IMP ) );                   // ROL Accumulator
     _op[0x2D] = SET_OP( AND( &CPU::ABS ) );                   // AND Absolute
+    _op[0x2E] = SET_OP( ROL( &CPU::ABS ) );                   // ROL Absolute
     _op[0x31] = SET_OP( AND( &CPU::INDY ) );                  // AND Indirect Y
     _op[0x35] = SET_OP( AND( &CPU::ZPGX ) );                  // AND Zero Page X
+    _op[0x36] = SET_OP( ROL( &CPU::ZPGX ) );                  // ROL Zero Page X
     _op[0x39] = SET_OP( AND( &CPU::ABSY ) );                  // AND Absolute Y
     _op[0x3D] = SET_OP( AND( &CPU::ABSX ) );                  // AND Absolute X
+    _op[0x3E] = SET_OP( ROL( &CPU::ABSX ) );                  // ROL Absolute X
     _op[0x46] = SET_OP( LSR( &CPU::ZPG ) );                   // LSR Zero Page
     _op[0x4A] = SET_OP( LSR( &CPU::IMP ) );                   // LSR Accumulator
     _op[0x4E] = SET_OP( LSR( &CPU::ABS ) );                   // LSR Absolute
     _op[0x56] = SET_OP( LSR( &CPU::ZPGX ) );                  // LSR Zero Page X
     _op[0x5E] = SET_OP( LSR( &CPU::ABSX ) );                  // LSR Absolute X
+    _op[0x66] = SET_OP( ROR( &CPU::ZPG ) );                   // ROR Zero Page
+    _op[0x6A] = SET_OP( ROR( &CPU::IMP ) );                   // ROR Accumulator
+    _op[0x6E] = SET_OP( ROR( &CPU::ABS ) );                   // ROR Absolute
+    _op[0x76] = SET_OP( ROR( &CPU::ZPGX ) );                  // ROR Zero Page X
+    _op[0x7E] = SET_OP( ROR( &CPU::ABSX ) );                  // ROR Absolute X
     _op[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );           // STA Indirect X
     _op[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );            // STY Zero Page
     _op[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );            // STA Zero Page
@@ -527,6 +537,80 @@ void CPU::LSR( u16 ( CPU::*addressingMode )() )
 
     // Shift and set the zero and negative flags
     SetZeroAndNegativeFlags( value >>= 1 );
+
+    // Write the result back to memory or the accumulator
+    if ( addressingMode == &CPU::IMP )
+    {
+        _a = value;
+    }
+    else
+    {
+        Write( address, value );
+    }
+}
+
+void CPU::ROL( u16 ( CPU::*addressingMode )() )
+{
+    /*
+     Rotate Left
+    Each bit in the accumulator (if implied addressing) or memory is rotated one bit to the left.
+    The carry is shifted into bit 0 and bit 7 is shifted into the carry.
+    */
+    u16 address = addressingMode == &CPU::IMP ? 0 : ( this->*addressingMode )();
+    u8  value = addressingMode == &CPU::IMP ? _a : Read( address );
+
+    // Extract the msb to check if it's set
+    u8 msb = ( value & 0x80 ) >> 7;
+
+    // Shift left and set the 0th bit if the carry flag is set
+    value <<= 1;
+    if ( ( _p & Status::Carry ) != 0 )
+    {
+        value |= 0x01;
+    }
+
+    // Set the carry flag if the msb is set
+    _p = msb == 1 ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // Set the zero and negative flags
+    SetZeroAndNegativeFlags( value );
+
+    // Write the result back to memory or the accumulator
+    if ( addressingMode == &CPU::IMP )
+    {
+        _a = value;
+    }
+    else
+    {
+        Write( address, value );
+    }
+}
+
+void CPU::ROR( u16 ( CPU::*addressingMode )() )
+{
+    /*
+     Rotate Right
+    Each bit in the accumulator (if implied addressing) or memory is rotated one bit to the right.
+    The carry is shifted into bit 7 and bit 0 is shifted into the carry.
+    */
+    u16 address = addressingMode == &CPU::IMP ? 0 : ( this->*addressingMode )();
+    u8  value = addressingMode == &CPU::IMP ? _a : Read( address );
+
+    // Extract the lsb to check if it's set
+    u8 lsb = value & 0x01;
+
+    // Shift right and set the 7th bit if the carry flag is set
+    value >>= 1;
+    if ( ( _p & Status::Carry ) != 0 )
+    {
+        value |= 0x80;
+    }
+
+    // Set the carry flag if the lsb is set
+    _p = lsb == 1 ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // Set the zero and negative flags
+    SetZeroAndNegativeFlags( value );
 
     // Write the result back to memory or the accumulator
     if ( addressingMode == &CPU::IMP )
