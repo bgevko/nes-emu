@@ -55,22 +55,22 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x3D` AND Absolute X-indexed
 - [x] `0x3E` ROL Absolute X-indexed
 - [ ] `0x40` RTI
-- [ ] `0x41` EOR X-indexed indirect
-- [ ] `0x45` EOR Zero page
+- [x] `0x41` EOR X-indexed indirect
+- [x] `0x45` EOR Zero page
 - [x] `0x46` LSR Zero page
 - [ ] `0x48` PHA
-- [ ] `0x49` EOR Immediate
+- [x] `0x49` EOR Immediate
 - [x] `0x4A` LSR Accumulator
 - [ ] `0x4C` JMP Absolute
-- [ ] `0x4D` EOR Absolute
+- [x] `0x4D` EOR Absolute
 - [x] `0x4E` LSR Absolute
 - [ ] `0x50` BVC Relative
-- [ ] `0x51` EOR Indirect Y-indexed
-- [ ] `0x55` EOR Zero page X-indexed
+- [x] `0x51` EOR Indirect Y-indexed
+- [x] `0x55` EOR Zero page X-indexed
 - [x] `0x56` LSR Zero page X-indexed
 - [ ] `0x58` CLI
-- [ ] `0x59` EOR Absolute Y-indexed
-- [ ] `0x5D` EOR Absolute X-indexed
+- [x] `0x59` EOR Absolute Y-indexed
+- [x] `0x5D` EOR Absolute X-indexed
 - [x] `0x5E` LSR Absolute X-indexed
 - [ ] `0x60` RTS
 - [ ] `0x61` ADC X-indexed indirect
