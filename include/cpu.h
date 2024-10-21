@@ -121,12 +121,11 @@ class CPU
     void LD( u16 ( CPU::*addressingMode )(), u8& reg );
     void ST( u16 ( CPU::*addressingMode )(), u8 reg );
     void Transfer( u8& src, u8& dest, bool updateFlags = true );
-    void ModifyRegister( u8& reg, u8 value );
     void AND( u16 ( CPU::*addressingMode )() );
     void ORA( u16 ( CPU::*addressingMode )() );
     void EOR( u16 ( CPU::*addressingMode )() );
-    void LeftShift( u16 ( CPU::*addressingMode )() );
-    void LeftShiftAccumulator();
+    void ASL( u16 ( CPU::*addressingMode )() );
+    void LSR( u16 ( CPU::*addressingMode )() );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

@@ -19,17 +19,17 @@ CPU::CPU()  // NOLINT
     _op[0x00] = SET_OP( BRK() );                              // BRK
     _op[0x01] = SET_OP( ORA( &CPU::INDX ) );                  // ORA Indirect X
     _op[0x05] = SET_OP( ORA( &CPU::ZPG ) );                   // ORA Zero Page
-    _op[0x06] = SET_OP( LeftShift( &CPU::ZPG ) );             // ASL Zero Page
+    _op[0x06] = SET_OP( ASL( &CPU::ZPG ) );                   // ASL Zero Page
     _op[0x09] = SET_OP( ORA( &CPU::IMM ) );                   // ORA Immediate
-    _op[0x0A] = SET_OP( LeftShift( &CPU::IMP ) );             // ASL Accumulator
+    _op[0x0A] = SET_OP( ASL( &CPU::IMP ) );                   // ASL Accumulator
     _op[0x0D] = SET_OP( ORA( &CPU::ABS ) );                   // ORA Absolute
-    _op[0x0E] = SET_OP( LeftShift( &CPU::ABS ) );             // ASL Absolute
+    _op[0x0E] = SET_OP( ASL( &CPU::ABS ) );                   // ASL Absolute
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x15] = SET_OP( ORA( &CPU::ZPGX ) );                  // ORA Zero Page X
-    _op[0x16] = SET_OP( LeftShift( &CPU::ZPGX ) );            // ASL Zero Page X
+    _op[0x16] = SET_OP( ASL( &CPU::ZPGX ) );                  // ASL Zero Page X
     _op[0x19] = SET_OP( ORA( &CPU::ABSY ) );                  // ORA Absolute Y
     _op[0x1D] = SET_OP( ORA( &CPU::ABSX ) );                  // ORA Absolute X
-    _op[0x1E] = SET_OP( LeftShift( &CPU::ABSX ) );            // ASL Absolute X
+    _op[0x1E] = SET_OP( ASL( &CPU::ABSX ) );                  // ASL Absolute X
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
     _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                  // ORA Indirect Y
     _op[0x21] = SET_OP( AND( &CPU::INDX ) );                  // AND Indirect X
@@ -40,6 +40,11 @@ CPU::CPU()  // NOLINT
     _op[0x35] = SET_OP( AND( &CPU::ZPGX ) );                  // AND Zero Page X
     _op[0x39] = SET_OP( AND( &CPU::ABSY ) );                  // AND Absolute Y
     _op[0x3D] = SET_OP( AND( &CPU::ABSX ) );                  // AND Absolute X
+    _op[0x46] = SET_OP( LSR( &CPU::ZPG ) );                   // LSR Zero Page
+    _op[0x4A] = SET_OP( LSR( &CPU::IMP ) );                   // LSR Accumulator
+    _op[0x4E] = SET_OP( LSR( &CPU::ABS ) );                   // LSR Absolute
+    _op[0x56] = SET_OP( LSR( &CPU::ZPGX ) );                  // LSR Zero Page X
+    _op[0x5E] = SET_OP( LSR( &CPU::ABSX ) );                  // LSR Absolute X
     _op[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );           // STA Indirect X
     _op[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );            // STY Zero Page
     _op[0x85] = SET_OP( ST( &CPU::ZPG, cpu._a ) );            // STA Zero Page
@@ -356,6 +361,12 @@ void CPU::BRK()
 
 void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
 {
+    /*
+      LD is used by all loading instructions (LDA, LDX, LDY)
+      It loads a register with a value from memory, dictated by the addressing mode
+      and sets the zero and negative flags based on the value loaded.
+    */
+
     // Loads a register with a value and sets the zero and negative flags
     u16 address = ( this->*addressingMode )();
     u8  value = Read( address );
@@ -376,6 +387,11 @@ void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
 
 void CPU::ST( u16 ( CPU::*addressingMode )(), u8 reg )
 {
+    /*
+    ST is used by all storing instructions (STA, STX, STY)
+    It stores the value of a register into memory, dictated by the addressing mode.
+    */
+
     // Get the address from the specified addressing mode
     u16 address = ( this->*addressingMode )();
 
@@ -395,6 +411,12 @@ void CPU::ST( u16 ( CPU::*addressingMode )(), u8 reg )
 
 void CPU::AND( u16 ( CPU::*addressingMode )() )
 {
+    /*
+    AND (bitwise AND with accumulator)
+    Computes the bitwise AND of the accumulator with a value in memory, dictated by the addressing
+    mode. Sets the zero and negative flags based on the result.
+     */
+
     // AND (bitwise AND with accumulator)
     u16 address = ( this->*addressingMode )();
     _a &= Read( address );
@@ -403,6 +425,12 @@ void CPU::AND( u16 ( CPU::*addressingMode )() )
 
 void CPU::ORA( u16 ( CPU::*addressingMode )() )
 {
+    /*
+      ORA (bitwise OR with accumulator)
+          Computes the bitwise OR of the accumulator with a value in memory, dictated by the
+      addressing mode. Sets the zero and negative flags based on the result.
+    */
+
     u16 address = ( this->*addressingMode )();
     u8  value = Read( address );
     _a |= value;
@@ -423,6 +451,12 @@ void CPU::ORA( u16 ( CPU::*addressingMode )() )
 
 void CPU::EOR( u16 ( CPU::*addressingMode )() )
 {
+    /*
+      EOR (bitwise exclusive OR with accumulator)
+      Computes the bitwise exclusive OR of the accumulator with a value in memory, dictated by the
+      addressing mode. Sets the zero and negative flags based on the result.
+    */
+
     u16 address = ( this->*addressingMode )();
     u8  value = Read( address );
     _a ^= value;
@@ -431,6 +465,11 @@ void CPU::EOR( u16 ( CPU::*addressingMode )() )
 
 void CPU::Transfer( u8& src, u8& dest, bool updateFlags )
 {
+    /* Transfer is used by the transfer instructions (TAX, TAY, TSX, TXA, TXS, TYA) and
+      transfers a value from one register to another. The zero and negative flags are set based on
+      the destination register.
+    */
+
     dest = src;
     if ( updateFlags )
     {
@@ -438,50 +477,65 @@ void CPU::Transfer( u8& src, u8& dest, bool updateFlags )
     }
 }
 
-void CPU::ModifyRegister( u8& reg, u8 value )
+void CPU::ASL( u16 ( CPU::*addressingMode )() )
 {
-    // Used for inc / dec, adds / subtracts value to register
-    reg += value;
-    SetZeroAndNegativeFlags( reg );
-}
+    /* Arithmetic Shift Left
+     Shifts all the bits of the accumulator (if implied addressing) or memory one bit left.
+     Bit 0 is set to 0 and big 7 is placed to the carry flag. This effect is similar to
+     multiplying memory contents by 2.
+    */
 
-void CPU::LeftShift( u16 ( CPU::*addressingMode )() )
-{
-    // Left Shift, used by ASL
-    u16 address = 0;
-    u16 value = 0;  // value is 16 bit in case of overflow
+    // Grab address and value from register A if implied addressing mode, from memory otherwise
+    u16 address = addressingMode == &CPU::IMP ? 0 : ( this->*addressingMode )();
+    u8  value = addressingMode == &CPU::IMP ? _a : Read( address );
 
-    // When the instruction is implied, the value is the accumulator
-    if ( addressingMode == &CPU::IMP )
-    {
-        value = _a;
-    }
-    else
-    {
-        address = ( this->*addressingMode )();
-        value = static_cast<u16>( Read( address ) );
-    }
+    // Extract the msb to check if it's set
+    u8 msb = ( value & 0x80 ) >> 7;
 
-    // Shift left by one bit
-    u16 temp = value << 1;
+    // If MSB is set, then it will carry over to the carry flag
+    _p = msb == 1 ? _p | Status::Carry : _p & ~Status::Carry;
 
-    // Set the carry flag if bit 7 is set
-    _p = ( temp & 0x100 ) != 0 ? _p | Status::Carry : _p & ~Status::Carry;
-
-    // Get the low byte
-    u8 result = static_cast<u8>( temp & 0x00FF );
-
-    // Set the zero and negative flags
-    SetZeroAndNegativeFlags( result );
+    // Shift and set the zero and negative flags
+    SetZeroAndNegativeFlags( value <<= 1 );
 
     // Write the result back to memory or the accumulator
     if ( addressingMode == &CPU::IMP )
     {
-        _a = result;
+        _a = value;
     }
     else
     {
-        Write( address, result );
+        Write( address, value );
+    }
+}
+
+void CPU::LSR( u16 ( CPU::*addressingMode )() )
+{
+    /*
+     Logical Shift Right
+    Each bit in the accumulator (if implied addressing) or memory is shifted one bit to the right.
+    If there was a bit in the 0 (LSB) position, it is shifted into the carry. Bit 7 is set to 0.
+    */
+    u16 address = addressingMode == &CPU::IMP ? 0 : ( this->*addressingMode )();
+    u8  value = addressingMode == &CPU::IMP ? _a : Read( address );
+
+    // Extract the lsb to check if it's set
+    u8 lsb = value & 0x01;
+
+    // If LSB is set, then it will carry over to the carry flag
+    _p = lsb == 1 ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // Shift and set the zero and negative flags
+    SetZeroAndNegativeFlags( value >>= 1 );
+
+    // Write the result back to memory or the accumulator
+    if ( addressingMode == &CPU::IMP )
+    {
+        _a = value;
+    }
+    else
+    {
+        Write( address, value );
     }
 }
 
