@@ -1,0 +1,14 @@
+Note: Google Test filter = CPUTest.x65*
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from CPUTest
+[ RUN      ] CPUTest.x65_ADC_ZeroPage
+---------- 65 ADC ZeroPage Tests ---------
+---------- 65 ADC ZeroPage Tests Complete ---------
+
+[       OK ] CPUTest.x65_ADC_ZeroPage (984 ms)
+[----------] 1 test from CPUTest (984 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (985 ms total)
+[  PASSED  ] 1 test.

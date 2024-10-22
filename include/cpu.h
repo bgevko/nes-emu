@@ -100,6 +100,7 @@ class CPU
 
     // helper globals
     bool _halt = false;
+    bool _supportsDecimalMode = false;
 
     // Opcodes table
     using OpcodeHandler = void ( * )( CPU& );
@@ -135,6 +136,8 @@ class CPU
     void AddToMemory( u16 ( CPU::*addressingMode )(), u8 value );
     void SetFlags( u8 flag );
     void ClearFlags( u8 flag );
+    void ADC( u16 ( CPU::*addressingMode )() );
+    void SBC( u16 ( CPU::*addressingMode )() );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

@@ -66,12 +66,20 @@ CPU::CPU()  // NOLINT
     _op[0x59] = SET_OP( EOR( &CPU::ABSY ) );                       // EOR Absolute Y
     _op[0x5D] = SET_OP( EOR( &CPU::ABSX ) );                       // EOR Absolute X
     _op[0x5E] = SET_OP( LSR( &CPU::ABSX ) );                       // LSR Absolute X
+    _op[0x61] = SET_OP( ADC( &CPU::INDX ) );                       // ADC Indirect X
+    _op[0x65] = SET_OP( ADC( &CPU::ZPG ) );                        // ADC Zero Page
     _op[0x66] = SET_OP( ROR( &CPU::ZPG ) );                        // ROR Zero Page
-    _op[0x6A] = SET_OP( ROR( &CPU::IMP ) );                        // ROR Accumulator
-    _op[0x6E] = SET_OP( ROR( &CPU::ABS ) );                        // ROR Absolute
     _op[0x68] = SET_OP( PLA() );                                   // PLA
+    _op[0x69] = SET_OP( ADC( &CPU::IMM ) );                        // ADC Immediate
+    _op[0x6A] = SET_OP( ROR( &CPU::IMP ) );                        // ROR Accumulator
+    _op[0x6D] = SET_OP( ADC( &CPU::ABS ) );                        // ADC Absolute
+    _op[0x6E] = SET_OP( ROR( &CPU::ABS ) );                        // ROR Absolute
+    _op[0x71] = SET_OP( ADC( &CPU::INDY ) );                       // ADC Indirect Y
+    _op[0x75] = SET_OP( ADC( &CPU::ZPGX ) );                       // ADC Zero Page X
     _op[0x76] = SET_OP( ROR( &CPU::ZPGX ) );                       // ROR Zero Page X
     _op[0x78] = SET_OP( SetFlags( Status::InterruptDisable ) );    // SEI (Set Interrupt Disable)
+    _op[0x79] = SET_OP( ADC( &CPU::ABSY ) );                       // ADC Absolute Y
+    _op[0x7D] = SET_OP( ADC( &CPU::ABSX ) );                       // ADC Absolute X
     _op[0x7E] = SET_OP( ROR( &CPU::ABSX ) );                       // ROR Absolute X
     _op[0x81] = SET_OP( ST( &CPU::INDX, cpu._a ) );                // STA Indirect X
     _op[0x84] = SET_OP( ST( &CPU::ZPG, cpu._y ) );                 // STY Zero Page
@@ -119,11 +127,19 @@ CPU::CPU()  // NOLINT
     _op[0xD6] = SET_OP( AddToMemory( &CPU::ZPGX, -1 ) );           // DEC Zero Page X
     _op[0xD8] = SET_OP( ClearFlags( Status::Decimal ) );           // CLD
     _op[0xDE] = SET_OP( AddToMemory( &CPU::ABSX, -1 ) );           // DEC Absolute X
+    _op[0xE1] = SET_OP( SBC( &CPU::INDX ) );                       // SBC Indirect X
+    _op[0xE5] = SET_OP( SBC( &CPU::ZPG ) );                        // SBC Zero Page
     _op[0xE6] = SET_OP( AddToMemory( &CPU::ZPG, 1 ) );             // INC Zero Page
     _op[0xE8] = SET_OP( AddToReg( cpu._x, 1 ) );                   // INX
+    _op[0xE9] = SET_OP( SBC( &CPU::IMM ) );                        // SBC Immediate
+    _op[0xED] = SET_OP( SBC( &CPU::ABS ) );                        // SBC Absolute
     _op[0xEE] = SET_OP( AddToMemory( &CPU::ABS, 1 ) );             // INC Absolute
+    _op[0xF1] = SET_OP( SBC( &CPU::INDY ) );                       // SBC Indirect Y
+    _op[0xF5] = SET_OP( SBC( &CPU::ZPGX ) );                       // SBC Zero Page X
     _op[0xF6] = SET_OP( AddToMemory( &CPU::ZPGX, 1 ) );            // INC Zero Page X
     _op[0xF8] = SET_OP( SetFlags( Status::Decimal ) );             // SED (Set Decimal Flag)
+    _op[0xF9] = SET_OP( SBC( &CPU::ABSY ) );                       // SBC Absolute Y
+    _op[0xFD] = SET_OP( SBC( &CPU::ABSX ) );                       // SBC Absolute X
     _op[0xFE] = SET_OP( AddToMemory( &CPU::ABSX, 1 ) );            // INC Absolute X
 }
 
@@ -733,6 +749,99 @@ void CPU::ClearFlags( u8 flag )
       Used by the CLC, CLD, and CLI instructions to clear a flag in the status register.
     */
     _p &= ~flag;
+}
+
+void CPU::ADC( u16 ( CPU::*addressingMode )() )
+{
+    /* Add with Carry
+      Adds the value in memory to the accumulator along with the carry flag.
+      Sets the zero, negative, overflow, and carry flags based on the result.
+    */
+
+    // Get the value from memory
+    u16 address = ( this->*addressingMode )();
+    u8  value = Read( address );
+
+    // Store the sum in a 16-bit variable to check for overflow
+    u8  carry = ( _p & Status::Carry ) != 0 ? 1 : 0;
+    u16 sum = _a + value + carry;
+
+    // Carry flag exists in the high byte
+    _p = sum > 0xFF ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // If lower flag is zero
+    _p = ( sum & 0xFF ) == 0 ? _p | Status::Zero : _p & ~Status::Zero;
+
+    // Signed overflow is set if the sign bit is incorrect
+    // If both operands have the same sign and the result has a different sign, set overflow
+    // i.e. 1000 0001 + 1000 0001 = 0000 0010, there's overflow and the sign bit in the result
+    // is different from A and the memory value. (Adding two negatives shouldn't result in a
+    // positive, and vice versa
+    u8 aSign = ( _a & 0x80 ) >> 7;
+    u8 valueSign = ( value & 0x80 ) >> 7;
+    u8 sumSign = ( sum & 0x80 ) >> 7;
+
+    if ( ( aSign == valueSign ) && ( aSign != sumSign ) )
+    {
+        _p |= Status::Overflow;
+    }
+    else
+    {
+        _p &= ~Status::Overflow;
+    }
+
+    // If bit 7 is set, set the negative flag
+    _p = ( sum & 0x80 ) != 0 ? _p | Status::Negative : _p & ~Status::Negative;
+
+    // Store the result in the accumulator
+    _a = sum & 0xFF;
+}
+
+void CPU::SBC( u16 ( CPU::*addressingMode )() )
+{
+    /* Subtract with Carry - Accumulator - Memory Value - (1 - Carry)
+     Subtracts memory value from the current value in the Accumulator, taking
+     borrow into account (complement of the carry flag). The result is stored in
+     the accumulator
+
+     Processor Status register changes
+     - Carry flag	Set if borrowing did not occur during the calculation, or cleared if
+       borrowing did occur.
+     - Overflow flag	Set if bit #7 of the result changed in a way that indicates
+       overflow when subtracting signed byte values, otherwise cleared.
+     - Zero flag	Set if the result is zero, otherwise cleared.
+     - Negative flag	Updated to the value of bit #7 of the result.
+    */
+
+    // Get the value from memory
+    u16 address = ( this->*addressingMode )();
+    u8  value = Read( address );
+
+    // Store the sum in a 16-bit variable to check for overflow
+    u8  carry = ( _p & Status::Carry ) != 0 ? 0 : 1;
+    u16 diff = _a - value - carry;
+
+    // Carry flag exists in the high byte
+    _p = diff < 0x100 ? _p | Status::Carry : _p & ~Status::Carry;
+
+    // If lower flag is zero
+    _p = ( diff & 0xFF ) == 0 ? _p | Status::Zero : _p & ~Status::Zero;
+
+    // Signed overflow is set if the sign bit is incorrect
+    if ( ( _a ^ value ) & ( _a ^ diff ) & 0x80 )  // NOLINT
+    {
+        _p |= Status::Overflow;
+    }
+    else
+    {
+        _p &= ~Status::Overflow;
+    }
+
+    // If bit 7 is set, set the negative flag
+    _p = ( diff & 0x80 ) != 0 ? _p | Status::Negative : _p & ~Status::Negative;
+
+    // Store the result in the accumulator
+    _a = diff & 0xFF;
 }
 
 // ----------------------------------------------------------------------------

@@ -73,22 +73,22 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x5D` EOR Absolute X-indexed
 - [x] `0x5E` LSR Absolute X-indexed
 - [ ] `0x60` RTS
-- [ ] `0x61` ADC X-indexed indirect
-- [ ] `0x65` ADC Zero page
+- [x] `0x61` ADC X-indexed indirect
+- [x] `0x65` ADC Zero page
 - [x] `0x66` ROR Zero page
 - [x] `0x68` PLA
-- [ ] `0x69` ADC Immediate
+- [x] `0x69` ADC Immediate
 - [x] `0x6A` ROR Accumulator
 - [ ] `0x6C` JMP Indirect
-- [ ] `0x6D` ADC Absolute
+- [x] `0x6D` ADC Absolute
 - [x] `0x6E` ROR Absolute
 - [ ] `0x70` BVS Relative
-- [ ] `0x71` ADC Indirect Y-indexed
-- [ ] `0x75` ADC Zero page X-indexed
+- [x] `0x71` ADC Indirect Y-indexed
+- [x] `0x75` ADC Zero page X-indexed
 - [x] `0x76` ROR Zero page X-indexed
 - [x] `0x78` SEI
-- [ ] `0x79` ADC Absolute Y-indexed
-- [ ] `0x7D` ADC Absolute X-indexed
+- [x] `0x79` ADC Absolute Y-indexed
+- [x] `0x7D` ADC Absolute X-indexed
 - [x] `0x7E` ROR Absolute X-indexed
 - [x] `0x81` STA X-indexed indirect
 - [x] `0x84` STY Zero page
@@ -151,21 +151,21 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [ ] `0xDD` CMP Absolute X-indexed
 - [x] `0xDE` DEC Absolute X-indexed
 - [ ] `0xE0` CPX Immediate
-- [ ] `0xE1` SBC X-indexed indirect
+- [x] `0xE1` SBC X-indexed indirect
 - [ ] `0xE4` CPX Zero page
-- [ ] `0xE5` SBC Zero page
+- [x] `0xE5` SBC Zero page
 - [x] `0xE6` INC Zero page
 - [x] `0xE8` INX
-- [ ] `0xE9` SBC Immediate
+- [x] `0xE9` SBC Immediate
 - [ ] `0xEA` NOP
 - [ ] `0xEC` CPX Absolute
-- [ ] `0xED` SBC Absolute
+- [x] `0xED` SBC Absolute
 - [x] `0xEE` INC Absolute
 - [ ] `0xF0` BEQ Relative
-- [ ] `0xF1` SBC Indirect Y-indexed
-- [ ] `0xF5` SBC Zero page X-indexed
+- [x] `0xF1` SBC Indirect Y-indexed
+- [x] `0xF5` SBC Zero page X-indexed
 - [x] `0xF6` INC Zero page X-indexed
 - [x] `0xF8` SED
-- [ ] `0xF9` SBC Absolute Y-indexed
-- [ ] `0xFD` SBC Absolute X-indexed
+- [x] `0xF9` SBC Absolute Y-indexed
+- [x] `0xFD` SBC Absolute X-indexed
 - [x] `0xFE` INC Absolute X-indexed

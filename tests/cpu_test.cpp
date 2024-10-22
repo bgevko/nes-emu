@@ -12,6 +12,7 @@
 
 using json = nlohmann::json;
 bool verbose = false;
+bool runDecimalModeTests = false;
 
 class CPUTest : public ::testing::Test
 {
@@ -20,6 +21,7 @@ class CPUTest : public ::testing::Test
     // Helper methods
     void        LoadStateFromJson( const json& jsonData, const std::string& state );
     void        PrintCPUState( const json& jsonData, const std::string& state );
+    std::string GetCPUStateString( const json& jsonData, const std::string& state );
     void        RunTestCase( const json& testCase );
     static void PrintTestStartMsg( const std::string& testName );
     static void PrintTestEndMsg( const std::string& testName );
@@ -423,19 +425,29 @@ CPU_TEST( FD, SBC, AbsoluteX, "fd.json" );
 CPU_TEST( FE, INC, AbsoluteX, "fe.json" );
 
 //------------------------------------------------------------------
+//-------------------- DECIMAL MODE TESTS --------------------------
+//------------------------------------------------------------------
+/* TEST_F( CPUTest, x61_ADC_IndirectX_Decimal ) */
+/* { */
+/*     if ( !runDecimalModeTests ) */
+/*     { */
+/*         GTEST_SKIP(); */
+/*     } */
+/*     std::string testName = "ADC IndirectX Decimal"; */
+/*     PrintTestStartMsg( testName ); */
+/*     json testCases = ExtractTestsFromJson( "tests/Harte/61_decimal.json" ); */
+/*     for ( const auto& testCase : testCases ) */
+/*     { */
+/*         RunTestCase( testCase ); */
+/*     } */
+/*     PrintTestEndMsg( testName ); */
+/* } */
+
+//------------------------------------------------------------------
 //-------------------- MAIN FUNCTION ------------------------------
 //------------------------------------------------------------------
 int main( int argc, char** argv )
 {
-    for ( int i = 1; i < argc; ++i )
-    {
-        if ( std::string( argv[i] ) == "--v" )
-        {
-            verbose = true;
-            std::cout << "Verbose mode enabled.\n";
-            break;
-        }
-    }
     testing::InitGoogleTest( &argc, argv );
     return RUN_ALL_TESTS();
 }
@@ -566,6 +578,8 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
     // Load initial state from JSON
     LoadStateFromJson( testCase, "initial" );
 
+    std::string initialState = GetCPUStateString( testCase, "initial" );
+
     // Ensure loaded values match JSON values
     EXPECT_EQ( cpu.GetPC(), u16( testCase["initial"]["pc"] ) );
     EXPECT_EQ( cpu.GetA(), testCase["initial"]["a"] );
@@ -590,37 +604,197 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
     // Execute instructions
     cpu.FetchDecodeExecute();
 
-    // Print final state
-    if ( verbose )
-    {
-        PrintCPUState( testCase, "final" );
-    }
-
+    bool               testFailed = false;  // Track if any test has failed
+    std::ostringstream errorMessages;       // Accumulate error messages
+                                            //
     // Ensure final values match JSON values
-    EXPECT_EQ( cpu.GetPC(), u16( testCase["final"]["pc"] ) )
-        << "PC mismatch: Expected " << std::hex << std::setw( 4 ) << std::setfill( '0' )
-        << u16( testCase["final"]["pc"] ) << ", but got " << cpu.GetPC();
-    EXPECT_EQ( cpu.GetA(), u8( testCase["final"]["a"] ) )
-        << "A mismatch: Expected " << u8( testCase["final"]["a"] ) << ", but got " << cpu.GetA();
-    EXPECT_EQ( cpu.GetX(), u8( testCase["final"]["x"] ) )
-        << "X mismatch: Expected " << u8( testCase["final"]["x"] ) << ", but got " << cpu.GetX();
-    EXPECT_EQ( cpu.GetY(), u8( testCase["final"]["y"] ) )
-        << "Y mismatch: Expected " << u8( testCase["final"]["y"] ) << ", but got " << cpu.GetY();
-    EXPECT_EQ( cpu.GetS(), u8( testCase["final"]["s"] ) )
-        << "S mismatch: Expected " << u8( testCase["final"]["s"] ) << ", but got " << cpu.GetS();
-    EXPECT_EQ( cpu.GetP(), u8( testCase["final"]["p"] ) )
-        << "P mismatch: Expected " << ParseStatus( u8( testCase["final"]["p"] ) ) << ", but got "
-        << ParseStatus( cpu.GetP() );
+    /* EXPECT_EQ( cpu.GetPC(), u16( testCase["final"]["pc"] ) ) */
+    /*     << "PC mismatch: Expected " << std::hex << std::setw( 4 ) << std::setfill( '0' ) */
+    /*     << u16( testCase["final"]["pc"] ) << ", but got " << cpu.GetPC(); */
+    /* EXPECT_EQ( cpu.GetA(), u8( testCase["final"]["a"] ) ) */
+    /*     << "A mismatch: Expected " << u8( testCase["final"]["a"] ) << ", but got " << cpu.GetA();
+     */
+    /* EXPECT_EQ( cpu.GetX(), u8( testCase["final"]["x"] ) ) */
+    /*     << "X mismatch: Expected " << u8( testCase["final"]["x"] ) << ", but got " << cpu.GetX();
+     */
+    /* EXPECT_EQ( cpu.GetY(), u8( testCase["final"]["y"] ) ) */
+    /*     << "Y mismatch: Expected " << u8( testCase["final"]["y"] ) << ", but got " << cpu.GetY();
+     */
+    /* EXPECT_EQ( cpu.GetS(), u8( testCase["final"]["s"] ) ) */
+    /*     << "S mismatch: Expected " << u8( testCase["final"]["s"] ) << ", but got " <<
+     * cpu.GteetS();
+     */
+    /* EXPECT_EQ( cpu.GetP(), u8( testCase["final"]["p"] ) ) */
+    /*     << "P mismatch: Expected " << ParseStatus( u8( testCase["final"]["p"] ) ) << ", but got "
+     */
+    /*     << ParseStatus( cpu.GetP() ); */
+    if ( cpu.GetPC() != u16( testCase["final"]["pc"] ) )
+    {
+        testFailed = true;
+        errorMessages << "PC ";
+    }
+    if ( cpu.GetA() != u8( testCase["final"]["a"] ) )
+    {
+        testFailed = true;
+        errorMessages << "A ";
+    }
+    if ( cpu.GetX() != u8( testCase["final"]["x"] ) )
+    {
+        testFailed = true;
+        errorMessages << "X ";
+    }
+    if ( cpu.GetY() != u8( testCase["final"]["y"] ) )
+    {
+        testFailed = true;
+        errorMessages << "Y ";
+    }
+    if ( cpu.GetS() != u8( testCase["final"]["s"] ) )
+    {
+        testFailed = true;
+        errorMessages << "S ";
+    }
+    if ( cpu.GetP() != u8( testCase["final"]["p"] ) )
+    {
+        testFailed = true;
+        errorMessages << "P ";
+    }
 
     for ( const auto& ramEntry : testCase["final"]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  expectedValue = ramEntry[1];
         uint8_t  actualValue = cpu.Read( address );
-        EXPECT_EQ( actualValue, expectedValue )
-            << "RAM mismatch at address " << std::hex << address << ": Expected "
-            << int( expectedValue ) << ", but got " << int( actualValue );
+        /* EXPECT_EQ( actualValue, expectedValue ) */
+        /*     << "RAM mismatch at address " << std::hex << address << ": Expected " */
+        /*     << int( expectedValue ) << ", but got " << int( actualValue ); */
+        if ( actualValue != expectedValue )
+        {
+            testFailed = true;
+            errorMessages << "RAM ";
+        }
     }
+
+    std::string finalState = GetCPUStateString( testCase, "final" );
+    // print initial and final state if there are any failures
+    if ( testFailed )
+    {
+        std::cout << "Test Case: " << testCase["name"] << '\n';
+        std::cout << "Failed: " << errorMessages.str() << '\n';
+        std::cout << initialState << '\n';
+        std::cout << finalState << '\n';
+        std::cout << '\n';
+        FAIL();
+    }
+}
+
+std::string CPUTest::GetCPUStateString( const json& jsonData, const std::string& state )
+{
+    // Expected values
+    u16 expectedPC = u16( jsonData[state]["pc"] );
+    u8  expectedA = jsonData[state]["a"];
+    u8  expectedX = jsonData[state]["x"];
+    u8  expectedY = jsonData[state]["y"];
+    u8  expectedS = jsonData[state]["s"];
+    u8  expectedP = jsonData[state]["p"];
+
+    // Actual values
+    u16 actualPC = cpu.GetPC();
+    u8  actualA = cpu.GetA();
+    u8  actualX = cpu.GetX();
+    u8  actualY = cpu.GetY();
+    u8  actualS = cpu.GetS();
+    u8  actualP = cpu.GetP();
+
+    // Column Widths
+    const int labelWidth = 6;
+    const int valueWidth = 12;
+
+    // Use ostringstream to collect output
+    std::ostringstream output;
+
+    // Print header
+    output << "----------" << state << " State----------" << '\n';
+    output << std::left << std::setw( labelWidth ) << "" << std::setw( valueWidth ) << "EXPECTED"
+           << std::setw( valueWidth ) << "ACTUAL" << '\n';
+
+    // Function to format and print a line
+    auto printLine =
+        [&]( const std::string& label, const std::string& expected, const std::string& actual )
+    {
+        auto toHexDecimalString = []( const std::string& value )
+        {
+            std::stringstream ss;
+            int               intValue = std::strtol( value.c_str(), nullptr, 16 );
+
+            // Print hex value with proper formatting, followed by decimal in parentheses
+            ss << std::hex << std::uppercase << std::setw( 2 ) << std::setfill( '0' ) << intValue
+               << " (" << std::dec << intValue << ")";
+
+            return ss.str();
+        };
+
+        output << std::left << std::setw( labelWidth ) << label;
+        output << std::setw( valueWidth ) << toHexDecimalString( expected );
+        output << std::setw( valueWidth ) << toHexDecimalString( actual ) << '\n';
+    };
+
+    // Convert values to strings with proper formatting
+    std::ostringstream oss;
+    oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << expectedPC;
+    std::string expectedPCStr = oss.str();
+    oss.str( "" );
+    oss.clear();
+    oss << std::hex << std::setw( 4 ) << std::setfill( '0' ) << actualPC;
+    std::string actualPCStr = oss.str();
+    oss.str( "" );
+    oss.clear();
+
+    // Reset formatting
+    output << std::dec << std::setfill( ' ' );
+
+    // Print registers
+    printLine( "pc:", expectedPCStr, actualPCStr );
+    printLine( "s:", std::to_string( expectedS ), std::to_string( actualS ) );
+    printLine( "a:", std::to_string( expectedA ), std::to_string( actualA ) );
+    printLine( "x:", std::to_string( expectedX ), std::to_string( actualX ) );
+    printLine( "y:", std::to_string( expectedY ), std::to_string( actualY ) );
+    printLine( "p:", std::to_string( expectedP ), std::to_string( actualP ) );
+
+    // Blank line and RAM header
+    output << '\n' << "RAM" << '\n';
+
+    // Print RAM entries
+    for ( const auto& ramEntry : jsonData[state]["ram"] )
+    {
+        uint16_t address = ramEntry[0];
+        uint8_t  expectedValue = ramEntry[1];
+        uint8_t  actualValue = cpu.Read( address );
+
+        // Helper lambda to format values as "HEX (DECIMAL)"
+        auto formatValue = []( uint8_t value )
+        {
+            std::ostringstream oss;
+            oss << std::hex << std::uppercase << std::setw( 2 ) << std::setfill( '0' )
+                << static_cast<int>( value ) << " (" << std::dec << static_cast<int>( value )
+                << ")";
+            return oss.str();
+        };
+
+        // Format address as hex only (no decimal for addresses)
+        std::ostringstream addressStream;
+        addressStream << std::hex << std::setw( 4 ) << std::setfill( '0' ) << address;
+
+        // Print formatted output
+        output << addressStream.str() << ": ";
+        output << std::setw( valueWidth ) << formatValue( expectedValue );
+        output << std::setw( valueWidth ) << formatValue( actualValue ) << '\n';
+    }
+
+    output << "--------------------------------" << '\n';
+    output << '\n';
+
+    // Return the accumulated string
+    return output.str();
 }
 
 auto CPUTest::ExtractTestsFromJson( const std::string& path ) -> json
