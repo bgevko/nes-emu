@@ -139,6 +139,12 @@ class CPU
     void ADC( u16 ( CPU::*addressingMode )() );
     void SBC( u16 ( CPU::*addressingMode )() );
     void Compare( u16 ( CPU::*addressingMode )(), u8 reg );
+    void BranchOn( u8 status, bool condition );
+    void JMP( u16 ( CPU::*addressingMode )() );
+    void JSR();
+    void RTS();
+    void RTI();
+    void NOP();
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

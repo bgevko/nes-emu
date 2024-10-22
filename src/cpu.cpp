@@ -15,65 +15,72 @@ CPU::CPU()  // NOLINT
     _op.fill( nullptr );
 
 // Initialize the opcode table with the appropriate function pointers
-#define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }  // NOLINT
-    _op[0x00] = SET_OP( BRK() );                           // BRK
-    _op[0x01] = SET_OP( ORA( &CPU::INDX ) );               // ORA Indirect X
-    _op[0x05] = SET_OP( ORA( &CPU::ZPG ) );                // ORA Zero Page
-    _op[0x06] = SET_OP( ASL( &CPU::ZPG ) );                // ASL Zero Page
-    _op[0x08] = SET_OP( Push( cpu._p | 0x30 ) );           // PHP (bits 4 and 5 are always set)
-    _op[0x09] = SET_OP( ORA( &CPU::IMM ) );                // ORA Immediate
-    _op[0x0A] = SET_OP( ASL( &CPU::IMP ) );                // ASL Accumulator
-    _op[0x0D] = SET_OP( ORA( &CPU::ABS ) );                // ORA Absolute
-    _op[0x0E] = SET_OP( ASL( &CPU::ABS ) );                // ASL Absolute
-    _op[0x11] = SET_OP( ORA( &CPU::INDY ) );               // ORA Indirect Y
-    _op[0x15] = SET_OP( ORA( &CPU::ZPGX ) );               // ORA Zero Page X
-    _op[0x16] = SET_OP( ASL( &CPU::ZPGX ) );               // ASL Zero Page X
-    _op[0x18] = SET_OP( ClearFlags( Status::Carry ) );     // CLC (Clear Carry)
-    _op[0x19] = SET_OP( ORA( &CPU::ABSY ) );               // ORA Absolute Y
-    _op[0x1D] = SET_OP( ORA( &CPU::ABSX ) );               // ORA Absolute X
-    _op[0x1E] = SET_OP( ASL( &CPU::ABSX ) );               // ASL Absolute X
-    _op[0x21] = SET_OP( AND( &CPU::INDX ) );               // AND Indirect X
-    _op[0x11] = SET_OP( ORA( &CPU::INDY ) );               // ORA Indirect Y
-    _op[0x21] = SET_OP( AND( &CPU::INDX ) );               // AND Indirect X
-    _op[0x24] = SET_OP( BIT( &CPU::ZPG ) );                // BIT Zero Page
-    _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                // AND Zero Page
-    _op[0x26] = SET_OP( ROL( &CPU::ZPG ) );                // ROL Zero Page
-    _op[0x28] = SET_OP( PLP() );                           // PLP (Pull Processor Status)
-    _op[0x29] = SET_OP( AND( &CPU::IMM ) );                // AND Immediate
-    _op[0x2A] = SET_OP( ROL( &CPU::IMP ) );                // ROL Accumulator
-    _op[0x2C] = SET_OP( BIT( &CPU::ABS ) );                // BIT Absolute
-    _op[0x2D] = SET_OP( AND( &CPU::ABS ) );                // AND Absolute
-    _op[0x2E] = SET_OP( ROL( &CPU::ABS ) );                // ROL Absolute
-    _op[0x31] = SET_OP( AND( &CPU::INDY ) );               // AND Indirect Y
-    _op[0x35] = SET_OP( AND( &CPU::ZPGX ) );               // AND Zero Page X
-    _op[0x36] = SET_OP( ROL( &CPU::ZPGX ) );               // ROL Zero Page X
-    _op[0x38] = SET_OP( SetFlags( Status::Carry ) );       // SEC (Set Carry)
-    _op[0x39] = SET_OP( AND( &CPU::ABSY ) );               // AND Absolute Y
-    _op[0x3D] = SET_OP( AND( &CPU::ABSX ) );               // AND Absolute X
-    _op[0x3E] = SET_OP( ROL( &CPU::ABSX ) );               // ROL Absolute X
-    _op[0x41] = SET_OP( EOR( &CPU::INDX ) );               // EOR Indirect X
-    _op[0x45] = SET_OP( EOR( &CPU::ZPG ) );                // EOR Zero Page
-    _op[0x46] = SET_OP( LSR( &CPU::ZPG ) );                // LSR Zero Page
-    _op[0x48] = SET_OP( Push( cpu._a ) );                  // PHA
-    _op[0x49] = SET_OP( EOR( &CPU::IMM ) );                // EOR Immediate
-    _op[0x4A] = SET_OP( LSR( &CPU::IMP ) );                // LSR Accumulator
-    _op[0x4D] = SET_OP( EOR( &CPU::ABS ) );                // EOR Absolute
-    _op[0x4E] = SET_OP( LSR( &CPU::ABS ) );                // LSR Absolute
-    _op[0x51] = SET_OP( EOR( &CPU::INDY ) );               // EOR Indirect Y
-    _op[0x55] = SET_OP( EOR( &CPU::ZPGX ) );               // EOR Zero Page X
-    _op[0x56] = SET_OP( LSR( &CPU::ZPGX ) );               // LSR Zero Page X
+#define SET_OP( ... ) []( CPU& cpu ) { cpu.__VA_ARGS__; }       // NOLINT
+    _op[0x00] = SET_OP( BRK() );                                // BRK
+    _op[0x01] = SET_OP( ORA( &CPU::INDX ) );                    // ORA Indirect X
+    _op[0x05] = SET_OP( ORA( &CPU::ZPG ) );                     // ORA Zero Page
+    _op[0x06] = SET_OP( ASL( &CPU::ZPG ) );                     // ASL Zero Page
+    _op[0x08] = SET_OP( Push( cpu._p | 0x30 ) );                // PHP (bits 4 and 5 are always set)
+    _op[0x09] = SET_OP( ORA( &CPU::IMM ) );                     // ORA Immediate
+    _op[0x0A] = SET_OP( ASL( &CPU::IMP ) );                     // ASL Accumulator
+    _op[0x0D] = SET_OP( ORA( &CPU::ABS ) );                     // ORA Absolute
+    _op[0x0E] = SET_OP( ASL( &CPU::ABS ) );                     // ASL Absolute
+    _op[0x10] = SET_OP( BranchOn( Status::Negative, false ) );  // BPL
+    _op[0x11] = SET_OP( ORA( &CPU::INDY ) );                    // ORA Indirect Y
+    _op[0x15] = SET_OP( ORA( &CPU::ZPGX ) );                    // ORA Zero Page X
+    _op[0x16] = SET_OP( ASL( &CPU::ZPGX ) );                    // ASL Zero Page X
+    _op[0x18] = SET_OP( ClearFlags( Status::Carry ) );          // CLC (Clear Carry)
+    _op[0x19] = SET_OP( ORA( &CPU::ABSY ) );                    // ORA Absolute Y
+    _op[0x1D] = SET_OP( ORA( &CPU::ABSX ) );                    // ORA Absolute X
+    _op[0x1E] = SET_OP( ASL( &CPU::ABSX ) );                    // ASL Absolute X
+    _op[0x20] = SET_OP( JSR() );                                // JSR
+    _op[0x21] = SET_OP( AND( &CPU::INDX ) );                    // AND Indirect X
+    _op[0x24] = SET_OP( BIT( &CPU::ZPG ) );                     // BIT Zero Page
+    _op[0x25] = SET_OP( AND( &CPU::ZPG ) );                     // AND Zero Page
+    _op[0x26] = SET_OP( ROL( &CPU::ZPG ) );                     // ROL Zero Page
+    _op[0x28] = SET_OP( PLP() );                                // PLP (Pull Processor Status)
+    _op[0x29] = SET_OP( AND( &CPU::IMM ) );                     // AND Immediate
+    _op[0x2A] = SET_OP( ROL( &CPU::IMP ) );                     // ROL Accumulator
+    _op[0x2C] = SET_OP( BIT( &CPU::ABS ) );                     // BIT Absolute
+    _op[0x2D] = SET_OP( AND( &CPU::ABS ) );                     // AND Absolute
+    _op[0x2E] = SET_OP( ROL( &CPU::ABS ) );                     // ROL Absolute
+    _op[0x30] = SET_OP( BranchOn( Status::Negative, true ) );   // BMI
+    _op[0x31] = SET_OP( AND( &CPU::INDY ) );                    // AND Indirect Y
+    _op[0x35] = SET_OP( AND( &CPU::ZPGX ) );                    // AND Zero Page X
+    _op[0x36] = SET_OP( ROL( &CPU::ZPGX ) );                    // ROL Zero Page X
+    _op[0x38] = SET_OP( SetFlags( Status::Carry ) );            // SEC (Set Carry)
+    _op[0x39] = SET_OP( AND( &CPU::ABSY ) );                    // AND Absolute Y
+    _op[0x3D] = SET_OP( AND( &CPU::ABSX ) );                    // AND Absolute X
+    _op[0x3E] = SET_OP( ROL( &CPU::ABSX ) );                    // ROL Absolute X
+    _op[0x40] = SET_OP( RTI() );                                // RTI
+    _op[0x41] = SET_OP( EOR( &CPU::INDX ) );                    // EOR Indirect X
+    _op[0x45] = SET_OP( EOR( &CPU::ZPG ) );                     // EOR Zero Page
+    _op[0x46] = SET_OP( LSR( &CPU::ZPG ) );                     // LSR Zero Page
+    _op[0x48] = SET_OP( Push( cpu._a ) );                       // PHA
+    _op[0x49] = SET_OP( EOR( &CPU::IMM ) );                     // EOR Immediate
+    _op[0x4A] = SET_OP( LSR( &CPU::IMP ) );                     // LSR Accumulator
+    _op[0x4C] = SET_OP( JMP( &CPU::ABS ) );                     // JMP Absolute
+    _op[0x4D] = SET_OP( EOR( &CPU::ABS ) );                     // EOR Absolute
+    _op[0x4E] = SET_OP( LSR( &CPU::ABS ) );                     // LSR Absolute
+    _op[0x50] = SET_OP( BranchOn( Status::Overflow, false ) );  // BVC
+    _op[0x51] = SET_OP( EOR( &CPU::INDY ) );                    // EOR Indirect Y
+    _op[0x55] = SET_OP( EOR( &CPU::ZPGX ) );                    // EOR Zero Page X
+    _op[0x56] = SET_OP( LSR( &CPU::ZPGX ) );                    // LSR Zero Page X
     _op[0x58] = SET_OP( ClearFlags( Status::InterruptDisable ) );  // CLI
     _op[0x59] = SET_OP( EOR( &CPU::ABSY ) );                       // EOR Absolute Y
     _op[0x5D] = SET_OP( EOR( &CPU::ABSX ) );                       // EOR Absolute X
     _op[0x5E] = SET_OP( LSR( &CPU::ABSX ) );                       // LSR Absolute X
+    _op[0x60] = SET_OP( RTS() );                                   // RTS
     _op[0x61] = SET_OP( ADC( &CPU::INDX ) );                       // ADC Indirect X
     _op[0x65] = SET_OP( ADC( &CPU::ZPG ) );                        // ADC Zero Page
     _op[0x66] = SET_OP( ROR( &CPU::ZPG ) );                        // ROR Zero Page
     _op[0x68] = SET_OP( PLA() );                                   // PLA
     _op[0x69] = SET_OP( ADC( &CPU::IMM ) );                        // ADC Immediate
     _op[0x6A] = SET_OP( ROR( &CPU::IMP ) );                        // ROR Accumulator
+    _op[0x6C] = SET_OP( JMP( &CPU::IND ) );                        // JMP Indirect
     _op[0x6D] = SET_OP( ADC( &CPU::ABS ) );                        // ADC Absolute
     _op[0x6E] = SET_OP( ROR( &CPU::ABS ) );                        // ROR Absolute
+    _op[0x70] = SET_OP( BranchOn( Status::Overflow, true ) );      // BVS
     _op[0x71] = SET_OP( ADC( &CPU::INDY ) );                       // ADC Indirect Y
     _op[0x75] = SET_OP( ADC( &CPU::ZPGX ) );                       // ADC Zero Page X
     _op[0x76] = SET_OP( ROR( &CPU::ZPGX ) );                       // ROR Zero Page X
@@ -90,6 +97,7 @@ CPU::CPU()  // NOLINT
     _op[0x8C] = SET_OP( ST( &CPU::ABS, cpu._y ) );                 // STY Absolute
     _op[0x8D] = SET_OP( ST( &CPU::ABS, cpu._a ) );                 // STA Absolute
     _op[0x8E] = SET_OP( ST( &CPU::ABS, cpu._x ) );                 // STX Absolute
+    _op[0x90] = SET_OP( BranchOn( Status::Carry, false ) );        // BCC
     _op[0x91] = SET_OP( ST( &CPU::INDY, cpu._a ) );                // STA Indirect Y
     _op[0x94] = SET_OP( ST( &CPU::ZPGX, cpu._y ) );                // STY Zero Page X
     _op[0x95] = SET_OP( ST( &CPU::ZPGX, cpu._a ) );                // STA Zero Page X
@@ -110,6 +118,7 @@ CPU::CPU()  // NOLINT
     _op[0xAC] = SET_OP( LD( &CPU::ABS, cpu._y ) );                 // LDY Absolute
     _op[0xAD] = SET_OP( LD( &CPU::ABS, cpu._a ) );                 // LDA Absolute
     _op[0xAE] = SET_OP( LD( &CPU::ABS, cpu._x ) );                 // LDX Absolute
+    _op[0xB0] = SET_OP( BranchOn( Status::Carry, true ) );         // BCS
     _op[0xB1] = SET_OP( LD( &CPU::INDY, cpu._a ) );                // LDA Indirect Y
     _op[0xB4] = SET_OP( LD( &CPU::ZPGX, cpu._y ) );                // LDY Zero Page X
     _op[0xB5] = SET_OP( LD( &CPU::ZPGX, cpu._a ) );                // LDA Zero Page X
@@ -131,6 +140,7 @@ CPU::CPU()  // NOLINT
     _op[0xCC] = SET_OP( Compare( &CPU::ABS, cpu._y ) );            // CPY Absolute
     _op[0xCD] = SET_OP( Compare( &CPU::ABS, cpu._a ) );            // Compare Absolute
     _op[0xCE] = SET_OP( AddToMemory( &CPU::ABS, -1 ) );            // DEC Absolute
+    _op[0xD0] = SET_OP( BranchOn( Status::Zero, false ) );         // BNE
     _op[0xD1] = SET_OP( Compare( &CPU::INDY, cpu._a ) );           // Compare Indirect Y
     _op[0xD5] = SET_OP( Compare( &CPU::ZPGX, cpu._a ) );           // Compare Zero Page X
     _op[0xD6] = SET_OP( AddToMemory( &CPU::ZPGX, -1 ) );           // DEC Zero Page X
@@ -145,9 +155,11 @@ CPU::CPU()  // NOLINT
     _op[0xE6] = SET_OP( AddToMemory( &CPU::ZPG, 1 ) );             // INC Zero Page
     _op[0xE8] = SET_OP( AddToReg( cpu._x, 1 ) );                   // INX
     _op[0xE9] = SET_OP( SBC( &CPU::IMM ) );                        // SBC Immediate
+    _op[0xEA] = SET_OP( NOP() );                                   // NOP
     _op[0xEC] = SET_OP( Compare( &CPU::ABS, cpu._x ) );            // CPX Absolute
     _op[0xED] = SET_OP( SBC( &CPU::ABS ) );                        // SBC Absolute
     _op[0xEE] = SET_OP( AddToMemory( &CPU::ABS, 1 ) );             // INC Absolute
+    _op[0xF0] = SET_OP( BranchOn( Status::Zero, true ) );          // BEQ
     _op[0xF1] = SET_OP( SBC( &CPU::INDY ) );                       // SBC Indirect Y
     _op[0xF5] = SET_OP( SBC( &CPU::ZPGX ) );                       // SBC Zero Page X
     _op[0xF6] = SET_OP( AddToMemory( &CPU::ZPGX, 1 ) );            // INC Zero Page X
@@ -392,45 +404,6 @@ auto CPU::REL() -> u16
 // ----------------------------------------------------------------------------
 // -------------------------------- OPCODES -----------------------------------
 // ----------------------------------------------------------------------------
-void CPU::BRK()
-{
-    /*
-      BRK
-      Force Break
-
-      BRK initiates a software interrupt similar to a hardware
-      interrupt (IRQ). The return address pushed to the stack is
-      PC+2, providing an extra byte of spacing for a break mark
-      (identifying a reason for the break.)
-      The status register will be pushed to the stack with the break
-      flag set to 1. However, when retrieved during RTI or by a PLP
-      instruction, the break flag will be ignored.
-      The interrupt disable flag is not set automatically.
-
-      interrupt,
-      push PC+2, push SR
-      N	Z	C	I	D	V
-      -	-	-	1	-	-
-      addressing	assembler	opc	bytes	cycles
-      implied	BRK	00	1	7
-     */
-    _pc++;  // Padding byte, ignored by the CPU
-
-    // Push program counter to the stack
-    Push( _pc >> 8 );      // High byte
-    Push( _pc & 0x00FF );  // Low byte
-
-    // Push the status register to the stack with the break flag
-    // B flag and unused flag are pushed to the stack, but ignored when popped.
-    u8 status = _p | Status::Break | Status::Unused;
-    Push( status );
-
-    // Set PC to the address at the interrupt vector (0xFFFE)
-    _pc = ( Read( 0xFFFF ) << 8 ) | Read( 0xFFFE );
-
-    // Set the interrupt flag
-    _p |= Status::InterruptDisable;
-}
 
 void CPU::LD( u16 ( CPU::*addressingMode )(), u8& reg )
 {
@@ -875,6 +848,135 @@ void CPU::Compare( u16 ( CPU::*addressingMode )(), u8 reg )
 
     // Set the carry flag if the register is greater than or equal to the value
     _p = reg >= value ? _p | Status::Carry : _p & ~Status::Carry;
+}
+
+void CPU::BranchOn( u8 status, bool condition )
+{
+    /* Branch
+      Branches the program counter to a new location if a condition is met.
+    */
+    bool willBranch = ( _p & status ) == status;
+
+    if ( willBranch == condition )
+    {
+        // Get the signed 8-bit relative offset
+        s8 offset = static_cast<s8>( Read( _pc++ ) );
+
+        // Store old PC to detect page boundary crossing
+        u16 oldPC = _pc;
+
+        // Apply the offset to the program counter
+        _pc += offset;
+
+        // NOTE: Boundary crossing will add an extra cycle (Not implemented yet)
+        if ( ( oldPC & 0xFF00 ) != ( _pc & 0xFF00 ) )
+        {
+            // Add extra cycle if needed
+        }
+    }
+    else
+    {
+        // Increment the program counter to skip the offset byte
+        _pc++;
+    }
+}
+
+void CPU::BRK()
+{
+    /*
+      BRK
+      Force Break
+
+      BRK initiates a software interrupt similar to a hardware
+      interrupt (IRQ). The return address pushed to the stack is
+      PC+2, providing an extra byte of spacing for a break mark
+      (identifying a reason for the break.)
+      The status register will be pushed to the stack with the break
+      flag set to 1. However, when retrieved during RTI or by a PLP
+      instruction, the break flag will be ignored.
+      The interrupt disable flag is not set automatically.
+
+      interrupt,
+      push PC+2, push SR
+      N	Z	C	I	D	V
+      -	-	-	1	-	-
+      addressing	assembler	opc	bytes	cycles
+      implied	BRK	00	1	7
+     */
+    _pc++;  // Padding byte, ignored by the CPU
+
+    // Push program counter to the stack
+    Push( _pc >> 8 );      // High byte
+    Push( _pc & 0x00FF );  // Low byte
+
+    // Push the status register to the stack with the break flag
+    // B flag and unused flag are pushed to the stack, but ignored when popped.
+    u8 status = _p | Status::Break | Status::Unused;
+    Push( status );
+
+    // Set PC to the address at the interrupt vector (0xFFFE)
+    _pc = ( Read( 0xFFFF ) << 8 ) | Read( 0xFFFE );
+
+    // Set the interrupt flag
+    _p |= Status::InterruptDisable;
+}
+
+void CPU::RTI()
+{
+    u8 status = Pop();  // Pull status register
+
+    // Ignore the break flag and ensure the unused flag (bit 5) is set
+    _p = ( status & ~Status::Break ) | Status::Unused;
+
+    u16 low = Pop();            // Pull low byte of PC
+    u16 high = Pop();           // Pull high byte of PC
+    _pc = ( high << 8 ) | low;  // Combine into full address
+}
+
+void CPU::JMP( u16 ( CPU::*addressingMode )() )
+{
+    /* Jump
+      Jumps to a new location in memory.
+    */
+    _pc = ( this->*addressingMode )();
+}
+
+void CPU::JSR()
+{
+    /* Jump to Subroutine
+      Pushes the address of the next instruction minus 1 to the stack
+      and jumps to a new location in memory.
+    */
+
+    // Push the address of the next instruction to the stack
+    u16 returnAddress = _pc + 1;
+
+    // Push the high byte first
+    Push( ( returnAddress >> 8 ) & 0xFF );
+    // Push the low byte
+    Push( returnAddress & 0xFF );
+
+    // Set the program counter to the new address
+    _pc = ABS();
+}
+void CPU::RTS()
+{
+    /* Return from Subroutine
+      Pops the address of the next instruction from the stack and returns to that location.
+    */
+    u16 low = Pop();
+    u16 high = Pop();
+    _pc = ( high << 8 ) | low;
+    _pc++;
+}
+
+void CPU::NOP()
+{
+    /* No Operation
+      Does nothing, however, depending on the addressing mode, it can take up a different
+      number of cycles. Undocumented opcodes sometimes take advantage of this behavior
+    */
+    // NOTE: Cycles are spent here, implement later.
 }
 
 // ----------------------------------------------------------------------------

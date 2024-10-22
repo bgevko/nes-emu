@@ -27,7 +27,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x0A` ASL Accumulator
 - [x] `0x0D` ORA Absolute
 - [x] `0x0E` ASL Absolute
-- [ ] `0x10` BPL Relative
+- [x] `0x10` BPL Relative
 - [x] `0x11` ORA Indirect Y
 - [x] `0x15` ORA Zero Page X
 - [x] `0x16` ASL Zero page X-indexed
@@ -35,7 +35,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x19` ORA Absolute Y
 - [x] `0x1D` ORA Absolute X
 - [x] `0x1E` ASL Absolute X-indexed
-- [ ] `0x20` JSR Absolute
+- [x] `0x20` JSR Absolute
 - [x] `0x21` AND X-indexed indirect
 - [x] `0x24` BIT Zero page
 - [x] `0x25` AND Zero page
@@ -46,7 +46,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x2C` BIT Absolute
 - [x] `0x2D` AND Absolute
 - [x] `0x2E` ROL Absolute
-- [ ] `0x30` BMI Relative
+- [x] `0x30` BMI Relative
 - [x] `0x31` AND Indirect Y-indexed
 - [x] `0x35` AND Zero page X-indexed
 - [x] `0x36` ROL Zero page X-indexed
@@ -54,17 +54,17 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x39` AND Absolute Y-indexed
 - [x] `0x3D` AND Absolute X-indexed
 - [x] `0x3E` ROL Absolute X-indexed
-- [ ] `0x40` RTI
+- [x] `0x40` RTI
 - [x] `0x41` EOR X-indexed indirect
 - [x] `0x45` EOR Zero page
 - [x] `0x46` LSR Zero page
 - [x] `0x48` PHA
 - [x] `0x49` EOR Immediate
 - [x] `0x4A` LSR Accumulator
-- [ ] `0x4C` JMP Absolute
+- [x] `0x4C` JMP Absolute
 - [x] `0x4D` EOR Absolute
 - [x] `0x4E` LSR Absolute
-- [ ] `0x50` BVC Relative
+- [x] `0x50` BVC Relative
 - [x] `0x51` EOR Indirect Y-indexed
 - [x] `0x55` EOR Zero page X-indexed
 - [x] `0x56` LSR Zero page X-indexed
@@ -72,17 +72,17 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x59` EOR Absolute Y-indexed
 - [x] `0x5D` EOR Absolute X-indexed
 - [x] `0x5E` LSR Absolute X-indexed
-- [ ] `0x60` RTS
+- [x] `0x60` RTS
 - [x] `0x61` ADC X-indexed indirect
 - [x] `0x65` ADC Zero page
 - [x] `0x66` ROR Zero page
 - [x] `0x68` PLA
 - [x] `0x69` ADC Immediate
 - [x] `0x6A` ROR Accumulator
-- [ ] `0x6C` JMP Indirect
+- [x] `0x6C` JMP Indirect
 - [x] `0x6D` ADC Absolute
 - [x] `0x6E` ROR Absolute
-- [ ] `0x70` BVS Relative
+- [x] `0x70` BVS Relative
 - [x] `0x71` ADC Indirect Y-indexed
 - [x] `0x75` ADC Zero page X-indexed
 - [x] `0x76` ROR Zero page X-indexed
@@ -99,7 +99,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0x8C` STY Absolute
 - [x] `0x8D` STA Absolute
 - [x] `0x8E` STX Absolute
-- [ ] `0x90` BCC Relative
+- [x] `0x90` BCC Relative
 - [x] `0x91` STA Indirect Y-indexed
 - [x] `0x94` STY Zero page X-indexed
 - [x] `0x95` STA Zero page X-indexed
@@ -120,7 +120,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0xAC` LDY Absolute
 - [x] `0xAD` LDA Absolute
 - [x] `0xAE` LDX
-- [ ] `0xB0` BCS Relative
+- [x] `0xB0` BCS Relative
 - [x] `0xB1` LDA Indirect Y-indexed
 - [x] `0xB4` LDY Zero page X-indexed
 - [x] `0xB5` LDA Zero page X-indexed
@@ -142,7 +142,7 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0xCC` CPY Absolute
 - [x] `0xCD` CMP Absolute
 - [x] `0xCE` DEC Absolute
-- [ ] `0xD0` BNE Relative
+- [x] `0xD0` BNE Relative
 - [x] `0xD1` CMP Indirect Y-indexed
 - [x] `0xD5` CMP Zero page X-indexed
 - [x] `0xD6` DEC Zero page X-indexed
@@ -157,11 +157,11 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0xE6` INC Zero page
 - [x] `0xE8` INX
 - [x] `0xE9` SBC Immediate
-- [ ] `0xEA` NOP
+- [x] `0xEA` NOP
 - [x] `0xEC` CPX Absolute
 - [x] `0xED` SBC Absolute
 - [x] `0xEE` INC Absolute
-- [ ] `0xF0` BEQ Relative
+- [x] `0xF0` BEQ Relative
 - [x] `0xF1` SBC Indirect Y-indexed
 - [x] `0xF5` SBC Zero page X-indexed
 - [x] `0xF6` INC Zero page X-indexed
