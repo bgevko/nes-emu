@@ -131,34 +131,34 @@ This document tracks my progress as I implement and test the full set of 6502 in
 - [x] `0xBC` LDY Absolute X-indexed
 - [x] `0xBD` LDA Absolute X-indexed
 - [x] `0xBE` LDX Absolute Y-indexed
-- [ ] `0xC0` CPY Immediate
-- [ ] `0xC1` CMP X-indexed indirect
-- [ ] `0xC4` CPY Zero page
-- [ ] `0xC5` CMP Zero page
+- [x] `0xC0` CPY Immediate
+- [x] `0xC1` CMP X-indexed indirect
+- [x] `0xC4` CPY Zero page
+- [x] `0xC5` CMP Zero page
 - [x] `0xC6` DEC Zero page
 - [x] `0xC8` INY
-- [ ] `0xC9` CMP Immediate
+- [x] `0xC9` CMP Immediate
 - [x] `0xCA` DEX
-- [ ] `0xCC` CPY Absolute
-- [ ] `0xCD` CMP Absolute
+- [x] `0xCC` CPY Absolute
+- [x] `0xCD` CMP Absolute
 - [x] `0xCE` DEC Absolute
 - [ ] `0xD0` BNE Relative
-- [ ] `0xD1` CMP Indirect Y-indexed
-- [ ] `0xD5` CMP Zero page X-indexed
+- [x] `0xD1` CMP Indirect Y-indexed
+- [x] `0xD5` CMP Zero page X-indexed
 - [x] `0xD6` DEC Zero page X-indexed
 - [x] `0xD8` CLD
-- [ ] `0xD9` CMP Absolute Y-indexed
-- [ ] `0xDD` CMP Absolute X-indexed
+- [x] `0xD9` CMP Absolute Y-indexed
+- [x] `0xDD` CMP Absolute X-indexed
 - [x] `0xDE` DEC Absolute X-indexed
-- [ ] `0xE0` CPX Immediate
+- [x] `0xE0` CPX Immediate
 - [x] `0xE1` SBC X-indexed indirect
-- [ ] `0xE4` CPX Zero page
+- [x] `0xE4` CPX Zero page
 - [x] `0xE5` SBC Zero page
 - [x] `0xE6` INC Zero page
 - [x] `0xE8` INX
 - [x] `0xE9` SBC Immediate
 - [ ] `0xEA` NOP
-- [ ] `0xEC` CPX Absolute
+- [x] `0xEC` CPX Absolute
 - [x] `0xED` SBC Absolute
 - [x] `0xEE` INC Absolute
 - [ ] `0xF0` BEQ Relative

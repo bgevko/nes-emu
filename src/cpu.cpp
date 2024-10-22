@@ -120,18 +120,32 @@ CPU::CPU()  // NOLINT
     _op[0xBC] = SET_OP( LD( &CPU::ABSX, cpu._y ) );                // LDY Absolute X
     _op[0xBD] = SET_OP( LD( &CPU::ABSX, cpu._a ) );                // LDA Absolute X
     _op[0xBE] = SET_OP( LD( &CPU::ABSY, cpu._x ) );                // LDX Absolute Y
+    _op[0xC0] = SET_OP( Compare( &CPU::IMM, cpu._y ) );            // CPY Immediate
+    _op[0xC1] = SET_OP( Compare( &CPU::INDX, cpu._a ) );           // Compare Indirect X
     _op[0xCA] = SET_OP( AddToReg( cpu._x, -1 ) );                  // DEX
+    _op[0xC4] = SET_OP( Compare( &CPU::ZPG, cpu._y ) );            // CPY Zero Page
+    _op[0xC5] = SET_OP( Compare( &CPU::ZPG, cpu._a ) );            // Compare Zero Page
     _op[0xC6] = SET_OP( AddToMemory( &CPU::ZPG, -1 ) );            // DEC Zero Page
     _op[0xC8] = SET_OP( AddToReg( cpu._y, 1 ) );                   // INY
+    _op[0xC9] = SET_OP( Compare( &CPU::IMM, cpu._a ) );            // Compare Immediate
+    _op[0xCC] = SET_OP( Compare( &CPU::ABS, cpu._y ) );            // CPY Absolute
+    _op[0xCD] = SET_OP( Compare( &CPU::ABS, cpu._a ) );            // Compare Absolute
     _op[0xCE] = SET_OP( AddToMemory( &CPU::ABS, -1 ) );            // DEC Absolute
+    _op[0xD1] = SET_OP( Compare( &CPU::INDY, cpu._a ) );           // Compare Indirect Y
+    _op[0xD5] = SET_OP( Compare( &CPU::ZPGX, cpu._a ) );           // Compare Zero Page X
     _op[0xD6] = SET_OP( AddToMemory( &CPU::ZPGX, -1 ) );           // DEC Zero Page X
     _op[0xD8] = SET_OP( ClearFlags( Status::Decimal ) );           // CLD
+    _op[0xD9] = SET_OP( Compare( &CPU::ABSY, cpu._a ) );           // Compare Absolute Y
+    _op[0xDD] = SET_OP( Compare( &CPU::ABSX, cpu._a ) );           // Compare Absolute X
     _op[0xDE] = SET_OP( AddToMemory( &CPU::ABSX, -1 ) );           // DEC Absolute X
+    _op[0xE0] = SET_OP( Compare( &CPU::IMM, cpu._x ) );            // CPX Immediate
     _op[0xE1] = SET_OP( SBC( &CPU::INDX ) );                       // SBC Indirect X
+    _op[0xE4] = SET_OP( Compare( &CPU::ZPG, cpu._x ) );            // CPX Zero Page
     _op[0xE5] = SET_OP( SBC( &CPU::ZPG ) );                        // SBC Zero Page
     _op[0xE6] = SET_OP( AddToMemory( &CPU::ZPG, 1 ) );             // INC Zero Page
     _op[0xE8] = SET_OP( AddToReg( cpu._x, 1 ) );                   // INX
     _op[0xE9] = SET_OP( SBC( &CPU::IMM ) );                        // SBC Immediate
+    _op[0xEC] = SET_OP( Compare( &CPU::ABS, cpu._x ) );            // CPX Absolute
     _op[0xED] = SET_OP( SBC( &CPU::ABS ) );                        // SBC Absolute
     _op[0xEE] = SET_OP( AddToMemory( &CPU::ABS, 1 ) );             // INC Absolute
     _op[0xF1] = SET_OP( SBC( &CPU::INDY ) );                       // SBC Indirect Y
@@ -842,6 +856,25 @@ void CPU::SBC( u16 ( CPU::*addressingMode )() )
 
     // Store the result in the accumulator
     _a = diff & 0xFF;
+}
+
+void CPU::Compare( u16 ( CPU::*addressingMode )(), u8 reg )
+{
+    /* Compare
+      Compares the value in memory with a register (A, X, or Y) and sets the zero, negative, and
+      carry flags based on the result.
+    */
+    u16 address = ( this->*addressingMode )();
+    u8  value = Read( address );
+
+    // Set the zero flag if the values are equal
+    _p = reg == value ? _p | Status::Zero : _p & ~Status::Zero;
+
+    // Set the negative flag if the result is negative
+    _p = ( reg - value ) & 0x80 ? _p | Status::Negative : _p & ~Status::Negative;  // NOLINT
+
+    // Set the carry flag if the register is greater than or equal to the value
+    _p = reg >= value ? _p | Status::Carry : _p & ~Status::Carry;
 }
 
 // ----------------------------------------------------------------------------

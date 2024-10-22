@@ -138,6 +138,7 @@ class CPU
     void ClearFlags( u8 flag );
     void ADC( u16 ( CPU::*addressingMode )() );
     void SBC( u16 ( CPU::*addressingMode )() );
+    void Compare( u16 ( CPU::*addressingMode )(), u8 reg );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;
