@@ -18,7 +18,7 @@ cd "$BUILD_DIR" || {
 # Run specific test if provided, otherwise run all tests
 if [ -n "$1" ]; then
 	echo "Running specific test: $1"
-	ctest -R "$1" # Matches test names against provided pattern
+	ctest -R "$1" -V # Matches test names against provided pattern
 else
 	echo "Running all tests"
 	ctest -V

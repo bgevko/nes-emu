@@ -491,6 +491,7 @@ void CPUTest::PrintCPUState( const json &jsonData, const std::string &state )
     u8  expectedY = jsonData[state]["y"];
     u8  expectedS = jsonData[state]["s"];
     u8  expectedP = jsonData[state]["p"];
+    u64 expectedCycles = jsonData["cycles"].size();
 
     // Actual values
     u16 actualPC = cpu.GetPC();
@@ -499,6 +500,7 @@ void CPUTest::PrintCPUState( const json &jsonData, const std::string &state )
     u8  actualY = cpu.GetY();
     u8  actualS = cpu.GetS();
     u8  actualP = cpu.GetP();
+    u64 actualCycles = cpu.GetCycles();
 
     // Column Widths
     const int labelWidth = 6;
@@ -539,6 +541,7 @@ void CPUTest::PrintCPUState( const json &jsonData, const std::string &state )
     printLine( "x:", std::to_string( expectedX ), std::to_string( actualX ) );
     printLine( "y:", std::to_string( expectedY ), std::to_string( actualY ) );
     printLine( "p:", std::to_string( expectedP ), std::to_string( actualP ) );
+    printLine( "cycles:", std::to_string( expectedCycles ), std::to_string( actualCycles ) );
 
     // Blank line and RAM header
     std::cout << '\n' << "RAM" << '\n';
@@ -616,27 +619,6 @@ void CPUTest::RunTestCase( const json &testCase ) // NOLINT
     bool               testFailed = false; // Track if any test has failed
     std::ostringstream errorMessages;      // Accumulate error messages
                                            //
-    // Ensure final values match JSON values
-    /* EXPECT_EQ( cpu.GetPC(), u16( testCase["final"]["pc"] ) ) */
-    /*     << "PC mismatch: Expected " << std::hex << std::setw( 4 ) << std::setfill( '0' ) */
-    /*     << u16( testCase["final"]["pc"] ) << ", but got " << cpu.GetPC(); */
-    /* EXPECT_EQ( cpu.GetA(), u8( testCase["final"]["a"] ) ) */
-    /*     << "A mismatch: Expected " << u8( testCase["final"]["a"] ) << ", but got " << cpu.GetA();
-     */
-    /* EXPECT_EQ( cpu.GetX(), u8( testCase["final"]["x"] ) ) */
-    /*     << "X mismatch: Expected " << u8( testCase["final"]["x"] ) << ", but got " << cpu.GetX();
-     */
-    /* EXPECT_EQ( cpu.GetY(), u8( testCase["final"]["y"] ) ) */
-    /*     << "Y mismatch: Expected " << u8( testCase["final"]["y"] ) << ", but got " << cpu.GetY();
-     */
-    /* EXPECT_EQ( cpu.GetS(), u8( testCase["final"]["s"] ) ) */
-    /*     << "S mismatch: Expected " << u8( testCase["final"]["s"] ) << ", but got " <<
-     * cpu.GteetS();
-     */
-    /* EXPECT_EQ( cpu.GetP(), u8( testCase["final"]["p"] ) ) */
-    /*     << "P mismatch: Expected " << ParseStatus( u8( testCase["final"]["p"] ) ) << ", but got "
-     */
-    /*     << ParseStatus( cpu.GetP() ); */
     if ( cpu.GetPC() != u16( testCase["final"]["pc"] ) )
     {
         testFailed = true;
@@ -667,15 +649,17 @@ void CPUTest::RunTestCase( const json &testCase ) // NOLINT
         testFailed = true;
         errorMessages << "P ";
     }
+    if ( cpu.GetCycles() != testCase["cycles"].size() )
+    {
+        testFailed = true;
+        errorMessages << "Cycle count ";
+    }
 
     for ( const auto &ramEntry : testCase["final"]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  expectedValue = ramEntry[1];
         uint8_t  actualValue = cpu.Read( address );
-        /* EXPECT_EQ( actualValue, expectedValue ) */
-        /*     << "RAM mismatch at address " << std::hex << address << ": Expected " */
-        /*     << int( expectedValue ) << ", but got " << int( actualValue ); */
         if ( actualValue != expectedValue )
         {
             testFailed = true;
@@ -705,6 +689,7 @@ std::string CPUTest::GetCPUStateString( const json &jsonData, const std::string 
     u8  expectedY = jsonData[state]["y"];
     u8  expectedS = jsonData[state]["s"];
     u8  expectedP = jsonData[state]["p"];
+    u64 expectedCycles = jsonData["cycles"].size();
 
     // Actual values
     u16 actualPC = cpu.GetPC();
@@ -713,10 +698,11 @@ std::string CPUTest::GetCPUStateString( const json &jsonData, const std::string 
     u8  actualY = cpu.GetY();
     u8  actualS = cpu.GetS();
     u8  actualP = cpu.GetP();
+    u64 actualCycles = cpu.GetCycles();
 
     // Column Widths
-    const int labelWidth = 6;
-    const int valueWidth = 12;
+    const int labelWidth = 8;
+    const int valueWidth = 14;
 
     // Use ostringstream to collect output
     std::ostringstream output;
@@ -768,6 +754,14 @@ std::string CPUTest::GetCPUStateString( const json &jsonData, const std::string 
     printLine( "x:", std::to_string( expectedX ), std::to_string( actualX ) );
     printLine( "y:", std::to_string( expectedY ), std::to_string( actualY ) );
     printLine( "p:", std::to_string( expectedP ), std::to_string( actualP ) );
+
+    if ( state == "final" )
+    {
+
+        output << std::setw( labelWidth ) << "cycles: " << std::setw( valueWidth )
+               << std::to_string( expectedCycles ) << std::setw( valueWidth )
+               << std::to_string( actualCycles ) << '\n';
+    }
 
     // Blank line and RAM header
     output << '\n' << "RAM" << '\n';

@@ -24,5 +24,5 @@ I'm currently working on the CPU. I have implemented the following features:
 
 - [x] Addressing Modes
 - [x] Instructions
-- [ ] Cycle Tracking
+- [x] Cycle Tracking
 - [ ] ROM Loading

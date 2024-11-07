@@ -8,9 +8,10 @@
 
 using u8 = uint8_t;
 using u16 = uint16_t;
+using u64 = uint64_t;
 using s8 = int8_t;
 
-constexpr size_t kMemorySize = static_cast<size_t>( 64 * 1024 );
+constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 );
 constexpr size_t numOpcodes = 256;
 constexpr u16    defaultStartAddress = 0x8000;
 
@@ -24,7 +25,7 @@ struct CPUState
     std::optional<u8>  s = std::nullopt;  // Stack Pointer
     std::optional<u8>  p = std::nullopt;  // Status Register
 
-    std::optional<std::array<u8, kMemorySize>> memory = std::nullopt; // Memory
+    std::optional<std::array<u8, size64KB>> memory = std::nullopt; // Memory
 };
 
 class CPU
@@ -39,8 +40,9 @@ class CPU
     [[nodiscard]] auto GetY() const -> u8;
     [[nodiscard]] auto GetS() const -> u8;
     [[nodiscard]] auto GetP() const -> u8;
-    [[nodiscard]] auto GetMemory() const -> const std::array<u8, kMemorySize> &;
+    [[nodiscard]] auto GetMemory() const -> const std::array<u8, size64KB> &;
     [[nodiscard]] auto IsHalted() const;
+    [[nodiscard]] auto GetCycles() const -> u64;
 
     void SetPC( u16 pcVal );
     void SetA( u8 aVal );
@@ -48,7 +50,7 @@ class CPU
     void SetY( u8 yVal );
     void SetS( u8 sVal );
     void SetP( u8 pVal );
-    void SetMemory( const std::array<u8, kMemorySize> &memory );
+    void SetMemory( const std::array<u8, size64KB> &memory );
     void SetHalted( bool halt );
 
     // CPU Methods
@@ -69,21 +71,25 @@ class CPU
     auto ZPG() -> u16;  // Zero Page
     auto ABS() -> u16;  // ABS
     auto ABSX() -> u16; // Absolute x
+    auto ABSX_NoPageCross() -> u16;
     auto ABSY() -> u16; // Absolute y
+    auto ABSY_NoPageCross() -> u16;
     auto ZPGX() -> u16; // Zero Page x
     auto ZPGY() -> u16; // Zero Page y
     auto IND() -> u16;  // Indirect
     auto INDX() -> u16; // Indirect x
     auto INDY() -> u16; // Indirect y
-    auto REL() -> u16;  // Relative
+    auto INDY_NoPageCross() -> u16;
+    auto REL() -> u16; // Relative
 
   private:
     // Registers
     u16 _pc;
     u8  _a, _x, _y, _s, _p;
+    u64 _cycles;
 
     // Memory
-    std::array<u8, kMemorySize> _memory;
+    std::array<u8, size64KB> _memory;
     // friend class for testing
 
     // Statuses
@@ -112,36 +118,39 @@ class CPU
     {
         ( cpu.*Op )( addressingMode );
     }
+
     std::array<OpcodeHandler, numOpcodes> _op;
 
     // Instruction Helpers
-    void BRK();
-    void LD( u16 ( CPU::*addressingMode )(), u8 &reg );
-    void ST( u16 ( CPU::*addressingMode )(), u8 reg );
-    void Transfer( u8 &src, u8 &dest, bool updateFlags = true );
-    void AND( u16 ( CPU::*addressingMode )() );
-    void ORA( u16 ( CPU::*addressingMode )() );
-    void EOR( u16 ( CPU::*addressingMode )() );
-    void BIT( u16 ( CPU::*addressingMode )() );
-    void ASL( u16 ( CPU::*addressingMode )() );
-    void LSR( u16 ( CPU::*addressingMode )() );
-    void ROL( u16 ( CPU::*addressingMode )() );
-    void ROR( u16 ( CPU::*addressingMode )() );
-    void PLA();
-    void PLP();
-    void AddToReg( u8 &reg, u8 value );
-    void AddToMemory( u16 ( CPU::*addressingMode )(), u8 value );
-    void SetFlags( u8 flag );
-    void ClearFlags( u8 flag );
-    void ADC( u16 ( CPU::*addressingMode )() );
-    void SBC( u16 ( CPU::*addressingMode )() );
-    void Compare( u16 ( CPU::*addressingMode )(), u8 reg );
-    void BranchOn( u8 status, bool condition );
-    void JMP( u16 ( CPU::*addressingMode )() );
-    void JSR();
-    void RTS();
-    void RTI();
-    void NOP();
+    void BRK( u8 cycles );
+    void LD( u8 cycles, u16 ( CPU::*addressingMode )(), u8 &reg );
+    void ST( u8 cycles, u16 ( CPU::*addressingMode )(), u8 reg );
+    void Transfer( u8 cycles, u8 &src, u8 &dest, bool updateFlags = true );
+    void AND( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void ORA( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void EOR( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void BIT( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void ASL( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void LSR( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void ROL( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void ROR( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void PLA( u8 cycles );
+    void PLP( u8 cycles );
+    void PHP( u8 cycles );
+    void PHA( u8 cycles );
+    void AddToReg( u8 cycles, u8 &reg, u8 value );
+    void AddToMemory( u8 cycles, u16 ( CPU::*addressingMode )(), u8 value );
+    void SetFlags( u8 cycles, u8 flag );
+    void ClearFlags( u8 cycles, u8 flag );
+    void ADC( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void SBC( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void Compare( u8 cycles, u16 ( CPU::*addressingMode )(), u8 reg );
+    void BranchOn( u8 cycles, u8 status, bool condition );
+    void JMP( u8 cycles, u16 ( CPU::*addressingMode )() );
+    void JSR( u8 cycles );
+    void RTS( u8 cycles );
+    void RTI( u8 cycles );
+    void NOP( u8 cycles );
 
     // helpers
     [[nodiscard]] auto GetStatusString() const -> std::string;

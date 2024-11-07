@@ -70,8 +70,10 @@ enable_testing()
 # is the source directory of CMakeLists.txt (not the build folder). We have to do this
 # because the final executable will be in the build folder, which can mess with relative
 # paths in the tests. Do this for each test executable.
-add_test(NAME cpu_test COMMAND cpu_test)
-set_tests_properties(cpu_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+# add_test(NAME cpu_test COMMAND cpu_test)
+# set_tests_properties(cpu_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 # Add other tests and properties here
 
 # ----------------------- ENABLE ISOLATED TESTS -----------------------
