@@ -16,16 +16,16 @@ bool runDecimalModeTests = false;
 
 class CPUTest : public ::testing::Test
 {
-   protected:
-    CPU cpu;  // NOLINT
+  protected:
+    CPU cpu; // NOLINT
     // Helper methods
-    void        LoadStateFromJson( const json& jsonData, const std::string& state );
-    void        PrintCPUState( const json& jsonData, const std::string& state );
-    std::string GetCPUStateString( const json& jsonData, const std::string& state );
-    void        RunTestCase( const json& testCase );
-    static void PrintTestStartMsg( const std::string& testName );
-    static void PrintTestEndMsg( const std::string& testName );
-    static auto ExtractTestsFromJson( const std::string& path ) -> json;
+    void        LoadStateFromJson( const json &jsonData, const std::string &state );
+    void        PrintCPUState( const json &jsonData, const std::string &state );
+    std::string GetCPUStateString( const json &jsonData, const std::string &state );
+    void        RunTestCase( const json &testCase );
+    static void PrintTestStartMsg( const std::string &testName );
+    static void PrintTestEndMsg( const std::string &testName );
+    static auto ExtractTestsFromJson( const std::string &path ) -> json;
     static auto ParseStatus( u8 status ) -> std::string;
 };
 
@@ -65,7 +65,7 @@ TEST_F( CPUTest, ZPGX )
     cpu.SetX( 0x1 );
 
     // Write the zero page address at the pc location
-    cpu.Write( cpu.GetPC(), 0x80 );  // Zero page address 0x80
+    cpu.Write( cpu.GetPC(), 0x80 ); // Zero page address 0x80
     u8 zeroPageAddr = cpu.Read( cpu.GetPC() );
     u8 expectedAddr = ( zeroPageAddr + cpu.GetX() ) & 0xFF;
 
@@ -88,7 +88,7 @@ TEST_F( CPUTest, ZPGY )
     cpu.SetY( 0x1 );
 
     // Write the zero page address at the pc location
-    cpu.Write( cpu.GetPC(), 0x80 );  // Zero page address 0x80
+    cpu.Write( cpu.GetPC(), 0x80 ); // Zero page address 0x80
     u8 zeroPageAddr = cpu.Read( cpu.GetPC() );
     u8 expectedAddr = ( zeroPageAddr + cpu.GetY() ) & 0xFF;
 
@@ -193,8 +193,8 @@ TEST_F( CPUTest, INDX )
     u16 effectiveAddr = 0xABCD;
 
     // Write the effective address to zero-page memory
-    cpu.Write( ptr, effectiveAddr & 0xFF );               // Low byte
-    cpu.Write( ( ptr + 1 ) & 0xFF, effectiveAddr >> 8 );  // High byte
+    cpu.Write( ptr, effectiveAddr & 0xFF );              // Low byte
+    cpu.Write( ( ptr + 1 ) & 0xFF, effectiveAddr >> 8 ); // High byte
 
     // Write a test value at the effective address
     cpu.Write( effectiveAddr, 0x42 );
@@ -222,11 +222,11 @@ TEST_F( CPUTest, INDY )
     u16 effectiveAddr = 0xAB00;
 
     // Write the effective address to zero page memory
-    cpu.Write( ptr, effectiveAddr & 0xFF );    // Low byte
-    cpu.Write( ptr + 1, effectiveAddr >> 8 );  // High byte
+    cpu.Write( ptr, effectiveAddr & 0xFF );   // Low byte
+    cpu.Write( ptr + 1, effectiveAddr >> 8 ); // High byte
 
     u16 finalAddr = effectiveAddr + cpu.GetY();
-    cpu.Write( finalAddr, 0x42 );  // Write a test value at the final address
+    cpu.Write( finalAddr, 0x42 ); // Write a test value at the final address
     u16 addr = cpu.INDY();
     EXPECT_EQ( addr, finalAddr ) << "Expected " << std::hex << finalAddr << ", but got " << addr;
     EXPECT_EQ( cpu.Read( addr ), 0x42 ) << "Expected 0x42, but got " << int( cpu.Read( addr ) );
@@ -259,17 +259,26 @@ TEST_F( CPUTest, REL )
 //-------------------- INSTRUCTION TESTS ---------------------------
 //------------------------------------------------------------------
 
-#define CPU_TEST( opcode_hex, mnemonic, addr_mode, filename )             \
-    TEST_F( CPUTest, x##opcode_hex##_##mnemonic##_##addr_mode )           \
-    {                                                                     \
-        std::string testName = #opcode_hex " " #mnemonic " " #addr_mode;  \
-        PrintTestStartMsg( testName );                                    \
-        json testCases = ExtractTestsFromJson( "tests/HARTE/" filename ); \
-        for ( const auto& testCase : testCases )                          \
-        {                                                                 \
-            RunTestCase( testCase );                                      \
-        }                                                                 \
-        PrintTestEndMsg( testName );                                      \
+// Each test name in in the format:
+// x<last two digits of opcode>_<mnemonic>_<addressing mode>
+// Examples:
+// x00_BRK_Implied - BRK instruction with Implied addressing mode
+// x01_ORA_IndirectX - ORA instruction with IndirectX addressing mode
+// etc.
+// To isolate a test, use the test.sh script:
+// ./test.sh "CPUTest.x00" # Will run only the BRK test
+// ./test.sh "CPUTest.x01" # Will run only the ORA test
+#define CPU_TEST( opcode_hex, mnemonic, addr_mode, filename )                                      \
+    TEST_F( CPUTest, x##opcode_hex##_##mnemonic##_##addr_mode )                                    \
+    {                                                                                              \
+        std::string testName = #opcode_hex " " #mnemonic " " #addr_mode;                           \
+        PrintTestStartMsg( testName );                                                             \
+        json testCases = ExtractTestsFromJson( "tests/HARTE/" filename );                          \
+        for ( const auto &testCase : testCases )                                                   \
+        {                                                                                          \
+            RunTestCase( testCase );                                                               \
+        }                                                                                          \
+        PrintTestEndMsg( testName );                                                               \
     }
 
 CPU_TEST( 00, BRK, Implied, "00.json" );
@@ -446,7 +455,7 @@ CPU_TEST( FE, INC, AbsoluteX, "fe.json" );
 //------------------------------------------------------------------
 //-------------------- MAIN FUNCTION ------------------------------
 //------------------------------------------------------------------
-int main( int argc, char** argv )
+int main( int argc, char **argv )
 {
     testing::InitGoogleTest( &argc, argv );
     return RUN_ALL_TESTS();
@@ -456,7 +465,7 @@ int main( int argc, char** argv )
 // ----------------------- Helper Functions -----------------------
 // ----------------------------------------------------------------
 
-void CPUTest::LoadStateFromJson( const json& jsonData, const std::string& state )
+void CPUTest::LoadStateFromJson( const json &jsonData, const std::string &state )
 {
     cpu.SetPC( u16( jsonData[state]["pc"] ) );
     cpu.SetA( jsonData[state]["a"] );
@@ -464,7 +473,7 @@ void CPUTest::LoadStateFromJson( const json& jsonData, const std::string& state 
     cpu.SetY( jsonData[state]["y"] );
     cpu.SetS( jsonData[state]["s"] );
     cpu.SetP( jsonData[state]["p"] );
-    for ( const auto& ramEntry : jsonData[state]["ram"] )
+    for ( const auto &ramEntry : jsonData[state]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  value = ramEntry[1];
@@ -473,7 +482,7 @@ void CPUTest::LoadStateFromJson( const json& jsonData, const std::string& state 
 }
 
 // Helper function to print CPU state
-void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
+void CPUTest::PrintCPUState( const json &jsonData, const std::string &state )
 {
     // Expected values
     u16 expectedPC = u16( jsonData[state]["pc"] );
@@ -502,7 +511,7 @@ void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
 
     // Function to format and print a line
     auto printLine =
-        [&]( const std::string& label, const std::string& expected, const std::string& actual )
+        [&]( const std::string &label, const std::string &expected, const std::string &actual )
     {
         std::cout << std::left << std::setw( labelWidth ) << label;
         std::cout << std::setw( valueWidth ) << expected;
@@ -535,7 +544,7 @@ void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
     std::cout << '\n' << "RAM" << '\n';
 
     // Print RAM entries
-    for ( const auto& ramEntry : jsonData[state]["ram"] )
+    for ( const auto &ramEntry : jsonData[state]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  expectedValue = ramEntry[1];
@@ -570,7 +579,7 @@ void CPUTest::PrintCPUState( const json& jsonData, const std::string& state )
 }
 // Test case function for each test in the JSON array
 
-void CPUTest::RunTestCase( const json& testCase )  // NOLINT
+void CPUTest::RunTestCase( const json &testCase ) // NOLINT
 {
     // Initialize CPU
     cpu.Reset();
@@ -587,7 +596,7 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
     EXPECT_EQ( cpu.GetY(), testCase["initial"]["y"] );
     EXPECT_EQ( cpu.GetS(), testCase["initial"]["s"] );
     EXPECT_EQ( cpu.GetP(), testCase["initial"]["p"] );
-    for ( const auto& ramEntry : testCase["initial"]["ram"] )
+    for ( const auto &ramEntry : testCase["initial"]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  value = ramEntry[1];
@@ -604,9 +613,9 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
     // Execute instructions
     cpu.FetchDecodeExecute();
 
-    bool               testFailed = false;  // Track if any test has failed
-    std::ostringstream errorMessages;       // Accumulate error messages
-                                            //
+    bool               testFailed = false; // Track if any test has failed
+    std::ostringstream errorMessages;      // Accumulate error messages
+                                           //
     // Ensure final values match JSON values
     /* EXPECT_EQ( cpu.GetPC(), u16( testCase["final"]["pc"] ) ) */
     /*     << "PC mismatch: Expected " << std::hex << std::setw( 4 ) << std::setfill( '0' ) */
@@ -659,7 +668,7 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
         errorMessages << "P ";
     }
 
-    for ( const auto& ramEntry : testCase["final"]["ram"] )
+    for ( const auto &ramEntry : testCase["final"]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  expectedValue = ramEntry[1];
@@ -687,7 +696,7 @@ void CPUTest::RunTestCase( const json& testCase )  // NOLINT
     }
 }
 
-std::string CPUTest::GetCPUStateString( const json& jsonData, const std::string& state )
+std::string CPUTest::GetCPUStateString( const json &jsonData, const std::string &state )
 {
     // Expected values
     u16 expectedPC = u16( jsonData[state]["pc"] );
@@ -719,9 +728,9 @@ std::string CPUTest::GetCPUStateString( const json& jsonData, const std::string&
 
     // Function to format and print a line
     auto printLine =
-        [&]( const std::string& label, const std::string& expected, const std::string& actual )
+        [&]( const std::string &label, const std::string &expected, const std::string &actual )
     {
-        auto toHexDecimalString = []( const std::string& value )
+        auto toHexDecimalString = []( const std::string &value )
         {
             std::stringstream ss;
             int               intValue = std::strtol( value.c_str(), nullptr, 16 );
@@ -764,7 +773,7 @@ std::string CPUTest::GetCPUStateString( const json& jsonData, const std::string&
     output << '\n' << "RAM" << '\n';
 
     // Print RAM entries
-    for ( const auto& ramEntry : jsonData[state]["ram"] )
+    for ( const auto &ramEntry : jsonData[state]["ram"] )
     {
         uint16_t address = ramEntry[0];
         uint8_t  expectedValue = ramEntry[1];
@@ -797,7 +806,7 @@ std::string CPUTest::GetCPUStateString( const json& jsonData, const std::string&
     return output.str();
 }
 
-auto CPUTest::ExtractTestsFromJson( const std::string& path ) -> json
+auto CPUTest::ExtractTestsFromJson( const std::string &path ) -> json
 {
     std::ifstream jsonFile( path );
     if ( !jsonFile.is_open() )
@@ -814,12 +823,12 @@ auto CPUTest::ExtractTestsFromJson( const std::string& path ) -> json
     return testCases;
 }
 
-void CPUTest::PrintTestStartMsg( const std::string& testName )
+void CPUTest::PrintTestStartMsg( const std::string &testName )
 {
     std::cout << "---------- " << testName << " Tests ---------" << '\n';
 }
 
-void CPUTest::PrintTestEndMsg( const std::string& testName )
+void CPUTest::PrintTestEndMsg( const std::string &testName )
 {
     std::cout << "---------- " << testName << " Tests Complete ---------" << '\n';
     std::cout << '\n';

@@ -104,6 +104,8 @@ CTestCostData.txt
 bin/
 obj/
 lib/
+fceux/
 
 # Ignore any other common or custom build directories
 /build/
+/roms/

@@ -14,7 +14,7 @@ The NES consists of three major components: the CPU, the PPU, and the APU. The C
 
 ## Features
 
-- [ ] CPU <- We are here
+- [ ] CPU <- I am here
 - [ ] PPU
 - [ ] APU
 
@@ -22,20 +22,7 @@ The NES consists of three major components: the CPU, the PPU, and the APU. The C
 
 I'm currently working on the CPU. I have implemented the following features:
 
-### Addressing Modes
-
-- [x] Immediate
-- [x] Zero Page
-- [x] Zero Page X
-- [x] Zero Page Y
-- [x] Relative
-- [x] Absolute
-- [x] Absolute X
-- [x] Absolute Y
-- [x] Indirect
-- [x] Indirect X
-- [x] Indirect Y
-
-### Implemented Instructions
-
-See the full task list [here](tasks.md).
+- [x] Addressing Modes
+- [x] Instructions
+- [ ] Cycle Tracking
+- [ ] ROM Loading

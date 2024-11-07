@@ -1,0 +1,95 @@
+cmake_minimum_required( VERSION 3.15 )
+
+# Project name and version
+project( nes_emu VERSION 0.1 LANGUAGES CXX )
+
+# Enable compile_commands.json (for non-IDE builds)
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
+# C++ 17 standard
+set( CMAKE_CXX_STANDARD 17 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
+
+
+# Include directories
+include_directories( include )
+# Add additional includes here
+# include_directories(/path/to/other/includes)
+
+# Fetch content to download dependencies at configure time
+include(FetchContent)
+
+# Fetch the Google Test Library
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        v1.15.2 # Latest version as of Nov 6, 2024
+)
+
+# Ensures GoogleTest uses the shared C runtime (DLL) on Windows, instead of the static one
+set( gtest_force_shared_crt ON CACHE BOOL "" FORCE )
+FetchContent_MakeAvailable(googletest)
+
+# ----------------------- MAIN EXECUTABLES -----------------------
+add_executable(emu
+  src/main.cpp
+  src/cpu.cpp
+)
+
+# ----------------------- LIBRARIES -----------------------
+
+# Usage of PRIVATE, PUBLIC, and INTERFACE:
+# - PRIVATE: Only the target can use the linked library.
+# - PUBLIC: The target and its dependents can use the linked library.
+# - INTERFACE: Can be used by the target's dependents, but not the target itself.
+
+# Example
+# target_link_libraries(emu
+#   PRIVATE graphics_library           # Only emu
+#   PUBLIC core_library                # emu and anything using emu
+#   INTERFACE api_support_library      # Anything using emu, but not emu itself
+# )
+
+# ----------------------- TEST EXECUTABLES -----------------------
+add_executable(cpu_test
+  tests/cpu_test.cpp
+  src/cpu.cpp
+  # Add related cpp files here
+)
+# add other test executables here
+
+# ----------------------- TEST LIBRARIES -----------------------
+target_link_libraries(cpu_test PRIVATE gtest_main)
+# Link all other test executables to gtest_main
+
+# --- enable testing, do not touch, set only once ---
+enable_testing()
+
+# ----------------------- TEST CONFIGURATION -----------------------
+# Add the test executable to ctest. Inform ctest that the root directory of the test
+# is the source directory of CMakeLists.txt (not the build folder). We have to do this
+# because the final executable will be in the build folder, which can mess with relative
+# paths in the tests. Do this for each test executable.
+add_test(NAME cpu_test COMMAND cpu_test)
+set_tests_properties(cpu_test PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# Add other tests and properties here
+
+# ----------------------- ENABLE ISOLATED TESTS -----------------------
+# We need to add the below to be able to isolate tests. The PROPERTIES WORKING_DIRECTORY
+# sets the working directory of the test to the root folder instead of the build folder,
+# which resolves any issues with relative paths in the tests.
+
+# --- set only once ---
+include(GoogleTest)
+# ---
+gtest_discover_tests(cpu_test
+    PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+# Add individual tests for other test executables here
+
+# ----------------------- MAC BUNDLE -----------------------
+# Uncomment to build emu as a standalone MacOS .app bundle (optional)
+# Useful for distribution or if you need emu to behave as a native MacOS app.
+# Has no effect on Windows or Linux builds.
+# set_target_properties(emu PROPERTIES MACOSX_BUNDLE TRUE)
+
