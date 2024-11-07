@@ -11,7 +11,7 @@ using u16 = uint16_t;
 using u64 = uint64_t;
 using s8 = int8_t;
 
-constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 );
+/* constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 ); */
 constexpr size_t numOpcodes = 256;
 constexpr u16    defaultStartAddress = 0x8000;
 
@@ -24,14 +24,15 @@ struct CPUState
     std::optional<u8>  y = std::nullopt;  // Y Register
     std::optional<u8>  s = std::nullopt;  // Stack Pointer
     std::optional<u8>  p = std::nullopt;  // Status Register
-
-    std::optional<std::array<u8, size64KB>> memory = std::nullopt; // Memory
 };
+
+// Forward declaration, to avoid circular dependency
+class Bus;
 
 class CPU
 {
   public:
-    CPU();
+    explicit CPU( Bus *bus );
 
     // Getters and Setters
     [[nodiscard]] auto GetPC() const -> u16;
@@ -40,7 +41,7 @@ class CPU
     [[nodiscard]] auto GetY() const -> u8;
     [[nodiscard]] auto GetS() const -> u8;
     [[nodiscard]] auto GetP() const -> u8;
-    [[nodiscard]] auto GetMemory() const -> const std::array<u8, size64KB> &;
+    /* [[nodiscard]] auto GetMemory() const -> const std::array<u8, size64KB> &; */
     [[nodiscard]] auto IsHalted() const;
     [[nodiscard]] auto GetCycles() const -> u64;
 
@@ -50,8 +51,6 @@ class CPU
     void SetY( u8 yVal );
     void SetS( u8 sVal );
     void SetP( u8 pVal );
-    void SetMemory( const std::array<u8, size64KB> &memory );
-    void SetHalted( bool halt );
 
     // CPU Methods
     void Reset( CPUState state = {} );
@@ -89,8 +88,9 @@ class CPU
     u64 _cycles;
 
     // Memory
-    std::array<u8, size64KB> _memory;
-    // friend class for testing
+    std::array<u8, 2048> _ram; // 2KB of internal RAM, with mirroring
+
+    Bus *_bus;
 
     // Statuses
     enum Status : u8

@@ -3,16 +3,19 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "bus.h"
 #include "cpu.h"
 
 constexpr bool debug = false;
 
-CPU::CPU() // NOLINT
+CPU::CPU( Bus *bus )
+    : _bus( bus ), _ram{}, _op{}, _a( 0x00 ), _x( 0x00 ), _y( 0x00 ), _s( 0xFD ),
+      _p( 0x00 | Unused ), _cycles( 0 ), _pc( 0x0000 )
 {
-    Reset();
-
-    // Initialize the opcode table with nullptr
-    _op.fill( nullptr );
+    if ( bus == nullptr )
+    {
+        throw std::invalid_argument( "Bus is nullptr" );
+    }
 
 // Initialize the opcode table with the appropriate function pointers
 #define SET_OP( ... ) []( CPU &cpu ) { cpu.__VA_ARGS__; }            // NOLINT
@@ -178,7 +181,8 @@ CPU::CPU() // NOLINT
 [[nodiscard]] auto CPU::GetS() const -> u8 { return _s; }
 [[nodiscard]] auto CPU::GetP() const -> u8 { return _p; }
 [[nodiscard]] auto CPU::GetPC() const -> u16 { return _pc; }
-[[nodiscard]] auto CPU::GetMemory() const -> const std::array<u8, size64KB> & { return _memory; }
+/* [[nodiscard]] auto CPU::GetMemory() const -> const std::array<u8, size64KB> & { return _memory; }
+ */
 [[nodiscard]] auto CPU::IsHalted() const { return _halt; }
 [[nodiscard]] auto CPU::GetCycles() const -> u64 { return _cycles; }
 
@@ -191,8 +195,6 @@ void CPU::SetY( u8 yVal ) { _y = yVal; }
 void CPU::SetS( u8 sVal ) { _s = sVal; }
 void CPU::SetP( u8 pVal ) { _p = pVal; }
 void CPU::SetPC( u16 pcVal ) { _pc = pcVal; }
-void CPU::SetMemory( const std::array<u8, size64KB> &memory ) { _memory = memory; }
-void CPU::SetHalted( bool halt ) { _halt = halt; }
 
 // ----------------------------------------------------------------------------
 // ------------------------------- CPU METHODS --------------------------------
@@ -207,38 +209,15 @@ void CPU::Reset( CPUState state )
     _p = state.p.value_or( 0x00 | Unused );
     _cycles = 0;
 
-    if ( state.memory.has_value() )
-    {
-        _memory = state.memory.value();
-    }
-    else
-    {
-        _memory.fill( 0x00 );
-    }
-
     // The program counter is usually read from the reset vector of a game, a 16
     // bit address located at 0xFFFC. If an explicit PC value is not provided, it
     // will be read from ram at 0xFFFC, which is the hardware behavior.
     _pc = state.pc.value_or( ( Read( 0xFFFD ) << 8 ) | Read( 0xFFFC ) );
 }
 
-auto CPU::Read( u16 address ) const -> u8
-{
-    if ( address < 0x0000 || address > 0xFFFF )
-    {
-        throw std::out_of_range( "Read: Invalid read address: " + std::to_string( address ) );
-    }
-    return _memory[address];
-}
+auto CPU::Read( u16 address ) const -> u8 { return _bus->Read( address ); }
 
-void CPU::Write( u16 address, u8 data )
-{
-    if ( address < 0x0000 || address > 0xFFFF )
-    {
-        throw std::out_of_range( "Write: Invalid write address: " + std::to_string( address ) );
-    }
-    _memory[address] = data;
-}
+void CPU::Write( u16 address, u8 data ) { _bus->Write( address, data ); }
 
 void CPU::FetchDecodeExecute()
 {
