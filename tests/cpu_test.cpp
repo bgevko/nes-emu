@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "bus.h"
 #include "cpu.h"
 #include "json.hpp"
 
@@ -17,7 +18,11 @@ bool runDecimalModeTests = false;
 class CPUTest : public ::testing::Test
 {
   protected:
-    CPU cpu; // NOLINT
+    CPU cpu;
+    Bus bus;
+
+    CPUTest() : bus( true ), cpu( &bus ) {}
+
     // Helper methods
     void        LoadStateFromJson( const json &jsonData, const std::string &state );
     void        PrintCPUState( const json &jsonData, const std::string &state );

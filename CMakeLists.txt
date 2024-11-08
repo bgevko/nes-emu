@@ -34,6 +34,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(emu
   src/main.cpp
   src/cpu.cpp
+  src/bus.cpp
 )
 
 # ----------------------- LIBRARIES -----------------------
@@ -54,6 +55,7 @@ add_executable(emu
 add_executable(cpu_test
   tests/cpu_test.cpp
   src/cpu.cpp
+  src/bus.cpp
   # Add related cpp files here
 )
 # add other test executables here

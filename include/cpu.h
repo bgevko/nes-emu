@@ -11,7 +11,7 @@ using u16 = uint16_t;
 using u64 = uint64_t;
 using s8 = int8_t;
 
-/* constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 ); */
+constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 );
 constexpr size_t numOpcodes = 256;
 constexpr u16    defaultStartAddress = 0x8000;
 
@@ -41,7 +41,6 @@ class CPU
     [[nodiscard]] auto GetY() const -> u8;
     [[nodiscard]] auto GetS() const -> u8;
     [[nodiscard]] auto GetP() const -> u8;
-    /* [[nodiscard]] auto GetMemory() const -> const std::array<u8, size64KB> &; */
     [[nodiscard]] auto IsHalted() const;
     [[nodiscard]] auto GetCycles() const -> u64;
 

@@ -181,8 +181,6 @@ CPU::CPU( Bus *bus )
 [[nodiscard]] auto CPU::GetS() const -> u8 { return _s; }
 [[nodiscard]] auto CPU::GetP() const -> u8 { return _p; }
 [[nodiscard]] auto CPU::GetPC() const -> u16 { return _pc; }
-/* [[nodiscard]] auto CPU::GetMemory() const -> const std::array<u8, size64KB> & { return _memory; }
- */
 [[nodiscard]] auto CPU::IsHalted() const { return _halt; }
 [[nodiscard]] auto CPU::GetCycles() const -> u64 { return _cycles; }
 

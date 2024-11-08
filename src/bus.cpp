@@ -1,96 +1,92 @@
 
 // bus.cpp
 
-#include "apu.h"
 #include "bus.h"
-#include "cartridge.h"
-#include "ppu.h"
+#include <iostream>
 
 // Initialize RAM with zeros and cartridge with nullptr
-Bus::Bus( PPU &ppu, APU &apu ) : _ram{}, _cartridge{ nullptr }, _ppu{ ppu }, _apu{ apu } {}
+Bus::Bus( bool use_flat_memory ) : _use_flat_memory( use_flat_memory )
+{
+    _ram.fill( 0 );
+    _ppu_memory.fill( 0 );
+    _apu_io_memory.fill( 0 );
+    _expansion_rom_memory.fill( 0 );
+    _sram_memory.fill( 0 );
+    _prg_rom_memory.fill( 0 );
+}
 
 u8 Bus::Read( u16 address ) const
 {
+    if ( _use_flat_memory )
+    {
+        return _flat_memory[address];
+    }
+
     // System RAM: 0x0000 - 0x1FFF (mirrored every 2KB)
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
-        u16 ramAddress = address & 0x07FF; // Mirror the address
-        return _ram[ramAddress];
+        return _ram[address & 0x07FF];
     }
 
     // PPU Registers: 0x2000 - 0x3FFF (mirrored every 8 bytes)
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
+        // ppu read will go here. For now, return from temp private member of bus
         u16 ppuRegister = 0x2000 + ( address & 0x0007 );
-        return _ppu.ReadRegister( ppuRegister );
+        return _ppu_memory[ppuRegister];
     }
 
     // APU and I/O Registers: 0x4000 - 0x401F
     if ( address >= 0x4000 && address <= 0x401F )
     {
-        u16 apuAddress = address & 0x001F;
-
         // Handle reads from controller ports and other I/O
-        return _apu.Read( apuAddress );
-    }
-
-    // Unused APU and I/O addresses: 0x4018 - 0x401F
-    if ( address >= 0x4018 && address <= 0x401F )
-    {
-        // Return open bus value or handle as per emulator design
-        return 0x00;
+        // apu read will go here. For now, return from temp private member of bus
+        return _apu_io_memory[address & 0x001F];
     }
 
     // Expansion ROM: 0x4020 - 0x5FFF (if applicable)
     if ( address >= 0x4020 && address <= 0x5FFF )
     {
-        u16 expAddress = address - 0x4020;
-        if ( _cartridge )
-        {
-            return _cartridge->ReadExpROM( expAddress );
-        }
-
-        // Return open bus value if no cartridge
-        return 0xFF;
+        // This will be read from the cartridge, it's rarely used
+        // Normally, if there's no cartridge, the convention is to return 0xFF
+        // For now, this memory will be read from a temp private member of bus
+        return _expansion_rom_memory[address - 0x4020];
     }
 
     // SRAM (Save RAM): 0x6000 - 0x7FFF
     if ( address >= 0x6000 && address <= 0x7FFF )
     {
-        u16 sramAddress = address - 0x6000;
-        if ( _cartridge )
-        {
-            return _cartridge->ReadSRAM( sramAddress );
-        }
-
-        // Return open bus value if no cartridge
-        return 0xFF;
+        // This will be read from the cartridge, if present
+        // It represents battery-backed save data. Returns 0xFF if no cartridge
+        // For now, this memory will be read from a temp private member of bus
+        return _sram_memory[address - 0x6000];
     }
 
     // PRG ROM: 0x8000 - 0xFFFF
     if ( address >= 0x8000 && address <= 0xFFFF )
     {
-        u16 prgAddress = address - 0x8000;
-        if ( _cartridge )
-        {
-            return _cartridge->ReadPRG( prgAddress );
-        }
-
-        // Return open bus value if no cartridge
-        return 0xFF;
+        // This is PRG ROM, where the game code is stored
+        // For now, this memory will be read from a temp private member of bus
+        return _prg_rom_memory[address - 0x8000];
     }
 
     // Unhandled address ranges return open bus value
+    std::cout << "Unhandled read from address: " << std::hex << address << "\n";
     return 0xFF;
 }
 
 void Bus::Write( u16 address, u8 data )
 {
+    if ( _use_flat_memory )
+    {
+        _flat_memory[address] = data;
+        return;
+    }
+
     // System RAM: 0x0000 - 0x1FFF (mirrored every 2KB)
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
-        u16 ramAddress = address & 0x07FF; // Mirror the address
-        _ram[ramAddress] = data;
+        _ram[address & 0x07FF] = data;
         return;
     }
 
@@ -98,76 +94,40 @@ void Bus::Write( u16 address, u8 data )
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         u16 ppuRegister = 0x2000 + ( address & 0x0007 );
-        _ppu.WriteRegister( ppuRegister, data );
+        _ppu_memory[ppuRegister] = data; // temp
         return;
     }
 
     // APU and I/O Registers: 0x4000 - 0x401F
     if ( address >= 0x4000 && address <= 0x401F )
     {
-        u16 apuAddress = address & 0x001F;
-
-        // Handle OAM DMA transfer
-        if ( address == 0x4014 )
-        {
-            // Initiate DMA transfer to PPU OAM
-            u16                 cpuBaseAddress = data << 8;
-            std::array<u8, 256> dmaData{};
-
-            // Read 256 bytes from CPU memory
-            for ( u16 i = 0; i < 256; ++i )
-            {
-                dmaData[i] = Read( cpuBaseAddress + i );
-            }
-
-            // Write the data to PPU OAM
-            _ppu.DoDMATransfer( dmaData );
-            return;
-        }
-
-        _apu.Write( apuAddress, data );
-        return;
-    }
-
-    // Unused APU and I/O addresses: 0x4018 - 0x401F
-    if ( address >= 0x4018 && address <= 0x401F )
-    {
-        // Typically ignored or logged
+        _apu_io_memory[address & 0x001F] = data; // temp
         return;
     }
 
     // Expansion ROM: 0x4020 - 0x5FFF (if applicable)
     if ( address >= 0x4020 && address <= 0x5FFF )
     {
-        u16 expAddress = address - 0x4020;
-        if ( _cartridge )
-        {
-            _cartridge->WriteExpROM( expAddress, data );
-        }
+        _expansion_rom_memory[address - 0x4020] = data; // temp
         return;
     }
 
     // SRAM (Save RAM): 0x6000 - 0x7FFF
     if ( address >= 0x6000 && address <= 0x7FFF )
     {
-        u16 sramAddress = address - 0x6000;
-        if ( _cartridge )
-        {
-            _cartridge->WriteSRAM( sramAddress, data );
-        }
+        _sram_memory[address - 0x6000] = data; // temp
         return;
     }
 
-    // PRG ROM: 0x8000 - 0xFFFF (typically read-only)
+    // PRG ROM: 0x8000 - 0xFFFF (read only)
     if ( address >= 0x8000 && address <= 0xFFFF )
     {
-        if ( _cartridge )
-        {
-            _cartridge->WritePRG( address - 0x8000, data ); // For mapper-controlled writes
-        }
+        std::cout << "Attempted write to read-only PRG ROM address: " << std::hex << address
+                  << "\n";
         return;
     }
 
     // Unhandled address ranges
     // Optionally log a warning or ignore
+    std::cout << "Unhandled write to address: " << std::hex << address << "\n";
 }
