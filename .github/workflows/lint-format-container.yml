@@ -3,7 +3,7 @@
 
 # The workflow is triggered on pull requests and checks for changes in C++ files.
 # If changes are detected, the workflow installs grabs the latest
-# Docker container, and runs linting/formatting tests. 
+# Docker container, and runs linting/formatting tests.
 
 # If the checks pass, the workflow will report success. If the checks fail,
 # the workflow will report failure.
@@ -36,14 +36,14 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GH_TOKEN }}
 
       - name: Pull Docker image from GHCR
         if: env.files_modified == 'true'
         run: |
-          docker pull ghcr.io/coopeaus/nes-emulator/build-lint-container:latest
+          docker pull ghcr.io/bgevko/nes-emu/build-lint-container:latest
 
       - name: Run Linter
         if: env.files_modified == 'true'
         run: |
-          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/coopeaus/nes-emulator/build-lint-container:latest lint
+          docker run --platform linux/amd64 -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest lint
