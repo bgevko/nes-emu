@@ -86,7 +86,7 @@ lint)
     # In CI, check linting without fixing
     echo "Running clang-tidy in CI mode (check only)..."
     for file in $(find src/ include/ -name '*.cpp' -o -name '*.h'); do
-      clang-tidy -p "$BUILD_DIR" -header-filter='.*' "$file" || lint_failures=1
+      clang-tidy -p "$BUILD_DIR" -header-filter='.*' -warnings-as-errors='*' "$file" || lint_failures=1
     done
 
     # Report failure if linting issues were found
