@@ -1,97 +1,100 @@
-// cpu.h
 #pragma once
 
 #include <array>
 #include <cstdint>
-#include <optional>
-#include <vector>
+#include <string>
 
+// Aliases for integer types
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u64 = uint64_t;
-using s8 = int8_t;
 
-constexpr size_t size64KB = static_cast<size_t>( 64 * 1024 );
-constexpr size_t numOpcodes = 256;
-constexpr u16    defaultStartAddress = 0x8000;
-
-// CPU state with optional values to make testing partial states easier.
-struct CPUState
-{
-    std::optional<u16> pc = std::nullopt; // Program Counter
-    std::optional<u8>  a = std::nullopt;  // Accumulator
-    std::optional<u8>  x = std::nullopt;  // X Register
-    std::optional<u8>  y = std::nullopt;  // Y Register
-    std::optional<u8>  s = std::nullopt;  // Stack Pointer
-    std::optional<u8>  p = std::nullopt;  // Status Register
-};
-
-// Forward declaration, to avoid circular dependency
+// Forward declaration for reads and writes
 class Bus;
 
 class CPU
 {
   public:
-    explicit CPU( Bus *bus );
+    explicit CPU( Bus *bus ); // Must pass a pointer to a Bus class on initialization
 
-    // Getters and Setters
-    [[nodiscard]] auto GetPC() const -> u16;
-    [[nodiscard]] auto GetA() const -> u8;
-    [[nodiscard]] auto GetX() const -> u8;
-    [[nodiscard]] auto GetY() const -> u8;
-    [[nodiscard]] auto GetS() const -> u8;
-    [[nodiscard]] auto GetP() const -> u8;
-    [[nodiscard]] auto IsHalted() const;
-    [[nodiscard]] auto GetCycles() const -> u64;
+    // Getters for registers
+    [[nodiscard]] u8  GetAccumulator() const;
+    [[nodiscard]] u8  GetXRegister() const;
+    [[nodiscard]] u8  GetYRegister() const;
+    [[nodiscard]] u8  GetStatusRegister() const;
+    [[nodiscard]] u8  GetStackPointer() const;
+    [[nodiscard]] u16 GetProgramCounter() const;
+    [[nodiscard]] u64 GetCycles() const;
 
-    void SetPC( u16 pcVal );
-    void SetA( u8 aVal );
-    void SetX( u8 xVal );
-    void SetY( u8 yVal );
-    void SetS( u8 sVal );
-    void SetP( u8 pVal );
-
-    // CPU Methods
-    void Reset( CPUState state = {} );
-    void FetchDecodeExecute();
-
-    [[nodiscard]] auto Read( u16 address ) const -> u8;
-    void               Write( u16 address, u8 data );
-
-    // Helpers
-    void LoadProgram( const std::vector<u8> &data, u16 startAddress = defaultStartAddress );
-    void PrintMemory( u16 start, u16 end = 0x0000 ) const;
-    void PrintRegisters() const;
-
-    // Addressing modes
-    auto IMP() -> u16;  // Implied
-    auto IMM() -> u16;  // IMM
-    auto ZPG() -> u16;  // Zero Page
-    auto ABS() -> u16;  // ABS
-    auto ABSX() -> u16; // Absolute x
-    auto ABSX_NoPageCross() -> u16;
-    auto ABSY() -> u16; // Absolute y
-    auto ABSY_NoPageCross() -> u16;
-    auto ZPGX() -> u16; // Zero Page x
-    auto ZPGY() -> u16; // Zero Page y
-    auto IND() -> u16;  // Indirect
-    auto INDX() -> u16; // Indirect x
-    auto INDY() -> u16; // Indirect y
-    auto INDY_NoPageCross() -> u16;
-    auto REL() -> u16; // Relative
+    // Setters for registers
+    void SetAccumulator( u8 value );
+    void SetXRegister( u8 value );
+    void SetYRegister( u8 value );
+    void SetStatusRegister( u8 value );
+    void SetStackPointer( u8 value );
+    void SetProgramCounter( u16 value );
+    void SetCycles( u64 value );
 
   private:
+    friend class CPUTestFixture; // Sometimes used for testing private methods
+
+    Bus *_bus;         // Pointer to the Bus class
+    bool _imp = false; // Implicit addressing mode flag
+
     // Registers
-    u16 _pc;
-    u8  _a, _x, _y, _s, _p;
-    u64 _cycles;
+    u16 _pc = 0x0000; // Program counter (PC)
+    u8  _a = 0x00;    // Accumulator register (A)
+    u8  _x = 0x00;    // X register
+    u8  _y = 0x00;    // Y register
+    u8  _s = 0xFD;    // Stack pointer (SP)
+    u8  _p =
+        0x00 | Unused; // Status register (P), per the specs, the unused flag should always be set
+    u64 _cycles = 0;   // Number of cycles
 
-    // Memory
-    std::array<u8, 2048> _ram; // 2KB of internal RAM, with mirroring
+    // Instruction data
+    struct InstructionData
+    {
+        std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
+        void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
+        u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
+        u8 cycles;                               // Number of cycles the instruction takes
+        // Some instructions take an extra cycle if a page boundary is crossed. However, in some
+        // cases the extra cycle is not taken if the operation is a read. This will be set
+        // selectively for a handful of opcodes, but otherwise will be set to true by default
+        bool pageCrossPenalty = true;
+    };
 
-    Bus *_bus;
+    bool _currentPageCrossPenalty = true;
 
-    // Statuses
+    // Opcode table
+    std::array<InstructionData, 256> _opcodeTable;
+
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                        CPU Methods                         ||
+    ||                                                            ||
+    ################################################################
+    */
+    void Reset();
+
+    // Fetch/decode/execute cycle
+    [[nodiscard]] u8 Fetch();
+    void             Tick();
+
+    // Read/write methods
+    [[nodiscard]] auto Read( u16 address ) const -> u8;
+    void               Write( u16 address, u8 data ) const;
+
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                    Instruction Helpers                     ||
+    ||                                                            ||
+    ################################################################
+    */
+
+    // Enum for Status Register
     enum Status : u8
     {
         Carry = 1 << 0,            // 0b00000001
@@ -104,56 +107,128 @@ class CPU
         Negative = 1 << 7,         // 0b10000000
     };
 
-    // helper globals
-    bool _halt = false;
-    bool _supportsDecimalMode = false;
-
-    // Opcodes table
-    using OpcodeHandler = void ( * )( CPU & );
-
-    template <void ( CPU::*Op )()> void ExecuteOpcode( CPU &cpu ) { ( cpu.*Op )(); }
-    template <void ( CPU::*Op )( void ( CPU::* )() ), void ( CPU::*addressingMode )()>
-    void ExecuteOpcode( CPU &cpu )
-    {
-        ( cpu.*Op )( addressingMode );
-    }
-
-    std::array<OpcodeHandler, numOpcodes> _op;
-
-    // Instruction Helpers
-    void BRK( u8 cycles );
-    void LD( u8 cycles, u16 ( CPU::*addressingMode )(), u8 &reg );
-    void ST( u8 cycles, u16 ( CPU::*addressingMode )(), u8 reg );
-    void Transfer( u8 cycles, u8 &src, u8 &dest, bool updateFlags = true );
-    void AND( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void ORA( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void EOR( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void BIT( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void ASL( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void LSR( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void ROL( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void ROR( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void PLA( u8 cycles );
-    void PLP( u8 cycles );
-    void PHP( u8 cycles );
-    void PHA( u8 cycles );
-    void AddToReg( u8 cycles, u8 &reg, u8 value );
-    void AddToMemory( u8 cycles, u16 ( CPU::*addressingMode )(), u8 value );
-    void SetFlags( u8 cycles, u8 flag );
-    void ClearFlags( u8 cycles, u8 flag );
-    void ADC( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void SBC( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void Compare( u8 cycles, u16 ( CPU::*addressingMode )(), u8 reg );
-    void BranchOn( u8 cycles, u8 status, bool condition );
-    void JMP( u8 cycles, u16 ( CPU::*addressingMode )() );
-    void JSR( u8 cycles );
-    void RTS( u8 cycles );
-    void RTI( u8 cycles );
-    void NOP( u8 cycles );
-
-    // helpers
-    [[nodiscard]] auto GetStatusString() const -> std::string;
-    [[nodiscard]] auto Pop() -> u8;
-    void               Push( u8 value );
+    // Flag methods
+    void               SetFlags( u8 flag );
+    void               ClearFlags( u8 flag );
+    [[nodiscard]] auto IsFlagSet( u8 flag ) const -> bool;
     void               SetZeroAndNegativeFlags( u8 value );
+
+    // LDA, LDX, and LDY helper
+    void LoadRegister( u16 address, u8 &reg );
+    void StoreRegister( u16 address, u8 reg ) const;
+
+    // Branch helper
+    void BranchOnStatus( u16 offsetAddress, u8 flag, bool isSet );
+
+    // Compare helper
+    void CompareAddressWithRegister( u16 address, u8 reg );
+
+    // Push/Pop helper
+    void               StackPush( u8 value );
+    [[nodiscard]] auto StackPop() -> u8;
+
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                      Addressing Modes                      ||
+    ||                                                            ||
+    ################################################################
+    */
+    auto IMP() -> u16;  // Implicit
+    auto IMM() -> u16;  // Immediate
+    auto ZPG() -> u16;  // Zero Page
+    auto ZPGX() -> u16; // Zero Page X
+    auto ZPGY() -> u16; // Zero Page Y
+    auto ABS() -> u16;  // Absolute
+    auto ABSX() -> u16; // Absolute X
+    auto ABSY() -> u16; // Absolute Y
+    auto IND() -> u16;  // Indirect
+    auto INDX() -> u16; // Indirect X
+    auto INDY() -> u16; // Indirect Y
+    auto REL() -> u16;  // Relative
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                        Instructions                        ||
+    ||                                                            ||
+    ################################################################
+      */
+
+    // NOP
+    void NOP( u16 address );
+
+    // Load/Store
+    void LDA( u16 address );
+    void LDX( u16 address );
+    void LDY( u16 address );
+    void STA( u16 address );
+    void STX( u16 address );
+    void STY( u16 address );
+
+    // Arithmetic
+    void ADC( u16 address );
+    void SBC( u16 address );
+    void INC( u16 address );
+    void DEC( u16 address );
+    void INX( u16 address );
+    void INY( u16 address );
+    void DEX( u16 address );
+    void DEY( u16 address );
+
+    // Clear/Set flags
+    void CLC( u16 address );
+    void CLI( u16 address );
+    void CLD( u16 address );
+    void CLV( u16 address );
+    void SEC( u16 address );
+    void SED( u16 address );
+    void SEI( u16 address );
+
+    // Branch
+    void BPL( u16 address );
+    void BMI( u16 address );
+    void BVC( u16 address );
+    void BVS( u16 address );
+    void BCC( u16 address );
+    void BCS( u16 address );
+    void BNE( u16 address );
+    void BEQ( u16 address );
+
+    // Compare
+    void CMP( u16 address );
+    void CPX( u16 address );
+    void CPY( u16 address );
+
+    // Shift
+    void ASL( u16 address );
+    void LSR( u16 address );
+    void ROL( u16 address );
+    void ROR( u16 address );
+
+    // Stack
+    void PHA( u16 address );
+    void PHP( u16 address );
+    void PLA( u16 address );
+    void PLP( u16 address );
+    void TSX( u16 address );
+    void TXS( u16 address );
+
+    // Jumps
+    void JMP( u16 address );
+    void JSR( u16 address );
+    void RTS( u16 address );
+    void RTI( u16 address );
+    void BRK( u16 address );
+
+    // Bitwise
+    void AND( u16 address );
+    void EOR( u16 address );
+    void ORA( u16 address );
+    void BIT( u16 address );
+
+    // Transfer
+    void TAX( u16 address );
+    void TXA( u16 address );
+    void TAY( u16 address );
+    void TYA( u16 address );
 };

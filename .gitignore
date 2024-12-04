@@ -1,10 +1,15 @@
 # Name of my executable
 emu
 
+# Env files
+.env
+
+# Google Test files
+_deps/
+
 # Ignore object files and static libraries
 *.o
 *.a
-*.lib
 
 # Ignore dynamic libraries
 *.so
@@ -23,10 +28,12 @@ emu
 
 # Ignore CMake build directory
 /build/
+/build_container/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+cmake-build-*
 
 # Ignore Code::Blocks workspace files
 *.depend
@@ -86,9 +93,6 @@ Makefile
 *.bak
 *.old
 
-# Ignore generated documentation
-/docs/
-
 # Ignore coverage files
 *.gcda
 *.gcno
@@ -103,9 +107,14 @@ CTestCostData.txt
 # Ignore binary folders or output directories
 bin/
 obj/
-lib/
 fceux/
 
 # Ignore any other common or custom build directories
 /build/
-/roms/
+.vscode/
+
+# Local tooling
+lint.sh
+format.sh
+local.sh
+list.md

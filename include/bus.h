@@ -1,7 +1,12 @@
-// bus.h
 #pragma once
-
 #include "cpu.h"
+#include <array>
+#include <cstdint>
+#include <memory>
+
+using u8 = uint8_t;
+using u16 = uint16_t;
+using u64 = uint64_t;
 
 // forward declarations
 class Cartridge;
@@ -11,7 +16,11 @@ class APU;
 class Bus
 {
   public:
-    /* Bus( PPU &ppu, APU &apu ); */
+    // Will eventually pass other components to the constructor
+    // Bus( PPU &ppu, APU &apu, bool use_flat_memory = false );
+
+    // For now, let's use flat memory. Disabled by default, but but can and should be enabled
+    // during testing
     Bus( bool use_flat_memory = false );
 
     // Memory read/write interface
@@ -22,19 +31,22 @@ class Bus
     void LoadCartridge( std::shared_ptr<Cartridge> cartridge );
 
   private:
-    /* std::shared_ptr<Cartridge> _cartridge; // Shared ownership for dynamic life cycle management
-     */
+    // Shared ownership for dynamic life cycle management, leave off for now
+    std::shared_ptr<Cartridge> _cartridge;
 
-    /* PPU &_ppu; // NOLINT */
-    /* APU &_apu; // NOLINT */
+    // Leave these off for now
+    /* PPU &_ppu; */
+    /* APU &_apu; */
 
-    bool _use_flat_memory; // For testing purposes
+    // Flat memory for early implementation
+    bool                  _use_flat_memory; // For testing purposes
+    std::array<u8, 65536> _flat_memory{};   // 64KB memory, for early testing
 
-    std::array<u8, 65536> _flat_memory{}; // 64KB memory, for early testing
-
+    // CPU RAM, this can stay in this file
     std::array<u8, 0x0800> _ram{}; // 2KB internal cpu RAM
 
-    // temp memory placeholders
+    // Temp memory placeholders. These will eventually be passed of to their parent class Read/Write
+    // methods
     std::array<u8, 0x2000> _ppu_memory{};           // 8KB PPU memory (temp)
     std::array<u8, 0x0020> _apu_io_memory{};        // 32 bytes APU and I/O registers
     std::array<u8, 0x1FE0> _expansion_rom_memory{}; // 8160 bytes expansion ROM memory

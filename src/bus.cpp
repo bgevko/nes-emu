@@ -1,11 +1,11 @@
-
-// bus.cpp
-
 #include "bus.h"
+#include "cartridge.h"
 #include <iostream>
+#include <memory>
+#include <utility>
 
-// Initialize RAM with zeros and cartridge with nullptr
-Bus::Bus( bool use_flat_memory ) : _use_flat_memory( use_flat_memory )
+// Constructor to initialize the bus with a flat memory model
+Bus::Bus( const bool use_flat_memory ) : _use_flat_memory( use_flat_memory )
 {
     _ram.fill( 0 );
     _ppu_memory.fill( 0 );
@@ -15,7 +15,7 @@ Bus::Bus( bool use_flat_memory ) : _use_flat_memory( use_flat_memory )
     _prg_rom_memory.fill( 0 );
 }
 
-u8 Bus::Read( u16 address ) const
+u8 Bus::Read( const u16 address ) const
 {
     if ( _use_flat_memory )
     {
@@ -32,8 +32,8 @@ u8 Bus::Read( u16 address ) const
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         // ppu read will go here. For now, return from temp private member of bus
-        u16 ppuRegister = 0x2000 + ( address & 0x0007 );
-        return _ppu_memory[ppuRegister];
+        const u16 ppu_register = 0x2000 + ( address & 0x0007 );
+        return _ppu_memory[ppu_register];
     }
 
     // APU and I/O Registers: 0x4000 - 0x401F
@@ -67,7 +67,7 @@ u8 Bus::Read( u16 address ) const
     {
         // This is PRG ROM, where the game code is stored
         // For now, this memory will be read from a temp private member of bus
-        return _prg_rom_memory[address - 0x8000];
+        return _cartridge->ReadPRG( address );
     }
 
     // Unhandled address ranges return open bus value
@@ -75,7 +75,7 @@ u8 Bus::Read( u16 address ) const
     return 0xFF;
 }
 
-void Bus::Write( u16 address, u8 data )
+void Bus::Write( const u16 address, const u8 data )
 {
     if ( _use_flat_memory )
     {
@@ -93,8 +93,8 @@ void Bus::Write( u16 address, u8 data )
     // PPU Registers: 0x2000 - 0x3FFF (mirrored every 8 bytes)
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
-        u16 ppuRegister = 0x2000 + ( address & 0x0007 );
-        _ppu_memory[ppuRegister] = data; // temp
+        const u16 ppu_register = 0x2000 + ( address & 0x0007 );
+        _ppu_memory[ppu_register] = data; // temp
         return;
     }
 
@@ -130,4 +130,9 @@ void Bus::Write( u16 address, u8 data )
     // Unhandled address ranges
     // Optionally log a warning or ignore
     std::cout << "Unhandled write to address: " << std::hex << address << "\n";
+}
+
+void Bus::LoadCartridge( std::shared_ptr<Cartridge> cartridge )
+{
+    _cartridge = std::move( cartridge );
 }
