@@ -35,8 +35,8 @@ Cartridge::Cartridge( const std::string &file_path )
     _chr_rom_size = char_header[5];
 
     // Extract header info
-    u8       flags6 = char_header[6];
-    u8 const flags7 = char_header[7];
+    u8 flags6 = char_header[6];
+    u8 flags7 = char_header[7];
     _mapper = ( flags7 & 0b11110000 ) | ( flags6 >> 4 );
     _mirroring = flags6 & 0b00000001;
     _has_battery = ( flags6 & 0b00000010 ) != 0;
