@@ -578,6 +578,21 @@ CPU_TEST( FD, SBC, AbsoluteX, "fd.json" );
 CPU_TEST( FE, INC, AbsoluteX, "fe.json" );
 CPU_TEST( F8, SED, Implied, "f8.json" );
 
+// Illegal - JAM (02, 12, 22, 32, 45, 52, 62, 72, 92, B2, D2, F2)
+CPU_TEST( 02, JAM, Implied, "02.json" );
+CPU_TEST( 12, JAM, Implied, "12.json" );
+CPU_TEST( 22, JAM, Implied, "22.json" );
+CPU_TEST( 32, JAM, Implied, "32.json" );
+CPU_TEST( 42, JAM, Implied, "42.json" );
+CPU_TEST( 45, JAM, Implied, "42.json" );
+CPU_TEST( 52, JAM, Implied, "52.json" );
+CPU_TEST( 62, JAM, Implied, "62.json" );
+CPU_TEST( 72, JAM, Implied, "72.json" );
+CPU_TEST( 92, JAM, Implied, "92.json" );
+CPU_TEST( B2, JAM, Implied, "b2.json" );
+CPU_TEST( D2, JAM, Implied, "d2.json" );
+CPU_TEST( F2, JAM, Implied, "f2.json" );
+
 /*
 ################################################################
 ||                                                            ||

@@ -20,6 +20,7 @@ TEST( RomTests, CPUOfficial )
     // Loop until the test completes successfully
     while ( true )
     {
+        std::cout << cpu.DisassembleAtPC() << '\n';
         cpu.Tick(); // Run one CPU cycle
 
         // Read the status code from memory locations 0x02 and 0x03
