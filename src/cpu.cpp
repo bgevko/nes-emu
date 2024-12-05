@@ -297,12 +297,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x53] = InstructionData{ "*SRE_IndirectY", &CPU::SRE, &CPU::INDY, 8, 2, false };
 
     // RRA: 67, 77, 6F, 7F, 7B, 63, 73
-    // _opcodeTable[0x67] = InstructionData{ "*RRA_ZeroPage", &CPU::RRA, &CPU::ZPG, 5, 2 };
-    // _opcodeTable[0x77] = InstructionData{ "*RRA_ZeroPageX", &CPU::RRA, &CPU::ZPGX, 6, 2 };
-    // _opcodeTable[0x6F] = InstructionData{ "*RRA_Absolute", &CPU::RRA, &CPU::ABS, 6, 3 };
-    // _opcodeTable[0x7F] = InstructionData{ "*RRA_AbsoluteX", &CPU::RRA, &CPU::ABSX, 7, 3, false };
-    // _opcodeTable[0x7B] = InstructionData{ "*RRA_AbsoluteY", &CPU::RRA, &CPU::ABSY, 7, 3, false };
-    // _opcodeTable[0x63] = InstructionData{ "*RRA_IndirectX", &CPU::RRA, &CPU::INDX, 8, 2 };
+    _opcodeTable[0x67] = InstructionData{ "*RRA_ZeroPage", &CPU::RRA, &CPU::ZPG, 5, 2 };
+    _opcodeTable[0x77] = InstructionData{ "*RRA_ZeroPageX", &CPU::RRA, &CPU::ZPGX, 6, 2 };
+    _opcodeTable[0x6F] = InstructionData{ "*RRA_Absolute", &CPU::RRA, &CPU::ABS, 6, 3 };
+    _opcodeTable[0x7F] = InstructionData{ "*RRA_AbsoluteX", &CPU::RRA, &CPU::ABSX, 7, 3, false };
+    _opcodeTable[0x7B] = InstructionData{ "*RRA_AbsoluteY", &CPU::RRA, &CPU::ABSY, 7, 3, false };
+    _opcodeTable[0x63] = InstructionData{ "*RRA_IndirectX", &CPU::RRA, &CPU::INDX, 8, 2 };
+    _opcodeTable[0x73] = InstructionData{ "*RRA_IndirectY", &CPU::RRA, &CPU::INDY, 8, 2, false };
 
     // SAX: 87, 97, 8F, 83
     // _opcodeTable[0x87] = InstructionData{ "*SAX_ZeroPage", &CPU::SAX, &CPU::ZPG, 3, 2 };
@@ -2013,4 +2014,22 @@ void CPU::SRE( const u16 address )
      */
     CPU::LSR( address );
     CPU::EOR( address );
+}
+
+void CPU::RRA( const u16 address )
+{
+    /* @brief Illegal opcode: combines ROR and ADC
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   RRA Zero Page: 67(5)
+     *   RRA Zero Page X: 77(6)
+     *   RRA Absolute: 6F(6)
+     *   RRA Absolute X: 7F(7)
+     *   RRA Absolute Y: 7B(7)
+     *   RRA Indirect X: 63(8)
+     *   RRA Indirect Y: 73(8)
+     */
+    CPU::ROR( address );
+    CPU::ADC( address );
 }

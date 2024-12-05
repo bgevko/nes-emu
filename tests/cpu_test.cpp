@@ -651,13 +651,13 @@ CPU_TEST( 43, SRE, IndirectX, "43.json" );
 CPU_TEST( 53, SRE, IndirectY, "53.json" );
 
 // Illegal - RRA: 67, 77, 6F, 7F, 7B, 63, 73
-// CPU_TEST( 67, RRA, ZeroPage, "67.json" );
-// CPU_TEST( 77, RRA, ZeroPageX, "77.json" );
-// CPU_TEST( 6F, RRA, Absolute, "6f.json" );
-// CPU_TEST( 7F, RRA, AbsoluteX, "7f.json" );
-// CPU_TEST( 7B, RRA, AbsoluteY, "7b.json" );
-// CPU_TEST( 63, RRA, IndirectX, "63.json" );
-// CPU_TEST( 73, RRA, IndirectY, "73.json" );
+CPU_TEST( 67, RRA, ZeroPage, "67.json" );
+CPU_TEST( 77, RRA, ZeroPageX, "77.json" );
+CPU_TEST( 6F, RRA, Absolute, "6f.json" );
+CPU_TEST( 7F, RRA, AbsoluteX, "7f.json" );
+CPU_TEST( 7B, RRA, AbsoluteY, "7b.json" );
+CPU_TEST( 63, RRA, IndirectX, "63.json" );
+CPU_TEST( 73, RRA, IndirectY, "73.json" );
 
 // Illegal - SAX: 87, 97, 8F, 83
 // CPU_TEST( 87, SAX, ZeroPage, "87.json" );
