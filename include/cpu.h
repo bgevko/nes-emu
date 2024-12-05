@@ -251,4 +251,16 @@ class CPU
     void SAX( u16 address );
     void LAX( u16 address );
     void DCP( u16 address );
+    void ISC( u16 address );
+    void ALR( u16 address );
+    void ARR( u16 address );
+    void ANE( u16 address );
+    void SHA( u16 address );
+    void TAS( u16 address );
+    void LXA( u16 address );
+    void LAS( u16 address );
+    void SBX( u16 address );
+    void USBC( u16 address );
+    void SHY( u16 address );
+    void SHX( u16 address );
 };

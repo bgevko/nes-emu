@@ -327,6 +327,15 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xDB] = InstructionData{ "*DCP_AbsoluteY", &CPU::DCP, &CPU::ABSY, 7, 3, false };
     _opcodeTable[0xC3] = InstructionData{ "*DCP_IndirectX", &CPU::DCP, &CPU::INDX, 8, 2 };
     _opcodeTable[0xD3] = InstructionData{ "*DCP_IndirectY", &CPU::DCP, &CPU::INDY, 8, 2, false };
+
+    // ISC: E7, F7, EF, FF, FB, E3, F3
+    _opcodeTable[0xE7] = InstructionData{ "*ISC_ZeroPage", &CPU::ISC, &CPU::ZPG, 5, 2 };
+    _opcodeTable[0xF7] = InstructionData{ "*ISC_ZeroPageX", &CPU::ISC, &CPU::ZPGX, 6, 2 };
+    _opcodeTable[0xEF] = InstructionData{ "*ISC_Absolute", &CPU::ISC, &CPU::ABS, 6, 3 };
+    _opcodeTable[0xFF] = InstructionData{ "*ISC_AbsoluteX", &CPU::ISC, &CPU::ABSX, 7, 3, false };
+    _opcodeTable[0xFB] = InstructionData{ "*ISC_AbsoluteY", &CPU::ISC, &CPU::ABSY, 7, 3, false };
+    _opcodeTable[0xE3] = InstructionData{ "*ISC_IndirectX", &CPU::ISC, &CPU::INDX, 8, 2 };
+    _opcodeTable[0xF3] = InstructionData{ "*ISC_IndirectY", &CPU::ISC, &CPU::INDY, 8, 2, false };
 };
 
 // Getters
@@ -2083,4 +2092,22 @@ void CPU::DCP( const u16 address )
      */
     CPU::DEC( address );
     CPU::CMP( address );
+}
+
+void CPU::ISC( const u16 address )
+{
+    /* @brief Illegal opcode: combines INC and SBC
+     * N Z C I D V
+     * + + + - - +
+     *   Usage and cycles:
+     *   ISC Zero Page: E7(5)
+     *   ISC Zero Page X: F7(6)
+     *   ISC Absolute: EF(6)
+     *   ISC Absolute X: FF(7)
+     *   ISC Absolute Y: FB(7)
+     *   ISC Indirect X: E3(8)
+     *   ISC Indirect Y: F3(8)
+     */
+    CPU::INC( address );
+    CPU::SBC( address );
 }

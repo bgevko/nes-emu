@@ -682,6 +682,30 @@ CPU_TEST( DB, DCP, AbsoluteY, "db.json" );
 CPU_TEST( C3, DCP, IndirectX, "c3.json" );
 CPU_TEST( D3, DCP, IndirectY, "d3.json" );
 
+// Illegal - ISC: E7, F7, EF, FF, FB, E3, F3
+CPU_TEST( E7, ISC, ZeroPage, "e7.json" );
+CPU_TEST( F7, ISC, ZeroPageX, "f7.json" );
+CPU_TEST( EF, ISC, Absolute, "ef.json" );
+CPU_TEST( FF, ISC, AbsoluteX, "ff.json" );
+CPU_TEST( FB, ISC, AbsoluteY, "fb.json" );
+CPU_TEST( E3, ISC, IndirectX, "e3.json" );
+CPU_TEST( F3, ISC, IndirectY, "f3.json" );
+
+// ALR, ARR, ANE, SHA, TAS, LXA, LAS, SBX, USBC, SHY, SHX
+// 4B, 6B, 8B, 9F, 93, 9B, AB, BB, CB, EB, 9C, 9E
+// CPU_TEST( 4B, ALR, Immediate, "4b.json" );
+// CPU_TEST( 6B, ARR, Immediate, "6b.json" );
+// CPU_TEST( 8B, ANE, Immediate, "8b.json" );
+// CPU_TEST( 9F, SHA, AbsoluteY, "9f.json" );
+// CPU_TEST( 93, SHA, IndirectY, "93.json" );
+// CPU_TEST( 9B, TAS, AbsoluteY, "9b.json" );
+// CPU_TEST( AB, LXA, Immediate, "ab.json" );
+// CPU_TEST( BB, LAS, AbsoluteY, "bb.json" );
+// CPU_TEST( CB, SBX, Immediate, "cb.json" );
+// CPU_TEST( EB, USBC, Immediate, "eb.json" );
+// CPU_TEST( 9C, SHY, AbsoluteX, "9c.json" );
+// CPU_TEST( 9E, SHX, AbsoluteY, "9e.json" );
+
 /*
 ################################################################
 ||                                                            ||
