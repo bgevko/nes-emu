@@ -666,12 +666,12 @@ CPU_TEST( 8F, SAX, Absolute, "8f.json" );
 CPU_TEST( 83, SAX, IndirectX, "83.json" );
 
 // Illegal - LAX: A7, B7, AF, BF, A3, B3
-// CPU_TEST( A7, LAX, ZeroPage, "a7.json" );
-// CPU_TEST( B7, LAX, ZeroPageY, "b7.json" );
-// CPU_TEST( AF, LAX, Absolute, "af.json" );
-// CPU_TEST( BF, LAX, AbsoluteY, "bf.json" );
-// CPU_TEST( A3, LAX, IndirectX, "a3.json" );
-// CPU_TEST( B3, LAX, IndirectY, "b3.json" );
+CPU_TEST( A7, LAX, ZeroPage, "a7.json" );
+CPU_TEST( B7, LAX, ZeroPageY, "b7.json" );
+CPU_TEST( AF, LAX, Absolute, "af.json" );
+CPU_TEST( BF, LAX, AbsoluteY, "bf.json" );
+CPU_TEST( A3, LAX, IndirectX, "a3.json" );
+CPU_TEST( B3, LAX, IndirectY, "b3.json" );
 
 // Illegal - DCP: C7, D7, CF, DF, DB, C3, D3
 // CPU_TEST( C7, DCP, ZeroPage, "c7.json" );

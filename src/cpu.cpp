@@ -312,12 +312,12 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x83] = InstructionData{ "*SAX_IndirectX", &CPU::SAX, &CPU::INDX, 6, 2 };
 
     // LAX: A7, B7, AF, BF, A3, B3
-    // _opcodeTable[0xA7] = InstructionData{ "*LAX_ZeroPage", &CPU::LAX, &CPU::ZPG, 3, 2 };
-    // _opcodeTable[0xB7] = InstructionData{ "*LAX_ZeroPageY", &CPU::LAX, &CPU::ZPGY, 4, 2 };
-    // _opcodeTable[0xAF] = InstructionData{ "*LAX_Absolute", &CPU::LAX, &CPU::ABS, 4, 3 };
-    // _opcodeTable[0xBF] = InstructionData{ "*LAX_AbsoluteY", &CPU::LAX, &CPU::ABSY, 4, 3, false };
-    // _opcodeTable[0xA3] = InstructionData{ "*LAX_IndirectX", &CPU::LAX, &CPU::INDX, 6, 2 };
-    // _opcodeTable[0xB3] = InstructionData{ "*LAX_IndirectY", &CPU::LAX, &CPU::INDY, 5, 2 };
+    _opcodeTable[0xA7] = InstructionData{ "*LAX_ZeroPage", &CPU::LAX, &CPU::ZPG, 3, 2 };
+    _opcodeTable[0xB7] = InstructionData{ "*LAX_ZeroPageY", &CPU::LAX, &CPU::ZPGY, 4, 2 };
+    _opcodeTable[0xAF] = InstructionData{ "*LAX_Absolute", &CPU::LAX, &CPU::ABS, 4, 3 };
+    _opcodeTable[0xBF] = InstructionData{ "*LAX_AbsoluteY", &CPU::LAX, &CPU::ABSY, 4, 3 };
+    _opcodeTable[0xA3] = InstructionData{ "*LAX_IndirectX", &CPU::LAX, &CPU::INDX, 6, 2 };
+    _opcodeTable[0xB3] = InstructionData{ "*LAX_IndirectY", &CPU::LAX, &CPU::INDY, 5, 2 };
 
     // DCP: C7, D7, CF, DF, DB, C3, D3
     // _opcodeTable[0xC7] = InstructionData{ "*DCP_ZeroPage", &CPU::DCP, &CPU::ZPG, 5, 2 };
@@ -2046,4 +2046,23 @@ void CPU::SAX( const u16 address )
      *   SAX Absolute: 8F(4)
      */
     Write( address, GetXRegister() & GetAccumulator() );
+}
+
+void CPU::LAX( const u16 address )
+{
+    /* @brief Illegal opcode: combines LDA and LDX
+     * N Z C I D V
+     * + + - - - -
+     *   Usage and cycles:
+     *   LAX Zero Page: A7(3)
+     *   LAX Zero Page Y: B7(4)
+     *   LAX Absolute: AF(4)
+     *   LAX Absolute Y: BF(4+)
+     *   LAX Indirect X: A3(6)
+     *   LAX Indirect Y: B3(5+)
+     */
+    u8 const value = Read( address );
+    SetAccumulator( value );
+    SetXRegister( value );
+    SetZeroAndNegativeFlags( value );
 }
