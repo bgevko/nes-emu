@@ -702,7 +702,7 @@ CPU_TEST( 4B, ALR, Immediate, "4b.json" );
 // CPU_TEST( AB, LXA, Immediate, "ab.json" );
 // CPU_TEST( BB, LAS, AbsoluteY, "bb.json" );
 // CPU_TEST( CB, SBX, Immediate, "cb.json" );
-// CPU_TEST( EB, USBC, Immediate, "eb.json" );
+CPU_TEST( EB, USBC, Immediate, "eb.json" );
 // CPU_TEST( 9C, SHY, AbsoluteX, "9c.json" );
 // CPU_TEST( 9E, SHX, AbsoluteY, "9e.json" );
 

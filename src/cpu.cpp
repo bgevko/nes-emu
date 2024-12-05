@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "bus.h"
+#include <iostream>
 
 CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 {
@@ -337,6 +338,9 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xE3] = InstructionData{ "*ISC_IndirectX", &CPU::ISC, &CPU::INDX, 8, 2 };
     _opcodeTable[0xF3] = InstructionData{ "*ISC_IndirectY", &CPU::ISC, &CPU::INDY, 8, 2, false };
 
+    // USBC: EB, this is just the normal SBC in immediate mode
+    _opcodeTable[0xEB] = InstructionData{ "*SBC_Immediate", &CPU::SBC, &CPU::IMM, 2, 2 };
+
     // ALR: 4B, ARR: 6B, ANE: 8B
     _opcodeTable[0x4B] = InstructionData{ "*ALR_Immediate", &CPU::ALR, &CPU::IMM, 2, 2 };
     // _opcodeTable[0x6B] = InstructionData{ "*ARR_Immediate", &CPU::ARR, &CPU::IMM, 2, 2 };
@@ -355,9 +359,6 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 
     // SBX: CB
     // _opcodeTable[0xCB] = InstructionData{ "*SBX_Immediate", &CPU::SBX, &CPU::IMM, 2, 2 };
-
-    // USBC: 9C
-    // _opcodeTable[0x9C] = InstructionData{ "*USBC_AbsoluteX", &CPU::USBC, &CPU::ABSX, 5, 3 };
 
     // SHY: 9C, SHX: 9E
     // _opcodeTable[0x9C] = InstructionData{ "*SHY_AbsoluteX", &CPU::SHY, &CPU::ABSX, 5, 3 };
@@ -465,9 +466,18 @@ std::string CPU::DisassembleAtPC() // NOLINT
 
     // Grab instrution name and adddress mode from opcode table
     std::string const &name_addrmode = _opcodeTable[Read( _pc )].name;
-    size_t const       split_pos = name_addrmode.find( '_' );
-    std::string        mnemonic = name_addrmode.substr( 0, split_pos );
-    std::string        addr_mode = name_addrmode.substr( split_pos + 1 );
+
+    if ( name_addrmode.empty() )
+    {
+        std::cerr << "Attempted to grab from a non existing table entry at PC: " << to_hex( _pc, 4 )
+                  << '\n';
+        std::cerr << "Opcode: " << to_hex( Read( _pc ), 2 ) << '\n';
+        throw std::runtime_error( "Invalid opcode" );
+    }
+
+    size_t const split_pos = name_addrmode.find( '_' );
+    std::string  mnemonic = name_addrmode.substr( 0, split_pos );
+    std::string  addr_mode = name_addrmode.substr( split_pos + 1 );
 
     std::string output;
 
@@ -489,7 +499,8 @@ std::string CPU::DisassembleAtPC() // NOLINT
     // Mnemonic and addressing mode can be fetched from the name attribute of
     // the instruction struct, they are separated by a "_"
 
-    output += mnemonic + " ";
+    ( mnemonic[0] == '*' ) ? output += "*" + mnemonic.substr( 1 ) + " "
+                           : output += " " + mnemonic + " ";
 
     // Addressing mode specific output
     u8 value = 0x00;
