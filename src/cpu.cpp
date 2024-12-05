@@ -226,6 +226,41 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xB2] = InstructionData{ "JAM_Implied", &CPU::JAM, &CPU::IMP, 3, 1 };
     _opcodeTable[0xD2] = InstructionData{ "JAM_Implied", &CPU::JAM, &CPU::IMP, 3, 1 };
     _opcodeTable[0xF2] = InstructionData{ "JAM_Implied", &CPU::JAM, &CPU::IMP, 3, 1 };
+
+    // Illegal - NOP (1A, 3A, 5A, 7A, DA, FA, 80, 82, 89, C2, E2, 04, 44, 64, 14, 34, 54, 74, D4,
+    // F4, 0C, 1C, 3C, 5C, 7C, DC, FC)
+    // NOP Implied
+    _opcodeTable[0x1A] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    _opcodeTable[0x3A] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    _opcodeTable[0x5A] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    _opcodeTable[0x7A] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    _opcodeTable[0xDA] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    _opcodeTable[0xFA] = InstructionData{ "*NOP_Implied", &CPU::NOP, &CPU::IMP, 2, 1 };
+    // NOP Immediate
+    _opcodeTable[0x80] = InstructionData{ "*NOP_Immediate", &CPU::NOP, &CPU::IMM, 2, 2 };
+    _opcodeTable[0x82] = InstructionData{ "*NOP_Immediate", &CPU::NOP, &CPU::IMM, 2, 2 };
+    _opcodeTable[0x89] = InstructionData{ "*NOP_Immediate", &CPU::NOP, &CPU::IMM, 2, 2 };
+    _opcodeTable[0xC2] = InstructionData{ "*NOP_Immediate", &CPU::NOP, &CPU::IMM, 2, 2 };
+    _opcodeTable[0xE2] = InstructionData{ "*NOP_Immediate", &CPU::NOP, &CPU::IMM, 2, 2 };
+    // NOP Zero Page
+    _opcodeTable[0x04] = InstructionData{ "*NOP_ZeroPage", &CPU::NOP, &CPU::ZPG, 3, 2 };
+    _opcodeTable[0x44] = InstructionData{ "*NOP_ZeroPage", &CPU::NOP, &CPU::ZPG, 3, 2 };
+    _opcodeTable[0x64] = InstructionData{ "*NOP_ZeroPage", &CPU::NOP, &CPU::ZPG, 3, 2 };
+    // NOP Zero Page X
+    _opcodeTable[0x14] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    _opcodeTable[0x34] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    _opcodeTable[0x54] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    _opcodeTable[0x74] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    _opcodeTable[0xD4] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    _opcodeTable[0xF4] = InstructionData{ "*NOP_ZeroPageX", &CPU::NOP, &CPU::ZPGX, 4, 2 };
+    // NOP Absolute, NOP Absolute X
+    _opcodeTable[0x0C] = InstructionData{ "*NOP_Absolute", &CPU::NOP, &CPU::ABS, 4, 3 };
+    _opcodeTable[0x1C] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+    _opcodeTable[0x3C] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+    _opcodeTable[0x5C] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+    _opcodeTable[0x7C] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+    _opcodeTable[0xDC] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+    _opcodeTable[0xFC] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
 };
 
 // Getters
