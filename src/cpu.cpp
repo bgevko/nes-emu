@@ -227,6 +227,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xD2] = InstructionData{ "JAM_Implied", &CPU::JAM, &CPU::IMP, 3, 1 };
     _opcodeTable[0xF2] = InstructionData{ "JAM_Implied", &CPU::JAM, &CPU::IMP, 3, 1 };
 
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                      Illegal Opcodes                       ||
+    ||                                                            ||
+    ################################################################
+    */
     // Illegal - NOP (1A, 3A, 5A, 7A, DA, FA, 80, 82, 89, C2, E2, 04, 44, 64, 14, 34, 54, 74, D4,
     // F4, 0C, 1C, 3C, 5C, 7C, DC, FC)
     // NOP Implied
@@ -261,6 +268,64 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x7C] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
     _opcodeTable[0xDC] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
     _opcodeTable[0xFC] = InstructionData{ "*NOP_AbsoluteX", &CPU::NOP, &CPU::ABSX, 4, 3 };
+
+    // SLO
+    _opcodeTable[0x07] = InstructionData{ "*SLO_ZeroPage", &CPU::SLO, &CPU::ZPG, 5, 2 };
+    _opcodeTable[0x17] = InstructionData{ "*SLO_ZeroPageX", &CPU::SLO, &CPU::ZPGX, 6, 2 };
+    _opcodeTable[0x0F] = InstructionData{ "*SLO_Absolute", &CPU::SLO, &CPU::ABS, 6, 3 };
+    _opcodeTable[0x1F] = InstructionData{ "*SLO_AbsoluteX", &CPU::SLO, &CPU::ABSX, 7, 3, false };
+    _opcodeTable[0x1B] = InstructionData{ "*SLO_AbsoluteY", &CPU::SLO, &CPU::ABSY, 7, 3, false };
+    _opcodeTable[0x03] = InstructionData{ "*SLO_IndirectX", &CPU::SLO, &CPU::INDX, 8, 2 };
+    _opcodeTable[0x13] = InstructionData{ "*SLO_IndirectY", &CPU::SLO, &CPU::INDY, 8, 2, false };
+
+    // RLA: 27, 37, 2F, 3F, 3B, 23, 33
+    // _opcodeTable[0x27] = InstructionData{ "*RLA_ZeroPage", &CPU::RLA, &CPU::ZPG, 5, 2 };
+    // _opcodeTable[0x37] = InstructionData{ "*RLA_ZeroPageX", &CPU::RLA, &CPU::ZPGX, 6, 2 };
+    // _opcodeTable[0x2F] = InstructionData{ "*RLA_Absolute", &CPU::RLA, &CPU::ABS, 6, 3 };
+    // _opcodeTable[0x3F] = InstructionData{ "*RLA_AbsoluteX", &CPU::RLA, &CPU::ABSX, 7, 3, false };
+    // _opcodeTable[0x3B] = InstructionData{ "*RLA_AbsoluteY", &CPU::RLA, &CPU::ABSY, 7, 3, false };
+    // _opcodeTable[0x23] = InstructionData{ "*RLA_IndirectX", &CPU::RLA, &CPU::INDX, 8, 2 };
+    // _opcodeTable[0x33] = InstructionData{ "*RLA_IndirectY", &CPU::RLA, &CPU::INDY, 8, 2 };
+
+    // SRE: 47, 57, 4F, 5F, 5B, 43, 53
+    // _opcodeTable[0x47] = InstructionData{ "*SRE_ZeroPage", &CPU::SRE, &CPU::ZPG, 5, 2 };
+    // _opcodeTable[0x57] = InstructionData{ "*SRE_ZeroPageX", &CPU::SRE, &CPU::ZPGX, 6, 2 };
+    // _opcodeTable[0x4F] = InstructionData{ "*SRE_Absolute", &CPU::SRE, &CPU::ABS, 6, 3 };
+    // _opcodeTable[0x5F] = InstructionData{ "*SRE_AbsoluteX", &CPU::SRE, &CPU::ABSX, 7, 3, false };
+    // _opcodeTable[0x5B] = InstructionData{ "*SRE_AbsoluteY", &CPU::SRE, &CPU::ABSY, 7, 3, false };
+    // _opcodeTable[0x43] = InstructionData{ "*SRE_IndirectX", &CPU::SRE, &CPU::INDX, 8, 2 };
+    // _opcodeTable[0x53] = InstructionData{ "*SRE_IndirectY", &CPU::SRE, &CPU::INDY, 8, 2 };
+
+    // RRA: 67, 77, 6F, 7F, 7B, 63, 73
+    // _opcodeTable[0x67] = InstructionData{ "*RRA_ZeroPage", &CPU::RRA, &CPU::ZPG, 5, 2 };
+    // _opcodeTable[0x77] = InstructionData{ "*RRA_ZeroPageX", &CPU::RRA, &CPU::ZPGX, 6, 2 };
+    // _opcodeTable[0x6F] = InstructionData{ "*RRA_Absolute", &CPU::RRA, &CPU::ABS, 6, 3 };
+    // _opcodeTable[0x7F] = InstructionData{ "*RRA_AbsoluteX", &CPU::RRA, &CPU::ABSX, 7, 3, false };
+    // _opcodeTable[0x7B] = InstructionData{ "*RRA_AbsoluteY", &CPU::RRA, &CPU::ABSY, 7, 3, false };
+    // _opcodeTable[0x63] = InstructionData{ "*RRA_IndirectX", &CPU::RRA, &CPU::INDX, 8, 2 };
+
+    // SAX: 87, 97, 8F, 83
+    // _opcodeTable[0x87] = InstructionData{ "*SAX_ZeroPage", &CPU::SAX, &CPU::ZPG, 3, 2 };
+    // _opcodeTable[0x97] = InstructionData{ "*SAX_ZeroPageY", &CPU::SAX, &CPU::ZPGY, 4, 2 };
+    // _opcodeTable[0x8F] = InstructionData{ "*SAX_Absolute", &CPU::SAX, &CPU::ABS, 4, 3 };
+    // _opcodeTable[0x83] = InstructionData{ "*SAX_IndirectX", &CPU::SAX, &CPU::INDX, 6, 2 };
+
+    // LAX: A7, B7, AF, BF, A3, B3
+    // _opcodeTable[0xA7] = InstructionData{ "*LAX_ZeroPage", &CPU::LAX, &CPU::ZPG, 3, 2 };
+    // _opcodeTable[0xB7] = InstructionData{ "*LAX_ZeroPageY", &CPU::LAX, &CPU::ZPGY, 4, 2 };
+    // _opcodeTable[0xAF] = InstructionData{ "*LAX_Absolute", &CPU::LAX, &CPU::ABS, 4, 3 };
+    // _opcodeTable[0xBF] = InstructionData{ "*LAX_AbsoluteY", &CPU::LAX, &CPU::ABSY, 4, 3, false };
+    // _opcodeTable[0xA3] = InstructionData{ "*LAX_IndirectX", &CPU::LAX, &CPU::INDX, 6, 2 };
+    // _opcodeTable[0xB3] = InstructionData{ "*LAX_IndirectY", &CPU::LAX, &CPU::INDY, 5, 2 };
+
+    // DCP: C7, D7, CF, DF, DB, C3, D3
+    // _opcodeTable[0xC7] = InstructionData{ "*DCP_ZeroPage", &CPU::DCP, &CPU::ZPG, 5, 2 };
+    // _opcodeTable[0xD7] = InstructionData{ "*DCP_ZeroPageX", &CPU::DCP, &CPU::ZPGX, 6, 2 };
+    // _opcodeTable[0xCF] = InstructionData{ "*DCP_Absolute", &CPU::DCP, &CPU::ABS, 6, 3 };
+    // _opcodeTable[0xDF] = InstructionData{ "*DCP_AbsoluteX", &CPU::DCP, &CPU::ABSX, 7, 3, false };
+    // _opcodeTable[0xDB] = InstructionData{ "*DCP_AbsoluteY", &CPU::DCP, &CPU::ABSY, 7, 3, false };
+    // _opcodeTable[0xC3] = InstructionData{ "*DCP_IndirectX", &CPU::DCP, &CPU::INDX, 8, 2 };
+    // _opcodeTable[0xD3] = InstructionData{ "*DCP_IndirectY", &CPU::DCP, &CPU::INDY, 8, 2 };
 };
 
 // Getters
@@ -1894,4 +1959,22 @@ void CPU::JAM( const u16 address ) // NOLINT
     (void) address;
     // Do nothing (undo the pc increment)
     _pc--;
+}
+
+void CPU::SLO( const u16 address )
+{
+    /* @brief Illegal opcode: combines ASL and ORA
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   SLO Zero Page: 07(5)
+     *   SLO Zero Page X: 17(6)
+     *   SLO Absolute: 0F(6)
+     *   SLO Absolute X: 1F(7)
+     *   SLO Absolute Y: 1B(7)
+     *   SLO Indirect X: 03(8)
+     *   SLO Indirect Y: 13(8)
+     */
+    CPU::ASL( address );
+    CPU::ORA( address );
 }

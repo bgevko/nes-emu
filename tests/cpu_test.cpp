@@ -623,6 +623,65 @@ CPU_TEST( 7C, NOP, AbsoluteX, "7c.json" );
 CPU_TEST( DC, NOP, AbsoluteX, "dc.json" );
 CPU_TEST( FC, NOP, AbsoluteX, "fc.json" );
 
+// Illegal - SLO: 07, 17, 0F, 1F, 1B, 03, 13
+CPU_TEST( 07, SLO, ZeroPage, "07.json" );
+CPU_TEST( 17, SLO, ZeroPageX, "17.json" );
+CPU_TEST( 0F, SLO, Absolute, "0f.json" );
+CPU_TEST( 1F, SLO, AbsoluteX, "1f.json" );
+CPU_TEST( 1B, SLO, AbsoluteY, "1b.json" );
+CPU_TEST( 03, SLO, IndirectX, "03.json" );
+CPU_TEST( 13, SLO, IndirectY, "13.json" );
+
+// Illegal - RLA: 27, 37, 2F, 3F, 3B, 23, 33
+// CPU_TEST( 27, RLA, ZeroPage, "27.json" );
+// CPU_TEST( 37, RLA, ZeroPageX, "37.json" );
+// CPU_TEST( 2F, RLA, Absolute, "2f.json" );
+// CPU_TEST( 3F, RLA, AbsoluteX, "3f.json" );
+// CPU_TEST( 3B, RLA, AbsoluteY, "3b.json" );
+// CPU_TEST( 23, RLA, IndirectX, "23.json" );
+// CPU_TEST( 33, RLA, IndirectY, "33.json" );
+
+// Illegal - SRE: 47, 57, 4F, 5F, 5B, 43, 53
+// CPU_TEST( 47, SRE, ZeroPage, "47.json" );
+// CPU_TEST( 57, SRE, ZeroPageX, "57.json" );
+// CPU_TEST( 4F, SRE, Absolute, "4f.json" );
+// CPU_TEST( 5F, SRE, AbsoluteX, "5f.json" );
+// CPU_TEST( 5B, SRE, AbsoluteY, "5b.json" );
+// CPU_TEST( 43, SRE, IndirectX, "43.json" );
+// CPU_TEST( 53, SRE, IndirectY, "53.json" );
+
+// Illegal - RRA: 67, 77, 6F, 7F, 7B, 63, 73
+// CPU_TEST( 67, RRA, ZeroPage, "67.json" );
+// CPU_TEST( 77, RRA, ZeroPageX, "77.json" );
+// CPU_TEST( 6F, RRA, Absolute, "6f.json" );
+// CPU_TEST( 7F, RRA, AbsoluteX, "7f.json" );
+// CPU_TEST( 7B, RRA, AbsoluteY, "7b.json" );
+// CPU_TEST( 63, RRA, IndirectX, "63.json" );
+// CPU_TEST( 73, RRA, IndirectY, "73.json" );
+
+// Illegal - SAX: 87, 97, 8F, 83
+// CPU_TEST( 87, SAX, ZeroPage, "87.json" );
+// CPU_TEST( 97, SAX, ZeroPageY, "97.json" );
+// CPU_TEST( 8F, SAX, Absolute, "8f.json" );
+// CPU_TEST( 83, SAX, IndirectX, "83.json" );
+
+// Illegal - LAX: A7, B7, AF, BF, A3, B3
+// CPU_TEST( A7, LAX, ZeroPage, "a7.json" );
+// CPU_TEST( B7, LAX, ZeroPageY, "b7.json" );
+// CPU_TEST( AF, LAX, Absolute, "af.json" );
+// CPU_TEST( BF, LAX, AbsoluteY, "bf.json" );
+// CPU_TEST( A3, LAX, IndirectX, "a3.json" );
+// CPU_TEST( B3, LAX, IndirectY, "b3.json" );
+
+// Illegal - DCP: C7, D7, CF, DF, DB, C3, D3
+// CPU_TEST( C7, DCP, ZeroPage, "c7.json" );
+// CPU_TEST( D7, DCP, ZeroPageX, "d7.json" );
+// CPU_TEST( CF, DCP, Absolute, "cf.json" );
+// CPU_TEST( DF, DCP, AbsoluteX, "df.json" );
+// CPU_TEST( DB, DCP, AbsoluteY, "db.json" );
+// CPU_TEST( C3, DCP, IndirectX, "c3.json" );
+// CPU_TEST( D3, DCP, IndirectY, "d3.json" );
+
 /*
 ################################################################
 ||                                                            ||
