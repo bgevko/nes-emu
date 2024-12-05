@@ -35,6 +35,15 @@ class CPU
     void SetProgramCounter( u16 value );
     void SetCycles( u64 value );
 
+    // public cpu methods
+    void               Reset();
+    void               Tick();
+    [[nodiscard]] auto Read( u16 address ) const -> u8;
+
+    // public cpu members
+    bool is_halted = false; // NOLINT
+    u16  last_pc = 0x00;    // NOLINT for debugging only
+
   private:
     friend class CPUTestFixture; // Sometimes used for testing private methods
 
@@ -76,15 +85,12 @@ class CPU
     ||                                                            ||
     ################################################################
     */
-    void Reset();
 
     // Fetch/decode/execute cycle
     [[nodiscard]] u8 Fetch();
-    void             Tick();
 
     // Read/write methods
-    [[nodiscard]] auto Read( u16 address ) const -> u8;
-    void               Write( u16 address, u8 data ) const;
+    void Write( u16 address, u8 data ) const;
 
     /*
     ################################################################

@@ -4,9 +4,13 @@
 #include <cstddef>
 #include <fstream>
 #include <ios>
-#include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
+
+// Include all available mappers
+#include "mappers/mapper0.h"
+#include "mappers/mapper1.h"
 
 Cartridge::Cartridge( const std::string &file_path )
 {
@@ -16,69 +20,94 @@ Cartridge::Cartridge( const std::string &file_path )
         throw std::runtime_error( "Failed to open ROM file: " + file_path );
     }
 
-    // Read the header
-    std::array<char, 16> char_header{};
-    if ( !rom_file.read( char_header.data(), char_header.size() ) )
+    // Can adjust later, but we'll say files bigger than 5 MiB shouldn't be valid
+    constexpr size_t max_rom_size = static_cast<const size_t>( 5 * 1024 * 1024 );
+    rom_file.seekg( 0, std::ios::end );
+    size_t const file_size = static_cast<size_t>( rom_file.tellg() );
+    if ( file_size > max_rom_size )
     {
-        throw std::runtime_error( "Failed to read ROM header" );
+        throw std::runtime_error( "ROM file too large" );
+    }
+
+    // Seek back to the beginning
+    rom_file.seekg( 0, std::ios::beg );
+
+    // Read the header
+    std::array<char, 16> header{};
+    if ( !rom_file.read( header.data(), header.size() ) )
+    {
+        if ( rom_file.eof() )
+        {
+            throw std::runtime_error( "Failed to read ROM header: Unexpected end of file." );
+        }
+        if ( rom_file.fail() )
+        {
+            throw std::runtime_error( "Failed to read ROM header: I/O error." );
+        }
+        if ( rom_file.bad() )
+        {
+            throw std::runtime_error( "Failed to read ROM header: Fatal I/O error." );
+        }
+        if ( rom_file.good() )
+        {
+            throw std::runtime_error( "Failed to read ROM header: No error." );
+        }
     }
 
     // First four bytes, should be "NES\x1A", if not, let's bail
-    if ( char_header[0] != 'N' || char_header[1] != 'E' || char_header[2] != 'S' ||
-         char_header[3] != 0x1A )
+    if ( header[0] != 'N' || header[1] != 'E' || header[2] != 'S' || header[3] != 0x1A )
     {
         throw std::runtime_error( "Invalid ROM file" );
     }
 
     // Extract header info
-    _prg_rom_size = char_header[4];
-    _chr_rom_size = char_header[5];
+    _mirror_mode = header[6] & 0b00000001;
+    size_t const prg_size_bytes = static_cast<size_t>( header[4] * 16 * 1024 );
+    size_t const chr_size_bytes = static_cast<size_t>( header[5] * 8 * 1024 );
 
-    // Extract header info
-    u8 const flags6 = char_header[6];
-    u8 const flags7 = char_header[7];
-    _mapper = ( flags7 & 0b11110000 ) | ( flags6 >> 4 );
-    _mirroring = flags6 & 0b00000001;
-    _has_battery = ( flags6 & 0b00000010 ) != 0;
-    _has_trainer = ( flags6 & 0b00000100 ) != 0;
-    _four_screen_mode = ( flags6 & 0b00001000 ) != 0;
-
-    // For simplicity, only support mapper 0 (NROM) initially
-    if ( _mapper != 0 )
+    // Set up the mapper
+    u8 const flags6 = header[6];
+    u8 const flags7 = header[7];
+    u8 const mapper_id = ( flags7 & 0b11110000 ) | ( flags6 >> 4 );
+    switch ( mapper_id )
     {
-        throw std::runtime_error( "Unsupported mapper number: " + std::to_string( _mapper ) );
-    }
+        case 0:
+            _mapper = std::make_shared<Mapper0>( prg_size_bytes, chr_size_bytes );
+            break;
+        case 1:
+            _mapper = std::make_shared<Mapper1>( prg_size_bytes, chr_size_bytes );
+            break;
+        default:
+            throw std::runtime_error( "Unsupported mapper: " + std::to_string( mapper_id ) );
+    };
+
+    // Cart flags
+    _has_battery = ( flags6 & 0b00000010 );
+    _four_screen_mode = ( flags6 & 0b00001000 );
 
     // Skip trainer if present
-    if ( _has_trainer )
+    bool const has_trainer = ( flags6 & 0b00000100 ) != 0;
+    if ( has_trainer )
     {
         rom_file.seekg( 512, std::ios::cur );
     }
 
-    // Read program ROM data (PRG)
-    size_t const prg_rom_bytes = static_cast<size_t>( _prg_rom_size * 8 * 1024 );
-
-    // Safety check to make sure we can convert size_t to std::streamsize, which is an usigned to a
-    // signed conversion
-    if ( prg_rom_bytes > static_cast<size_t>( std::numeric_limits<std::streamsize>::max() ) )
-    {
-        throw std::runtime_error( "PRG ROM size exceeds maximum allowable size." );
-    }
-    _prg_rom.resize( prg_rom_bytes );
-
-    // Disable lint here because we need to read raw bytes into _prg_rom, which is a vector of u8
+    // Read PRG and CHR ROM data
+    _prg_rom.resize( prg_size_bytes );
     rom_file.read( reinterpret_cast<char *>( _prg_rom.data() ), // NOLINT
-                   static_cast<std::streamsize>( prg_rom_bytes ) );
+                   static_cast<std::streamsize>( prg_size_bytes ) );
 
-    // Read character ROM data (CHR)
-    size_t const chr_rom_bytes = static_cast<size_t>( _chr_rom_size * 8 * 1024 );
-    if ( chr_rom_bytes > static_cast<size_t>( std::numeric_limits<std::streamsize>::max() ) )
+    // Some games use CHR RAM when CHR ROM is not present
+    if ( chr_size_bytes == 0 )
     {
-        throw std::runtime_error( "CHR ROM size exceeds maximum allowable size." );
+        _chr_ram.resize( 8192 );
     }
-    _chr_rom.resize( chr_rom_bytes );
-    rom_file.read( reinterpret_cast<char *>( _chr_rom.data() ), // NOLINT
-                   static_cast<std::streamsize>( chr_rom_bytes ) );
+    else
+    {
+        _chr_rom.resize( chr_size_bytes );
+        rom_file.read( reinterpret_cast<char *>( _chr_rom.data() ), // NOLINT
+                       static_cast<std::streamsize>( chr_size_bytes ) );
+    }
 
     // Close the file
     rom_file.close();
@@ -86,23 +115,47 @@ Cartridge::Cartridge( const std::string &file_path )
 
 [[nodiscard]] u8 Cartridge::ReadPRG( u16 address )
 {
-    if ( _prg_rom_size == 1 )
+    return _prg_rom[_mapper->TranslateCPUAddress( address )];
+}
+
+[[nodiscard]] u8 Cartridge::ReadCHR( u16 address ) const
+{
+    u16 const translated_address = _mapper->TranslatePPUAddress( address );
+    if ( !_chr_rom.empty() )
     {
-        // 16 KB PRG ROM, mirror the bank
-        address = address & 0x3FFF; // Mask to 16 KB
+        // Read from CHR ROM
+        return _chr_rom[translated_address];
     }
-    else if ( _prg_rom_size == 2 )
+    if ( !_chr_ram.empty() )
     {
-        // 32 KB PRG ROM, no mirroring needed
-        address = address & 0x7FFF; // Mask to 32 KB
+        // Read from CHR RAM
+        return _chr_ram[translated_address];
+    }
+
+    // No CHR ROM or RAM
+    return 0xFF;
+}
+
+void Cartridge::WriteCHR( u16 address, u8 data )
+{
+    u16 const translated_address = _mapper->TranslatePPUAddress( address );
+    if ( !_chr_ram.empty() )
+    {
+        // Write to CHR RAM
+        _chr_ram[translated_address] = data;
     }
     else
     {
-        // Unsupported PRG ROM size
-        throw std::runtime_error( "Unsupported PRG ROM size: " + std::to_string( _prg_rom_size ) );
+        // CHR ROM is read-only; writes are ignored or could trigger an error
+        // For now, we can ignore writes to CHR ROM
     }
-
-    return _prg_rom[address];
 }
 
-u8 Cartridge::ReadCHR( u16 address ) const { return _chr_rom[address]; }
+u8 Cartridge::GetMirrorMode()
+{
+    u8 mode = _mapper->GetMirrorMode();
+    _mirror_mode = mode;
+    return _mirror_mode;
+}
+
+void Cartridge::WritePRG( u16 address, u8 data ) { _mapper->HandleCPUWrite( address, data ); }
