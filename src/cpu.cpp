@@ -336,6 +336,31 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xFB] = InstructionData{ "*ISC_AbsoluteY", &CPU::ISC, &CPU::ABSY, 7, 3, false };
     _opcodeTable[0xE3] = InstructionData{ "*ISC_IndirectX", &CPU::ISC, &CPU::INDX, 8, 2 };
     _opcodeTable[0xF3] = InstructionData{ "*ISC_IndirectY", &CPU::ISC, &CPU::INDY, 8, 2, false };
+
+    // ALR: 4B, ARR: 6B, ANE: 8B
+    _opcodeTable[0x4B] = InstructionData{ "*ALR_Immediate", &CPU::ALR, &CPU::IMM, 2, 2 };
+    // _opcodeTable[0x6B] = InstructionData{ "*ARR_Immediate", &CPU::ARR, &CPU::IMM, 2, 2 };
+    // _opcodeTable[0x8B] = InstructionData{ "*ANE_Immediate", &CPU::ANE, &CPU::IMM, 2, 2 };
+
+    // SHA: 9F, 93
+    // _opcodeTable[0x9F] = InstructionData{ "*SHA_AbsoluteY", &CPU::SHA, &CPU::ABSY, 5, 3 };
+    // _opcodeTable[0x93] = InstructionData{ "*SHA_IndirectY", &CPU::SHA, &CPU::INDY, 6, 2 };
+
+    // TAS: 9B
+    // _opcodeTable[0x9B] = InstructionData{ "*TAS_AbsoluteY", &CPU::TAS, &CPU::ABSY, 5, 3 };
+
+    // LXA: AB, LAX: AB
+    // _opcodeTable[0xAB] = InstructionData{ "*LAX_Immediate", &CPU::LAX, &CPU::IMM, 2, 2 };
+    // _opcodeTable[0xAB] = InstructionData{ "*LAX_Immediate", &CPU::LAX, &CPU::IMM, 2, 2 };
+
+    // SBX: CB
+    // _opcodeTable[0xCB] = InstructionData{ "*SBX_Immediate", &CPU::SBX, &CPU::IMM, 2, 2 };
+
+    // USBC: 9C
+    // _opcodeTable[0x9C] = InstructionData{ "*USBC_AbsoluteX", &CPU::USBC, &CPU::ABSX, 5, 3 };
+
+    // SHY: 9C, SHX: 9E
+    // _opcodeTable[0x9C] = InstructionData{ "*SHY_AbsoluteX", &CPU::SHY, &CPU::ABSX, 5, 3 };
 };
 
 // Getters
@@ -2110,4 +2135,21 @@ void CPU::ISC( const u16 address )
      */
     CPU::INC( address );
     CPU::SBC( address );
+}
+
+void CPU::ALR( const u16 address )
+{
+    /* @brief Illegal opcode: combines AND and LSR
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   ALR Immediate: 4B(2)
+     */
+    CPU::AND( address );
+
+    u8 value = GetAccumulator();
+    ( value & 0b00000001 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+    u8 result = value >> 1;
+    SetZeroAndNegativeFlags( result );
+    _a = result;
 }
