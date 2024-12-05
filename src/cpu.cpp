@@ -306,10 +306,10 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x73] = InstructionData{ "*RRA_IndirectY", &CPU::RRA, &CPU::INDY, 8, 2, false };
 
     // SAX: 87, 97, 8F, 83
-    // _opcodeTable[0x87] = InstructionData{ "*SAX_ZeroPage", &CPU::SAX, &CPU::ZPG, 3, 2 };
-    // _opcodeTable[0x97] = InstructionData{ "*SAX_ZeroPageY", &CPU::SAX, &CPU::ZPGY, 4, 2 };
-    // _opcodeTable[0x8F] = InstructionData{ "*SAX_Absolute", &CPU::SAX, &CPU::ABS, 4, 3 };
-    // _opcodeTable[0x83] = InstructionData{ "*SAX_IndirectX", &CPU::SAX, &CPU::INDX, 6, 2 };
+    _opcodeTable[0x87] = InstructionData{ "*SAX_ZeroPage", &CPU::SAX, &CPU::ZPG, 3, 2 };
+    _opcodeTable[0x97] = InstructionData{ "*SAX_ZeroPageY", &CPU::SAX, &CPU::ZPGY, 4, 2 };
+    _opcodeTable[0x8F] = InstructionData{ "*SAX_Absolute", &CPU::SAX, &CPU::ABS, 4, 3 };
+    _opcodeTable[0x83] = InstructionData{ "*SAX_IndirectX", &CPU::SAX, &CPU::INDX, 6, 2 };
 
     // LAX: A7, B7, AF, BF, A3, B3
     // _opcodeTable[0xA7] = InstructionData{ "*LAX_ZeroPage", &CPU::LAX, &CPU::ZPG, 3, 2 };
@@ -2032,4 +2032,18 @@ void CPU::RRA( const u16 address )
      */
     CPU::ROR( address );
     CPU::ADC( address );
+}
+
+void CPU::SAX( const u16 address )
+{
+    /* @brief Illegal opcode: combines STX and AND
+     * N Z C I D V
+     * - - - - - -
+     *   Usage and cycles:
+     *   SAX Zero Page: 87(3)
+     *   SAX Zero Page Y: 97(4)
+     *   SAX Indirect X: 83(6)
+     *   SAX Absolute: 8F(4)
+     */
+    Write( address, GetXRegister() & GetAccumulator() );
 }

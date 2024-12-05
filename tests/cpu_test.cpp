@@ -660,10 +660,10 @@ CPU_TEST( 63, RRA, IndirectX, "63.json" );
 CPU_TEST( 73, RRA, IndirectY, "73.json" );
 
 // Illegal - SAX: 87, 97, 8F, 83
-// CPU_TEST( 87, SAX, ZeroPage, "87.json" );
-// CPU_TEST( 97, SAX, ZeroPageY, "97.json" );
-// CPU_TEST( 8F, SAX, Absolute, "8f.json" );
-// CPU_TEST( 83, SAX, IndirectX, "83.json" );
+CPU_TEST( 87, SAX, ZeroPage, "87.json" );
+CPU_TEST( 97, SAX, ZeroPageY, "97.json" );
+CPU_TEST( 8F, SAX, Absolute, "8f.json" );
+CPU_TEST( 83, SAX, IndirectX, "83.json" );
 
 // Illegal - LAX: A7, B7, AF, BF, A3, B3
 // CPU_TEST( A7, LAX, ZeroPage, "a7.json" );
