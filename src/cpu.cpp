@@ -293,8 +293,11 @@ void CPU::Tick()
     else
     {
         // Houston, we have a problem. No opcode was found.
-        std::cerr << "Bad opcode: " << std::hex << static_cast<int>( opcode ) << '\n';
+        // Default to NOP
+        // std::cout << "Unknown opcode: " << std::hex << static_cast<int>( opcode ) << '\n';
+        NOP( IMM() );
     }
+    last_pc = _pc;
 }
 
 void CPU::Reset()
