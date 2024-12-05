@@ -288,13 +288,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x33] = InstructionData{ "*RLA_IndirectY", &CPU::RLA, &CPU::INDY, 8, 2, false };
 
     // SRE: 47, 57, 4F, 5F, 5B, 43, 53
-    // _opcodeTable[0x47] = InstructionData{ "*SRE_ZeroPage", &CPU::SRE, &CPU::ZPG, 5, 2 };
-    // _opcodeTable[0x57] = InstructionData{ "*SRE_ZeroPageX", &CPU::SRE, &CPU::ZPGX, 6, 2 };
-    // _opcodeTable[0x4F] = InstructionData{ "*SRE_Absolute", &CPU::SRE, &CPU::ABS, 6, 3 };
-    // _opcodeTable[0x5F] = InstructionData{ "*SRE_AbsoluteX", &CPU::SRE, &CPU::ABSX, 7, 3, false };
-    // _opcodeTable[0x5B] = InstructionData{ "*SRE_AbsoluteY", &CPU::SRE, &CPU::ABSY, 7, 3, false };
-    // _opcodeTable[0x43] = InstructionData{ "*SRE_IndirectX", &CPU::SRE, &CPU::INDX, 8, 2 };
-    // _opcodeTable[0x53] = InstructionData{ "*SRE_IndirectY", &CPU::SRE, &CPU::INDY, 8, 2 };
+    _opcodeTable[0x47] = InstructionData{ "*SRE_ZeroPage", &CPU::SRE, &CPU::ZPG, 5, 2 };
+    _opcodeTable[0x57] = InstructionData{ "*SRE_ZeroPageX", &CPU::SRE, &CPU::ZPGX, 6, 2 };
+    _opcodeTable[0x4F] = InstructionData{ "*SRE_Absolute", &CPU::SRE, &CPU::ABS, 6, 3 };
+    _opcodeTable[0x5F] = InstructionData{ "*SRE_AbsoluteX", &CPU::SRE, &CPU::ABSX, 7, 3, false };
+    _opcodeTable[0x5B] = InstructionData{ "*SRE_AbsoluteY", &CPU::SRE, &CPU::ABSY, 7, 3, false };
+    _opcodeTable[0x43] = InstructionData{ "*SRE_IndirectX", &CPU::SRE, &CPU::INDX, 8, 2 };
+    _opcodeTable[0x53] = InstructionData{ "*SRE_IndirectY", &CPU::SRE, &CPU::INDY, 8, 2, false };
 
     // RRA: 67, 77, 6F, 7F, 7B, 63, 73
     // _opcodeTable[0x67] = InstructionData{ "*RRA_ZeroPage", &CPU::RRA, &CPU::ZPG, 5, 2 };
@@ -1995,4 +1995,22 @@ void CPU::RLA( const u16 address )
      */
     CPU::ROL( address );
     CPU::AND( address );
+}
+
+void CPU::SRE( const u16 address )
+{
+    /* @brief Illegal opcode: combines LSR and EOR
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   SRE Zero Page: 47(5)
+     *   SRE Zero Page X: 57(6)
+     *   SRE Absolute: 4F(6)
+     *   SRE Absolute X: 5F(7)
+     *   SRE Absolute Y: 5B(7)
+     *   SRE Indirect X: 43(8)
+     *   SRE Indirect Y: 53(8)
+     */
+    CPU::LSR( address );
+    CPU::EOR( address );
 }
