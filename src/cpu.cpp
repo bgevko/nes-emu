@@ -279,13 +279,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x13] = InstructionData{ "*SLO_IndirectY", &CPU::SLO, &CPU::INDY, 8, 2, false };
 
     // RLA: 27, 37, 2F, 3F, 3B, 23, 33
-    // _opcodeTable[0x27] = InstructionData{ "*RLA_ZeroPage", &CPU::RLA, &CPU::ZPG, 5, 2 };
-    // _opcodeTable[0x37] = InstructionData{ "*RLA_ZeroPageX", &CPU::RLA, &CPU::ZPGX, 6, 2 };
-    // _opcodeTable[0x2F] = InstructionData{ "*RLA_Absolute", &CPU::RLA, &CPU::ABS, 6, 3 };
-    // _opcodeTable[0x3F] = InstructionData{ "*RLA_AbsoluteX", &CPU::RLA, &CPU::ABSX, 7, 3, false };
-    // _opcodeTable[0x3B] = InstructionData{ "*RLA_AbsoluteY", &CPU::RLA, &CPU::ABSY, 7, 3, false };
-    // _opcodeTable[0x23] = InstructionData{ "*RLA_IndirectX", &CPU::RLA, &CPU::INDX, 8, 2 };
-    // _opcodeTable[0x33] = InstructionData{ "*RLA_IndirectY", &CPU::RLA, &CPU::INDY, 8, 2 };
+    _opcodeTable[0x27] = InstructionData{ "*RLA_ZeroPage", &CPU::RLA, &CPU::ZPG, 5, 2 };
+    _opcodeTable[0x37] = InstructionData{ "*RLA_ZeroPageX", &CPU::RLA, &CPU::ZPGX, 6, 2 };
+    _opcodeTable[0x2F] = InstructionData{ "*RLA_Absolute", &CPU::RLA, &CPU::ABS, 6, 3 };
+    _opcodeTable[0x3F] = InstructionData{ "*RLA_AbsoluteX", &CPU::RLA, &CPU::ABSX, 7, 3, false };
+    _opcodeTable[0x3B] = InstructionData{ "*RLA_AbsoluteY", &CPU::RLA, &CPU::ABSY, 7, 3, false };
+    _opcodeTable[0x23] = InstructionData{ "*RLA_IndirectX", &CPU::RLA, &CPU::INDX, 8, 2 };
+    _opcodeTable[0x33] = InstructionData{ "*RLA_IndirectY", &CPU::RLA, &CPU::INDY, 8, 2, false };
 
     // SRE: 47, 57, 4F, 5F, 5B, 43, 53
     // _opcodeTable[0x47] = InstructionData{ "*SRE_ZeroPage", &CPU::SRE, &CPU::ZPG, 5, 2 };
@@ -1977,4 +1977,22 @@ void CPU::SLO( const u16 address )
      */
     CPU::ASL( address );
     CPU::ORA( address );
+}
+
+void CPU::RLA( const u16 address )
+{
+    /* @brief Illegal opcode: combines ROL and AND
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   RLA Zero Page: 27(5)
+     *   RLA Zero Page X: 37(6)
+     *   RLA Absolute: 2F(6)
+     *   RLA Absolute X: 3F(7)
+     *   RLA Absolute Y: 3B(7)
+     *   RLA Indirect X: 23(8)
+     *   RLA Indirect Y: 33(8)
+     */
+    CPU::ROL( address );
+    CPU::AND( address );
 }
