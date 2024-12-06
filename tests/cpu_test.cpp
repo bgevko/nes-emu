@@ -694,7 +694,7 @@ CPU_TEST( F3, ISC, IndirectY, "f3.json" );
 // ALR, ARR, ANE, SHA, TAS, LXA, LAS, SBX, USBC, SHY, SHX
 // 4B, 6B, 8B, 9F, 93, 9B, AB, BB, CB, EB, 9C, 9E
 CPU_TEST( 4B, ALR, Immediate, "4b.json" );
-// CPU_TEST( 6B, ARR, Immediate, "6b.json" );
+CPU_TEST( 6B, ARR, Immediate, "6b.json" );
 // CPU_TEST( 8B, ANE, Immediate, "8b.json" );
 // CPU_TEST( 9F, SHA, AbsoluteY, "9f.json" );
 // CPU_TEST( 93, SHA, IndirectY, "93.json" );

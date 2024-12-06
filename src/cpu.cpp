@@ -343,7 +343,7 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 
     // ALR: 4B, ARR: 6B, ANE: 8B
     _opcodeTable[0x4B] = InstructionData{ "*ALR_Immediate", &CPU::ALR, &CPU::IMM, 2, 2 };
-    // _opcodeTable[0x6B] = InstructionData{ "*ARR_Immediate", &CPU::ARR, &CPU::IMM, 2, 2 };
+    _opcodeTable[0x6B] = InstructionData{ "*ARR_Immediate", &CPU::ARR, &CPU::IMM, 2, 2 };
     // _opcodeTable[0x8B] = InstructionData{ "*ANE_Immediate", &CPU::ANE, &CPU::IMM, 2, 2 };
 
     // SHA: 9F, 93
@@ -2163,4 +2163,34 @@ void CPU::ALR( const u16 address )
     u8 result = value >> 1;
     SetZeroAndNegativeFlags( result );
     _a = result;
+}
+
+void CPU::ARR( const u16 address )
+{
+    /* @brief Illegal opcode: combines AND and ROR
+     * N Z C I D V
+     * + + + - - +
+     *   Usage and cycles:
+     *   ARR Immediate: 6B(2)
+     */
+
+    // A & operand
+    u8 value = _a & Read( address );
+
+    // ROR
+    u8 carry_in = IsFlagSet( Status::Carry ) ? 0x80 : 0x00;
+    value = ( value >> 1 ) | carry_in;
+
+    _a = value;
+
+    // Set flags
+    SetZeroAndNegativeFlags( _a );
+
+    // Adjust C and V flags according to the ARR rules
+    // C = bit 6 of A
+    ( _a & 0x40 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+
+    // V = bit 5 XOR bit 6
+    bool is_overflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
+    ( is_overflow ) ? SetFlags( Status::Overflow ) : ClearFlags( Status::Overflow );
 }
