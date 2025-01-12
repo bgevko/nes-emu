@@ -2,7 +2,11 @@
 
 #include "cpu.h"
 #include "bus.h"
+#include <cstddef>
+#include "utils.h"
 #include <iostream>
+#include <stdexcept>
+#include <string>
 
 CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 {
@@ -435,7 +439,7 @@ void CPU::Tick()
         // Add the number of cycles the instruction takes
         _cycles += instruction.cycles;
 
-        // Set the _imp flag to false
+        // Reset the _imp flag. It's triggered in IMP addressing mode
         _imp = false;
     }
     else
@@ -452,57 +456,46 @@ std::string CPU::DisassembleAtPC() // NOLINT
      * @brief Disassembles the instruction at the current program counter
      * Useful to understand what the current instruction is doing
      */
+    std::string output;
 
-    // hex utility function, converts ints to a hex string
-    auto to_hex = []( u32 num, u8 width ) -> std::string
-    {
-        std::string hex_str( width, '0' );
-        for ( int i = width - 1; i >= 0; i--, num >>= 4 )
-        {
-            hex_str[i] = "0123456789ABCDEF"[num & 0xF];
-        }
-        return hex_str;
-    };
-
-    // Grab instrution name and adddress mode from opcode table
+    // Fetch the instruction name and address mode from the opcode table
     std::string const &name_addrmode = _opcodeTable[Read( _pc )].name;
-
     if ( name_addrmode.empty() )
     {
-        std::cerr << "Attempted to grab from a non existing table entry at PC: " << to_hex( _pc, 4 )
-                  << '\n';
-        std::cerr << "Opcode: " << to_hex( Read( _pc ), 2 ) << '\n';
+        std::cerr << "Attempted to grab from a non existing table entry at PC: "
+                  << utils::toHex( _pc, 4 ) << '\n';
+        std::cerr << "Opcode: " << utils::toHex( Read( _pc ), 2 ) << '\n';
+        // This is only used for debugging, so we can throw an exception
         throw std::runtime_error( "Invalid opcode" );
     }
 
-    size_t const split_pos = name_addrmode.find( '_' );
-    std::string  mnemonic = name_addrmode.substr( 0, split_pos );
-    std::string  addr_mode = name_addrmode.substr( split_pos + 1 );
+    // Split name and addressing mode
+    size_t const      split_pos = name_addrmode.find( '_' );
+    std::string       name = name_addrmode.substr( 0, split_pos );
+    std::string const addr_mode = name_addrmode.substr( split_pos + 1 );
 
-    std::string output;
+    // Program counter address
+    // i.e. FFFF
+    output += utils::toHex( _pc, 4 ) + ":  ";
 
-    // Append program counter address
-    output += to_hex( _pc, 4 ) + ":  ";
-
-    // Opcode and operands
-    u8          instr_bytes = _opcodeTable[Read( _pc )].bytes;
-    std::string instr_line;
-    for ( u8 i = 0; i < instr_bytes; i++ )
+    // Hex instruction
+    // i.e. 4C F5 C5, this is the hex instruction
+    u8 const    bytes = _opcodeTable[Read( _pc )].bytes;
+    std::string hex_instruction;
+    for ( u8 i = 0; i < bytes; i++ )
     {
-        instr_line += to_hex( Read( _pc + i ), 2 ) + " ";
+        hex_instruction += utils::toHex( Read( _pc + i ), 2 ) + ' ';
     }
 
-    // format instruction line to be 9 characters wide, with space padding to the right
-    instr_line += std::string( 9 - instr_bytes * 3, ' ' );
-    output += instr_line;
+    // formatting, the instruction hex_instruction will be 9 characters long, with space padding to
+    // the right. This makes sure the hex line is the same length for all instructions
+    hex_instruction += std::string( 9 - ( bytes * 3 ), ' ' );
+    output += hex_instruction;
 
-    // Mnemonic and addressing mode can be fetched from the name attribute of
-    // the instruction struct, they are separated by a "_"
+    // If name starts with a "*", it is an illegal opcode
+    ( name[0] == '*' ) ? output += "*" + name.substr( 1 ) + " " : output += name + " ";
 
-    ( mnemonic[0] == '*' ) ? output += "*" + mnemonic.substr( 1 ) + " "
-                           : output += " " + mnemonic + " ";
-
-    // Addressing mode specific output
+    // Addressing mode and operand
     u8 value = 0x00;
     u8 low = 0x00;
     u8 high = 0x00;
@@ -513,12 +506,12 @@ std::string CPU::DisassembleAtPC() // NOLINT
     else if ( addr_mode == "Immediate" )
     {
         value = Read( _pc + 1 );
-        output += "#$" + to_hex( value, 2 );
+        output += "#$" + utils::toHex( value, 2 );
     }
     else if ( addr_mode == "ZeroPage" || addr_mode == "ZeroPageX" || addr_mode == "ZeroPageY" )
     {
         value = Read( _pc + 1 );
-        output += "$" + to_hex( value, 2 );
+        output += "$" + utils::toHex( value, 2 );
 
         ( addr_mode == "ZeroPageX" )   ? output += ", X"
         : ( addr_mode == "ZeroPageY" ) ? output += ", Y"
@@ -528,9 +521,9 @@ std::string CPU::DisassembleAtPC() // NOLINT
     {
         low = Read( _pc + 1 );
         high = Read( _pc + 2 );
-        u16 address = ( high << 8 ) | low;
+        u16 const address = ( high << 8 ) | low;
 
-        output += "$" + to_hex( address, 4 );
+        output += "$" + utils::toHex( address, 4 );
         ( addr_mode == "AbsoluteX" )   ? output += ", X"
         : ( addr_mode == "AbsoluteY" ) ? output += ", Y"
                                        : output += "";
@@ -539,31 +532,30 @@ std::string CPU::DisassembleAtPC() // NOLINT
     {
         low = Read( _pc + 1 );
         high = Read( _pc + 2 );
-        u16 address = ( high << 8 ) | low;
-        output += "($" + to_hex( address, 4 ) + ")";
+        u16 const address = ( high << 8 ) | low;
+        output += "($" + utils::toHex( address, 4 ) + ")";
     }
     else if ( addr_mode == "IndirectX" || addr_mode == "IndirectY" )
     {
         value = Read( _pc + 1 );
-        ( addr_mode == "IndirectX" ) ? output += "($" + to_hex( value, 2 ) + ", X)"
-                                     : output += "($" + to_hex( value, 2 ) + "), Y";
+        ( addr_mode == "IndirectX" ) ? output += "($" + utils::toHex( value, 2 ) + ", X)"
+                                     : output += "($" + utils::toHex( value, 2 ) + "), Y";
     }
     else if ( addr_mode == "Relative" )
     {
         value = Read( _pc + 1 );
-        s8  offset = static_cast<s8>( value );
-        u16 address = _pc + 2 + offset;
+        s8 const  offset = static_cast<s8>( value );
+        u16 const address = _pc + 2 + offset;
 
-        output += "$" + to_hex( value, 2 ) + " [$" + to_hex( address, 4 ) + "]";
+        output += "$" + utils::toHex( value, 2 ) + " [$" + utils::toHex( address, 4 ) + "]";
     }
     else
     {
+        // Houston.. yet again
         throw std::runtime_error( "Unknown addressing mode: " + addr_mode );
     }
-
     return output;
 }
-
 void CPU::Reset()
 {
     _a = 0x00;
@@ -965,6 +957,35 @@ void CPU::NOP( u16 address ) // NOLINT
      * - - - - - -
      * Usage and cycles:
      * NOP Implied: EA(2)
+     *
+     * --  Illegal  --
+     * NOP Implied: 1A(2)
+     * NOP Implied: 3A(2)
+     * NOP Implied: 5A(2)
+     * NOP Implied: 7A(2)
+     * NOP Implied: DA(2)
+     * NOP Implied: FA(2)
+     * NOP Immediate: 80(2)
+     * NOP Immediate: 82(2)
+     * NOP Immediate: 89(2)
+     * NOP Immediate: C2(2)
+     * NOP Immediate: E2(2)
+     * NOP Zero Page: 04(3)
+     * NOP Zero Page: 44(3)
+     * NOP Zero Page: 64(3)
+     * NOP Zero Page X: 14(4)
+     * NOP Zero Page X: 34(4)
+     * NOP Zero Page X: 54(4)
+     * NOP Zero Page X: 74(4)
+     * NOP Zero Page X: D4(4)
+     * NOP Zero Page X: F4(4)
+     * NOP Absolute: 0C(4)
+     * NOP Absolute: 1C(4)
+     * NOP Absolute: 3C(4)
+     * NOP Absolute: 5C(4)
+     * NOP Absolute: 7C(4)
+     * NOP Absolute: DC(4)
+     * NOP Absolute: FC(4)
      */
     (void) address;
 }
@@ -1131,6 +1152,9 @@ void CPU::SBC( u16 address )
      * SBC Absolute Y: F9(4+)
      * SBC Indirect X: E1(6)
      * SBC Indirect Y: F1(5+)
+     *
+     * --  Illegal  --
+     * SBC Immediate: EB(2)
      */
 
     u8 const value = Read( address );
@@ -2158,9 +2182,9 @@ void CPU::ALR( const u16 address )
      */
     CPU::AND( address );
 
-    u8 value = GetAccumulator();
+    u8 const value = GetAccumulator();
     ( value & 0b00000001 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
-    u8 result = value >> 1;
+    u8 const result = value >> 1;
     SetZeroAndNegativeFlags( result );
     _a = result;
 }
@@ -2178,7 +2202,7 @@ void CPU::ARR( const u16 address )
     u8 value = _a & Read( address );
 
     // ROR
-    u8 carry_in = IsFlagSet( Status::Carry ) ? 0x80 : 0x00;
+    u8 const carry_in = IsFlagSet( Status::Carry ) ? 0x80 : 0x00;
     value = ( value >> 1 ) | carry_in;
 
     _a = value;
@@ -2191,6 +2215,6 @@ void CPU::ARR( const u16 address )
     ( _a & 0x40 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
 
     // V = bit 5 XOR bit 6
-    bool is_overflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
+    bool const is_overflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
     ( is_overflow ) ? SetFlags( Status::Overflow ) : ClearFlags( Status::Overflow );
 }

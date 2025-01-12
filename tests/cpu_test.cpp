@@ -578,6 +578,11 @@ CPU_TEST( FD, SBC, AbsoluteX, "fd.json" );
 CPU_TEST( FE, INC, AbsoluteX, "fe.json" );
 CPU_TEST( F8, SED, Implied, "f8.json" );
 
+/*
+################################
+||       Illegal Opcodes      ||
+################################
+*/
 // Illegal - JAM (02, 12, 22, 32, 45, 52, 62, 72, 92, B2, D2, F2)
 CPU_TEST( 02, JAM, Implied, "02.json" );
 CPU_TEST( 12, JAM, Implied, "12.json" );
