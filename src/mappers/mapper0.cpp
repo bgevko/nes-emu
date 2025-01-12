@@ -1,6 +1,5 @@
 #include "mappers/mapper-base.h"
 #include "mappers/mapper0.h"
-#include <cstddef>
 #include <stdexcept>
 
 [[nodiscard]] u16 Mapper0::TranslateCPUAddress( u16 address )
@@ -13,14 +12,14 @@
     if ( address >= 0x8000 && address <= 0xFFFF )
     {
         // 32 KiB PRG ROM
-        if ( GetPrgSize() == static_cast<size_t>( 32 * 1024 ) )
+        if ( GetPrgBankCount() == 2 )
         {
             // Map directly to PRG ROM, starting at 0x0000
             return address - 0x8000;
         }
 
         // 16 KiB PRG ROM
-        if ( GetPrgSize() == static_cast<size_t>( 16 * 1024 ) )
+        if ( GetPrgBankCount() == 1 )
         {
             // Map to 0, with mirroring after 16 KiB
             return ( address - 0x8000 ) % ( 16 * 1024 );

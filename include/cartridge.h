@@ -37,7 +37,7 @@ class Cartridge
     void WritePrgRAM( u16 address, u8 data );       // 0x6000 - 0x7FFF: CPU
     void WritePrgROM( u16 address, u8 data );       // 0x8000 - 0xFFFF: CPU
 
-    [[nodiscard]] u8 GetMirrorMode();
+    [[nodiscard]] MirrorMode GetMirrorMode();
 
     // PRG and CHR data
     vector<u8>      _prg_rom;
@@ -57,11 +57,4 @@ class Cartridge
     u8   _four_screen_mode = 0;
     u8   _mirror_mode = 0;
     bool _uses_chr_ram = false;
-
-    enum MirrorMode : u8
-    {
-        Horizontal,
-        Vertical,
-        FourScreen
-    };
 };
