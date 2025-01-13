@@ -4,6 +4,7 @@
 #include "cartridge.h"
 #include <fstream>
 #include <regex>
+#include <thread>
 #include <vector>
 #include <iostream>
 #include <memory>
@@ -251,67 +252,80 @@ TEST( RomTests, Nestest )
 ||                                            ||
 ################################################
 */
-// TEST( RomTests, InstructionTestV5 )
-// {
-//     Bus bus;
-//     CPU cpu( &bus );
-//
-//     // Load the v5 instruction test ROM
-//     std::shared_ptr<Cartridge> cartridge =
-//         std::make_shared<Cartridge>( "tests/roms/instr_test-v5.nes" );
-//     bus.LoadCartridge( cartridge );
-//     cpu.Reset();
-//
-//     // Open a log file to capture output
-//     std::ofstream log( "tests/logs/instr_test_v5.log" );
-//     if ( !log.is_open() )
-//     {
-//         std::cerr << "Failed to open instr_test_v5.log for writing\n";
-//         FAIL() << "Cannot open log file.";
-//         return;
-//     }
-//
-//     bool        test_passed = false;
-//     std::string previous_output;
-//
-//     // Emulation loop
-//     while ( true )
-//     {
-//         log << cpu.DisassembleAtPC() << '\n';
-//         cpu.Tick();
-//
-//         // Read test status from $6000
-//         uint8_t result = cpu.Read( 0x6000 );
-//
-//         // temp, for every tick, print values from memory addresses:
-//         // 0x6000, 0x6001, 0x6002, 0x6003
-//         std::string output;
-//         output += "6000: " + toHex( result, 2 ) + '\n';
-//         output += "6001: " + toHex( cpu.Read( 0x6001 ), 2 ) + '\n';
-//         output += "6002: " + toHex( cpu.Read( 0x6002 ), 2 ) + '\n';
-//         output += "6003: " + toHex( cpu.Read( 0x6003 ), 2 ) + '\n';
-//
-//         std::cout << output;
-//
-//         // temp, just run for 1000 cycles
-//         if ( cpu.GetCycles() > 1000 )
-//         {
-//             break;
-//         }
-//     }
-//
-//     log.close();
-//
-//     if ( test_passed )
-//     {
-//         std::cout << "Test completed successfully.\n";
-//     }
-//     else
-//     {
-//         FAIL() << "InstructionTestV5 failed.";
-//     }
-// }
-// Main function to run all tests
+
+TEST( RomTests, InstructionTestV5 )
+{
+    Bus bus;
+    CPU cpu( &bus );
+
+    //     // Load the v5 instruction test ROM
+    shared_ptr<Cartridge> cartridge =
+        make_shared<Cartridge>( "tests/roms/v5-single/01-basics.nes" );
+    bus.LoadCartridge( cartridge );
+    cpu.Reset();
+
+    //     // Open a log file to capture output
+    ofstream log( "tests/output/my_instr_test_v5.txt" );
+    if ( !log.is_open() )
+    {
+        cerr << "Failed to open output/my_instr_test_v5.txt for writing\n";
+        FAIL() << "Cannot open log file.";
+        return;
+    }
+
+    bool   test_passed = false;
+    string previous_output;
+
+    int test_index = 0;
+    int line_num = 0;
+    // Emulation loop
+    while ( true )
+    {
+        log << cpu.DisassembleAtPC() << '\n';
+        cout << cpu.DisassembleAtPC() << '\n';
+        cpu.Tick();
+
+        // Read test status from $6000
+        uint8_t status = cpu.Read( 0x6000 );
+        // If the status is 0x81 => we must wait 100ms, then reset CPU
+        if ( status == 0x81 )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            cpu.Reset();
+        }
+        // If the status < 0x80 => test has ended with that code
+        else if ( status < 0x80 && status != 0 )
+        {
+            std::cout << "[TEST] Test finished. Final code: " << (int) status << "\n";
+            // Break out, or keep looping if you want to do something else
+            break;
+        }
+
+        // Read the output starting from 6004 until zero byte
+        while ( status != 0 )
+        {
+            u8 output_char = cpu.Read( 0x6004 + test_index );
+            if ( output_char == 0 )
+            {
+                break;
+            }
+            // print to the console in real time
+            cout << (char) output_char;
+            test_index++;
+        }
+    }
+    log.close();
+
+    if ( test_passed )
+    {
+        std::cout << "Test completed successfully.\n";
+    }
+    else
+    {
+        FAIL() << "InstructionTestV5 failed.";
+    }
+}
+
 int main( int argc, char **argv )
 {
     ::testing::InitGoogleTest( &argc, argv );

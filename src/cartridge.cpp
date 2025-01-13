@@ -229,7 +229,8 @@ void Cartridge::Write( u16 address, u8 data )
      */
     if ( address >= 0x8000 && address <= 0xFFFF )
     {
-        return _prg_rom[_mapper->TranslateCPUAddress( address )];
+        u16 const translated_address = _mapper->TranslateCPUAddress( address );
+        return _prg_rom[translated_address];
     }
     return 0xFF;
 }
@@ -241,7 +242,8 @@ void Cartridge::Write( u16 address, u8 data )
      */
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
-        return _chr_rom[_mapper->TranslatePPUAddress( address )];
+        u16 const translated_address = _mapper->TranslatePPUAddress( address );
+        return _chr_rom[translated_address];
     }
     return 0xFF;
 }
@@ -314,9 +316,9 @@ void Cartridge::WriteChrRAM( u16 address, u8 data )
      * - Byte 5 provides the number of CHR-ROM banks. If 0, then that's a signal that a game
      * uses CHR RAM
      */
-    u16 const translated_address = _mapper->TranslatePPUAddress( address );
     if ( _uses_chr_ram && address >= 0x0000 && address <= 0x1FFF )
     {
+        u16 const translated_address = _mapper->TranslatePPUAddress( address );
         _chr_ram[translated_address] = data;
     }
 }
