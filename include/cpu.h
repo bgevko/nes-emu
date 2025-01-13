@@ -6,7 +6,9 @@
 
 // Aliases for integer types
 using u8 = uint8_t;
+using s8 = int8_t;
 using u16 = uint16_t;
+using u32 = uint32_t;
 using u64 = uint64_t;
 
 // Forward declaration for reads and writes
@@ -35,6 +37,18 @@ class CPU
     void SetProgramCounter( u16 value );
     void SetCycles( u64 value );
 
+    // public cpu methods
+    void               Reset();
+    void               Tick();
+    [[nodiscard]] auto Read( u16 address ) const -> u8;
+
+    // public helpers
+    std::string DisassembleAtPC();
+
+    // public cpu members
+    bool is_halted = false; // NOLINT
+    u16  last_pc = 0x00;    // NOLINT for debugging only
+
   private:
     friend class CPUTestFixture; // Sometimes used for testing private methods
 
@@ -58,6 +72,7 @@ class CPU
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
+        u8 bytes;                                // Number of bytes the instruction takes
         // Some instructions take an extra cycle if a page boundary is crossed. However, in some
         // cases the extra cycle is not taken if the operation is a read. This will be set
         // selectively for a handful of opcodes, but otherwise will be set to true by default
@@ -69,22 +84,11 @@ class CPU
     // Opcode table
     std::array<InstructionData, 256> _opcodeTable;
 
-    /*
-    ################################################################
-    ||                                                            ||
-    ||                        CPU Methods                         ||
-    ||                                                            ||
-    ################################################################
-    */
-    void Reset();
-
     // Fetch/decode/execute cycle
     [[nodiscard]] u8 Fetch();
-    void             Tick();
 
     // Read/write methods
-    [[nodiscard]] auto Read( u16 address ) const -> u8;
-    void               Write( u16 address, u8 data ) const;
+    void Write( u16 address, u8 data ) const;
 
     /*
     ################################################################
@@ -231,4 +235,33 @@ class CPU
     void TXA( u16 address );
     void TAY( u16 address );
     void TYA( u16 address );
+
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                      Illegal Opcodes                       ||
+    ||                                                            ||
+    ################################################################
+    */
+    void JAM( u16 address );
+    void SLO( u16 address );
+    void RLA( u16 address );
+    void SRE( u16 address );
+    void RRA( u16 address );
+    void SAX( u16 address );
+    void LAX( u16 address );
+    void DCP( u16 address );
+    void ISC( u16 address );
+    void ALR( u16 address );
+    void ARR( u16 address );
+    void ANE( u16 address );
+    void SHA( u16 address );
+    void TAS( u16 address );
+    void LXA( u16 address );
+    void LAS( u16 address );
+    void SBX( u16 address );
+    void USBC( u16 address );
+    void SHY( u16 address );
+    void SHX( u16 address );
+    void ANC( u16 address );
 };
