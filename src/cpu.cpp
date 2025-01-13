@@ -4,6 +4,7 @@
 #include "bus.h"
 #include <cstddef>
 #include "utils.h"
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -2232,7 +2233,7 @@ void CPU::LXA( const u16 address )
      *   Usage and cycles:
      *   LXA Immediate: AB(2)
      */
-    u8       magic_constant = 0xEE;
+    u8 const magic_constant = 0xEE;
     u8 const value = Read( address );
     u8 const result = ( ( _a | magic_constant ) & value );
     _a = result;
@@ -2251,9 +2252,9 @@ void CPU::SBX( const u16 address )
      * Usage and cycles:
      *   SBX Immediate: CB (2 bytes, 2 cycles)
      */
-    u8 const operand = Read( address );
-    u8 const left = ( _a & _x );
-    u16      diff = static_cast<uint16_t>( left ) - static_cast<uint16_t>( operand );
+    u8 const  operand = Read( address );
+    u8 const  left = ( _a & _x );
+    u16 const diff = static_cast<uint16_t>( left ) - static_cast<uint16_t>( operand );
     _x = static_cast<u8>( diff & 0xFF );
     ( ( diff & 0x100 ) == 0 ) ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
     SetZeroAndNegativeFlags( _x );
