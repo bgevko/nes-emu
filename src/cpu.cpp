@@ -348,24 +348,16 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     // ALR: 4B, ARR: 6B, ANE: 8B
     _opcodeTable[0x4B] = InstructionData{ "*ALR_Immediate", &CPU::ALR, &CPU::IMM, 2, 2 };
     _opcodeTable[0x6B] = InstructionData{ "*ARR_Immediate", &CPU::ARR, &CPU::IMM, 2, 2 };
-    // _opcodeTable[0x8B] = InstructionData{ "*ANE_Immediate", &CPU::ANE, &CPU::IMM, 2, 2 };
 
-    // SHA: 9F, 93
-    // _opcodeTable[0x9F] = InstructionData{ "*SHA_AbsoluteY", &CPU::SHA, &CPU::ABSY, 5, 3 };
-    // _opcodeTable[0x93] = InstructionData{ "*SHA_IndirectY", &CPU::SHA, &CPU::INDY, 6, 2 };
+    // ANC: 0B, 2B
+    _opcodeTable[0x0B] = InstructionData{ "*ANC_Immediate", &CPU::ANC, &CPU::IMM, 2, 2 };
+    _opcodeTable[0x2B] = InstructionData{ "*ANC_Immediate", &CPU::ANC, &CPU::IMM, 2, 2 };
 
-    // TAS: 9B
-    // _opcodeTable[0x9B] = InstructionData{ "*TAS_AbsoluteY", &CPU::TAS, &CPU::ABSY, 5, 3 };
-
-    // LXA: AB, LAX: AB
-    // _opcodeTable[0xAB] = InstructionData{ "*LAX_Immediate", &CPU::LAX, &CPU::IMM, 2, 2 };
-    // _opcodeTable[0xAB] = InstructionData{ "*LAX_Immediate", &CPU::LAX, &CPU::IMM, 2, 2 };
+    // LXA: AB
+    _opcodeTable[0xAB] = InstructionData{ "*LXA_Immediate", &CPU::LXA, &CPU::IMM, 2, 2 };
 
     // SBX: CB
-    // _opcodeTable[0xCB] = InstructionData{ "*SBX_Immediate", &CPU::SBX, &CPU::IMM, 2, 2 };
-
-    // SHY: 9C, SHX: 9E
-    // _opcodeTable[0x9C] = InstructionData{ "*SHY_AbsoluteX", &CPU::SHY, &CPU::ABSX, 5, 3 };
+    _opcodeTable[0xCB] = InstructionData{ "*SBX_Immediate", &CPU::SBX, &CPU::IMM, 2, 2 };
 };
 
 // Getters
@@ -2217,4 +2209,52 @@ void CPU::ARR( const u16 address )
     // V = bit 5 XOR bit 6
     bool const is_overflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
     ( is_overflow ) ? SetFlags( Status::Overflow ) : ClearFlags( Status::Overflow );
+}
+
+void CPU::ANC( const u16 address )
+{
+    /* @brief Illegal opcode: combines AND and Carry
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   ANC Immediate: 0B(2)
+     *   ANC Immediate: 2B(2)
+     */
+    CPU::AND( address );
+    ( IsFlagSet( Status::Negative ) ) ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+}
+
+void CPU::LXA( const u16 address )
+{
+    /* @brief Illegal opcode: combines LDA and LDX
+     * N Z C I D V
+     * + + - - - -
+     *   Usage and cycles:
+     *   LXA Immediate: AB(2)
+     */
+    u8       magic_constant = 0xEE;
+    u8 const value = Read( address );
+    u8 const result = ( ( _a | magic_constant ) & value );
+    _a = result;
+    _x = result;
+    SetZeroAndNegativeFlags( result );
+}
+
+void CPU::SBX( const u16 address )
+{
+    /* @brief Illegal opcode: SBX (a.k.a. AXS) combines CMP and DEX
+     *        (A & X) - immediate -> X
+     * Sets flags like CMP:
+     *   N Z C I D V
+     *   + + + - - -
+     *
+     * Usage and cycles:
+     *   SBX Immediate: CB (2 bytes, 2 cycles)
+     */
+    u8 const operand = Read( address );
+    u8 const left = ( _a & _x );
+    u16      diff = static_cast<uint16_t>( left ) - static_cast<uint16_t>( operand );
+    _x = static_cast<u8>( diff & 0xFF );
+    ( ( diff & 0x100 ) == 0 ) ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+    SetZeroAndNegativeFlags( _x );
 }

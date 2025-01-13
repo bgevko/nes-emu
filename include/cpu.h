@@ -263,4 +263,5 @@ class CPU
     void USBC( u16 address );
     void SHY( u16 address );
     void SHX( u16 address );
+    void ANC( u16 address );
 };

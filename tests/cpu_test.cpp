@@ -711,6 +711,16 @@ CPU_TEST( EB, USBC, Immediate, "eb.json" );
 // CPU_TEST( 9C, SHY, AbsoluteX, "9c.json" );
 // CPU_TEST( 9E, SHX, AbsoluteY, "9e.json" );
 
+// Illegal - ANC: 0B, 2B
+CPU_TEST( 0B, ANC, Immediate, "0b.json" );
+CPU_TEST( 2B, ANC, Immediate, "2b.json" );
+
+// Illegal - LXA: AB
+CPU_TEST( AB, LXA, Immediate, "ab.json" );
+
+// Illegal - SBX: CB
+CPU_TEST( CB, SBX, Immediate, "cb.json" );
+
 /*
 ################################################################
 ||                                                            ||
