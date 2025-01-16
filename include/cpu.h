@@ -43,7 +43,7 @@ class CPU
     [[nodiscard]] auto Read( u16 address ) const -> u8;
 
     // public helpers
-    std::string DisassembleAtPC();
+    std::string LogLineAtPC( bool verbose = true );
 
     // public cpu members
     bool is_halted = false; // NOLINT
@@ -54,6 +54,7 @@ class CPU
 
     Bus *_bus;         // Pointer to the Bus class
     bool _imp = false; // Implicit addressing mode flag
+    bool _did_vblank = false;
 
     // Registers
     u16 _pc = 0x0000; // Program counter (PC)

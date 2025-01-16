@@ -2,6 +2,7 @@
 #include "bus.h"
 #include "cpu.h"
 #include "json.hpp"
+#include "ppu.h"
 #include <cstdint>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -25,9 +26,10 @@ class CPUTestFixture : public ::testing::Test
   protected:
     CPU cpu; // NOLINT
     Bus bus; // NOLINT
+    PPU ppu; // NOLINT
 
     // All tests assume flat memory model, which is why true is passed to Bus constructor
-    CPUTestFixture() : cpu( &bus ), bus( true ) {}
+    CPUTestFixture() : ppu( true ), bus( &ppu, true ), cpu( &bus ) {}
 
     void                      RunTestCase( const json &testCase );
     void                      LoadStateFromJson( const json &jsonData, const std::string &state );

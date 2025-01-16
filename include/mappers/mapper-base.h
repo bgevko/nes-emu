@@ -53,8 +53,8 @@ class Mapper
     [[nodiscard]] size_t GetChrBankCount() const { return _chr_rom_banks; }
 
     // Base methods
-    virtual u16  TranslateCPUAddress( u16 address ) = 0;
-    virtual u16  TranslatePPUAddress( u16 address ) = 0;
+    virtual u32  TranslateCPUAddress( u16 address ) = 0;
+    virtual u32  TranslatePPUAddress( u16 address ) = 0;
     virtual void HandleCPUWrite( u16 address, u8 data ) = 0;
 
     [[nodiscard]] virtual bool SupportsPrgRam() = 0;

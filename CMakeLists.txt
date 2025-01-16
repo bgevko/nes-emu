@@ -46,6 +46,7 @@ add_executable(emu
         src/cpu.cpp
         src/bus.cpp
         src/cartridge.cpp
+        src/ppu.cpp
         src/mappers/mapper0.cpp
         src/mappers/mapper1.cpp
 )
@@ -145,16 +146,17 @@ endif()
 
 # ----------------------- TEST EXECUTABLES -----------------------
 add_executable(sample_test
-        tests/sample.cpp
-        # Add related cpp files here
+  tests/sample.cpp
+  # Add related cpp files here
 )
 add_executable(cpu_test
-        tests/cpu_test.cpp
-        src/cpu.cpp
-        src/bus.cpp
-        src/cartridge.cpp
-        src/mappers/mapper0.cpp
-        src/mappers/mapper1.cpp
+  tests/cpu_test.cpp
+  src/cpu.cpp
+  src/bus.cpp
+  src/cartridge.cpp
+  src/ppu.cpp
+  src/mappers/mapper0.cpp
+  src/mappers/mapper1.cpp
 )
 
 add_executable(rom_test
@@ -162,6 +164,7 @@ add_executable(rom_test
   src/cpu.cpp
   src/bus.cpp
   src/cartridge.cpp
+  src/ppu.cpp
   src/mappers/mapper0.cpp
   src/mappers/mapper1.cpp
 )

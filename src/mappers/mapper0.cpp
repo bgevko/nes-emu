@@ -2,7 +2,7 @@
 #include "mappers/mapper0.h"
 #include <stdexcept>
 
-[[nodiscard]] u16 Mapper0::TranslateCPUAddress( u16 address )
+[[nodiscard]] u32 Mapper0::TranslateCPUAddress( u16 address )
 {
     /**
      * @brief Cartridges with Mapper 0 come in two fixed sizes: 16 KiB and 32 KiB
@@ -31,7 +31,7 @@
     throw std::runtime_error( "Address out of range in TranslateCPUAddress" );
 }
 
-[[nodiscard]] auto Mapper0::TranslatePPUAddress( u16 address ) -> u16
+[[nodiscard]] auto Mapper0::TranslatePPUAddress( u16 address ) -> u32
 {
     /**
      * @brief Translate PPU address. Mapper 0 doesn't redirect PPU address in any way

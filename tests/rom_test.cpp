@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
+#include "utils.h"
 #include "bus.h"
 #include "cpu.h"
+#include "ppu.h"
 #include "cartridge.h"
 #include <fstream>
 #include <regex>
@@ -9,17 +11,6 @@
 #include <iostream>
 #include <memory>
 using namespace std;
-
-auto toHex( uint32_t num, uint8_t width ) -> string
-{
-    string     hex_str( width, '0' );
-    const char hex_chars[] = "0123456789ABCDEF";
-    for ( int i = width - 1; i >= 0; --i, num >>= 4 )
-    {
-        hex_str[i] = hex_chars[num & 0xF];
-    }
-    return hex_str;
-}
 
 // Structure to hold expected CPU state from the log
 struct ExpectedLine
@@ -43,7 +34,8 @@ struct ExpectedLine
 */
 TEST( RomTests, Nestest )
 {
-    Bus bus;
+    PPU ppu{};
+    Bus bus( &ppu );
     CPU cpu( &bus );
 
     // Create a shared pointer to Cartridge
@@ -160,7 +152,7 @@ TEST( RomTests, Nestest )
     while ( line_index < expected_lines.size() )
     {
         // Save output to our own log file
-        log << cpu.DisassembleAtPC() << '\n';
+        log << cpu.LogLineAtPC() << '\n';
 
         // Get the expected line
         const auto &expected = expected_lines[line_index];
@@ -171,48 +163,48 @@ TEST( RomTests, Nestest )
         {
             did_fail = true;
             cerr << ( line_index + 1 ) << ": PC mismatch\n";
-            cerr << "Expected: " << toHex( expected.address, 4 ) << "    "
-                 << "Actual: " << toHex( cpu.GetProgramCounter(), 4 ) << '\n';
+            cerr << "Expected: " << utils::toHex( expected.address, 4 ) << "    "
+                 << "Actual: " << utils::toHex( cpu.GetProgramCounter(), 4 ) << '\n';
         }
 
         if ( cpu.GetAccumulator() != expected.a )
         {
             did_fail = true;
             std::cerr << ( line_index + 1 ) << ": A mismatch\n";
-            std::cerr << "Expected: " << toHex( expected.a, 2 ) << "    "
-                      << "Actual: " << toHex( cpu.GetAccumulator(), 2 ) << '\n';
+            std::cerr << "Expected: " << utils::toHex( expected.a, 2 ) << "    "
+                      << "Actual: " << utils::toHex( cpu.GetAccumulator(), 2 ) << '\n';
         }
 
         if ( cpu.GetXRegister() != expected.x )
         {
             did_fail = true;
             std::cerr << ( line_index + 1 ) << ": X mismatch\n";
-            std::cerr << "Expected: " << toHex( expected.x, 2 ) << "    "
-                      << "Actual: " << toHex( cpu.GetXRegister(), 2 ) << '\n';
+            std::cerr << "Expected: " << utils::toHex( expected.x, 2 ) << "    "
+                      << "Actual: " << utils::toHex( cpu.GetXRegister(), 2 ) << '\n';
         }
 
         if ( cpu.GetYRegister() != expected.y )
         {
             did_fail = true;
             std::cerr << ( line_index + 1 ) << ": Y mismatch\n";
-            std::cerr << "Expected: " << toHex( expected.y, 2 ) << "    "
-                      << "Actual: " << toHex( cpu.GetYRegister(), 2 ) << '\n';
+            std::cerr << "Expected: " << utils::toHex( expected.y, 2 ) << "    "
+                      << "Actual: " << utils::toHex( cpu.GetYRegister(), 2 ) << '\n';
         }
 
         if ( cpu.GetStatusRegister() != expected.p )
         {
             did_fail = true;
             std::cerr << ( line_index + 1 ) << ": P mismatch\n";
-            std::cerr << "Expected: " << toHex( expected.p, 2 ) << "    "
-                      << "Actual: " << toHex( cpu.GetStatusRegister(), 2 ) << '\n';
+            std::cerr << "Expected: " << utils::toHex( expected.p, 2 ) << "    "
+                      << "Actual: " << utils::toHex( cpu.GetStatusRegister(), 2 ) << '\n';
         }
 
         if ( cpu.GetStackPointer() != expected.sp )
         {
             did_fail = true;
             std::cerr << ( line_index + 1 ) << ": SP mismatch\n";
-            std::cerr << "Expected: " << toHex( expected.sp, 2 ) << "    "
-                      << "Actual: " << toHex( cpu.GetStackPointer(), 2 ) << '\n';
+            std::cerr << "Expected: " << utils::toHex( expected.sp, 2 ) << "    "
+                      << "Actual: " << utils::toHex( cpu.GetStackPointer(), 2 ) << '\n';
         }
 
         if ( cpu.GetCycles() != expected.cycles )
@@ -255,12 +247,12 @@ TEST( RomTests, Nestest )
 
 TEST( RomTests, InstructionTestV5 )
 {
-    Bus bus;
+    PPU ppu{};
+    Bus bus( &ppu );
     CPU cpu( &bus );
 
     //     // Load the v5 instruction test ROM
-    shared_ptr<Cartridge> cartridge =
-        make_shared<Cartridge>( "tests/roms/v5-single/01-basics.nes" );
+    shared_ptr<Cartridge> cartridge = make_shared<Cartridge>( "tests/roms/instr_test-v5.nes" );
     bus.LoadCartridge( cartridge );
     cpu.Reset();
 
@@ -277,29 +269,51 @@ TEST( RomTests, InstructionTestV5 )
     string previous_output;
 
     int test_index = 0;
-    int line_num = 0;
+    int last_line = 0;
+    int instr_count = 0;
     // Emulation loop
     while ( true )
     {
-        log << cpu.DisassembleAtPC() << '\n';
-        cout << cpu.DisassembleAtPC() << '\n';
+        log << cpu.LogLineAtPC() << '\n';
+        // cout << cpu.LogLineAtPC() << '\n';
+        // if ( cpu.GetCycles() == 86954 - 1 )
+        // {
+        //     cout << "made it here." << '\n';
+        // }
         cpu.Tick();
+        instr_count++;
 
         // Read test status from $6000
         uint8_t status = cpu.Read( 0x6000 );
+
         // If the status is 0x81 => we must wait 100ms, then reset CPU
         if ( status == 0x81 )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             cpu.Reset();
         }
-        // If the status < 0x80 => test has ended with that code
-        else if ( status < 0x80 && status != 0 )
+
+        if ( cpu.GetProgramCounter() == 0xEC5B )
         {
-            std::cout << "[TEST] Test finished. Final code: " << (int) status << "\n";
-            // Break out, or keep looping if you want to do something else
+            last_line++;
+        }
+
+        if ( last_line == 10 )
+        {
             break;
         }
+
+        // Stop after x amount of instructions, uncomment as needed.
+        // if ( instr_count == 100000 )
+        // {
+        //     break;
+        // }
+
+        // Stop after x condition, uncomment as needed.
+        // if ( ppu.GetScanline() == 2 )
+        // {
+        //     break;
+        // }
 
         // Read the output starting from 6004 until zero byte
         while ( status != 0 )
