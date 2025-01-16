@@ -3,9 +3,8 @@
 #include <stdexcept>
 
 Mapper1::Mapper1( u8 prg_rom_banks, u8 chr_rom_banks )
-    : Mapper( prg_rom_banks, chr_rom_banks ), 
-      _prg_bank_16_hi( prg_rom_banks - 1 )
-      
+    : Mapper( prg_rom_banks, chr_rom_banks ), _prg_bank_16_hi( prg_rom_banks - 1 )
+
 {
 }
 
