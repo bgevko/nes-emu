@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include "mappers/mapper-base.h"
 
 PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 
@@ -6,7 +7,7 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 [[nodiscard]] u16 PPU::GetCycle() const { return _cycle; }
 [[nodiscard]] u8  PPU::GetControlFlag( ControlFlag flag ) const
 {
-    u8 mask = 1 << flag;
+    u8 const mask = 1 << flag;
     return static_cast<u8>( ( _ppuCtrl & mask ) > 0 );
 }
 
@@ -46,15 +47,15 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
          * CPU sees the state before the read's side effects.
       */
         // Status grabs the top 3 bits of the status register
-        u8 status = _ppuStatus & 0xE0;
+        u8 const status = _ppuStatus & 0xE0;
 
         // The ppu data buffer has remnant data from the last read, which some games use
-        u8 noise = _dataBuffer & 0x1F;
+        u8 const noise = _dataBuffer & 0x1F;
 
         // The CPU expects the state of the PPU at the time of the read
         // the read does have a side effect of clearing the VerticalBlank flag, but
         // this is not reflected in the data returned by the read
-        u8 data = status | noise;
+        u8 const data = status | noise;
 
         // Clear the vertical blank flag
         _ppuStatus &= ~Status::VerticalBlank;
@@ -97,8 +98,8 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
         case 0x2000:
         {
             _ppuCtrl = data;
-            u8 nametable_x = GetControlFlag( ControlFlag::NametableX );
-            u8 nametable_y = GetControlFlag( ControlFlag::NametableY );
+            u8 const nametable_x = GetControlFlag( ControlFlag::NametableX );
+            u8 const nametable_y = GetControlFlag( ControlFlag::NametableY );
 
             // set nametableX to bit 10 of the temp address register, and nametableY to bit 11
             _tempAddr = ( _tempAddr & 0xF3FF ) | ( nametable_y << 11 ) | ( nametable_x << 10 );
@@ -222,8 +223,8 @@ void PPU::SyncPPU( u64 current_cpu_cycles )
         return;
     }
 
-    u64 cycles_since_sync = current_cpu_cycles - _lastSync;
-    u64 ppu_cycles = cycles_since_sync * 3;
+    u64 const cycles_since_sync = current_cpu_cycles - _lastSync;
+    u64 const ppu_cycles = cycles_since_sync * 3;
     for ( u64 i = 0; i < ppu_cycles; i++ )
     {
         Tick();

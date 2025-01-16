@@ -586,7 +586,7 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
         output += registers_str + status_str;
 
         // Horizontal scanline, pad for 3 characters + space
-        u16         ppu_cycles = _bus->GetPpuCycles();
+        u16         const ppu_cycles = _bus->GetPpuCycles();
         std::string ppu_cycles_str = std::to_string( ppu_cycles + 2 );
         ppu_cycles_str += std::string( 4 - ppu_cycles_str.size(), ' ' );
         output += "  PPU: " + ppu_cycles_str;

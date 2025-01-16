@@ -3,10 +3,9 @@
 #include <stdexcept>
 
 Mapper1::Mapper1( u8 prg_rom_banks, u8 chr_rom_banks )
-    : Mapper( prg_rom_banks, chr_rom_banks ), _control_register( 0x1C ), _prg_bank_16_lo( 0 ),
-      _prg_bank_16_hi( prg_rom_banks - 1 ), _prg_bank_32( 0 ), _chr_bank_4_lo( 0 ),
-      _chr_bank_4_hi( 0 ), _chr_bank_8( 0 ), _shift_register( 0x10 ), _write_count( 0 ),
-      _mirror_mode( MirrorMode::Horizontal )
+    : Mapper( prg_rom_banks, chr_rom_banks ), 
+      _prg_bank_16_hi( prg_rom_banks - 1 )
+      
 {
 }
 
