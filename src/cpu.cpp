@@ -11,6 +11,7 @@
 
 CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 {
+
     /*
     ################################################################
     ||                                                            ||
@@ -426,11 +427,12 @@ void CPU::Tick()
         // Calculate the address using the addressing mode
         u16 const address = ( this->*addressing_mode_handler )();
 
-        // Execute the instruction fetched from the opcode table
-        ( this->*instruction_handler )( address );
-
         // Add the number of cycles the instruction takes
         _cycles += instruction.cycles;
+        _bus->SyncPPU( _cycles );
+
+        // Execute the instruction fetched from the opcode table
+        ( this->*instruction_handler )( address );
 
         // Reset the _imp flag. It's triggered in IMP addressing mode
         _imp = false;
@@ -443,7 +445,7 @@ void CPU::Tick()
     last_pc = _pc;
 }
 
-std::string CPU::DisassembleAtPC() // NOLINT
+std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 {
     /*
      * @brief Disassembles the instruction at the current program counter
@@ -489,9 +491,11 @@ std::string CPU::DisassembleAtPC() // NOLINT
     ( name[0] == '*' ) ? output += "*" + name.substr( 1 ) + " " : output += name + " ";
 
     // Addressing mode and operand
-    u8 value = 0x00;
-    u8 low = 0x00;
-    u8 high = 0x00;
+
+    std::string assembly_str;
+    u8          value = 0x00;
+    u8          low = 0x00;
+    u8          high = 0x00;
     if ( addr_mode == "Implied" )
     {
         // Nothing to prefix
@@ -499,16 +503,16 @@ std::string CPU::DisassembleAtPC() // NOLINT
     else if ( addr_mode == "Immediate" )
     {
         value = Read( _pc + 1 );
-        output += "#$" + utils::toHex( value, 2 );
+        assembly_str += "#$" + utils::toHex( value, 2 );
     }
     else if ( addr_mode == "ZeroPage" || addr_mode == "ZeroPageX" || addr_mode == "ZeroPageY" )
     {
         value = Read( _pc + 1 );
-        output += "$" + utils::toHex( value, 2 );
+        assembly_str += "$" + utils::toHex( value, 2 );
 
-        ( addr_mode == "ZeroPageX" )   ? output += ", X"
-        : ( addr_mode == "ZeroPageY" ) ? output += ", Y"
-                                       : output += "";
+        ( addr_mode == "ZeroPageX" )   ? assembly_str += ", X"
+        : ( addr_mode == "ZeroPageY" ) ? assembly_str += ", Y"
+                                       : assembly_str += "";
     }
     else if ( addr_mode == "Absolute" || addr_mode == "AbsoluteX" || addr_mode == "AbsoluteY" )
     {
@@ -516,23 +520,23 @@ std::string CPU::DisassembleAtPC() // NOLINT
         high = Read( _pc + 2 );
         u16 const address = ( high << 8 ) | low;
 
-        output += "$" + utils::toHex( address, 4 );
-        ( addr_mode == "AbsoluteX" )   ? output += ", X"
-        : ( addr_mode == "AbsoluteY" ) ? output += ", Y"
-                                       : output += "";
+        assembly_str += "$" + utils::toHex( address, 4 );
+        ( addr_mode == "AbsoluteX" )   ? assembly_str += ", X"
+        : ( addr_mode == "AbsoluteY" ) ? assembly_str += ", Y"
+                                       : assembly_str += "";
     }
     else if ( addr_mode == "Indirect" )
     {
         low = Read( _pc + 1 );
         high = Read( _pc + 2 );
         u16 const address = ( high << 8 ) | low;
-        output += "($" + utils::toHex( address, 4 ) + ")";
+        assembly_str += "($" + utils::toHex( address, 4 ) + ")";
     }
     else if ( addr_mode == "IndirectX" || addr_mode == "IndirectY" )
     {
         value = Read( _pc + 1 );
-        ( addr_mode == "IndirectX" ) ? output += "($" + utils::toHex( value, 2 ) + ", X)"
-                                     : output += "($" + utils::toHex( value, 2 ) + "), Y";
+        ( addr_mode == "IndirectX" ) ? assembly_str += "($" + utils::toHex( value, 2 ) + ", X)"
+                                     : assembly_str += "($" + utils::toHex( value, 2 ) + "), Y";
     }
     else if ( addr_mode == "Relative" )
     {
@@ -540,13 +544,57 @@ std::string CPU::DisassembleAtPC() // NOLINT
         s8 const  offset = static_cast<s8>( value );
         u16 const address = _pc + 2 + offset;
 
-        output += "$" + utils::toHex( value, 2 ) + " [$" + utils::toHex( address, 4 ) + "]";
+        assembly_str += "$" + utils::toHex( value, 2 ) + " [$" + utils::toHex( address, 4 ) + "]";
     }
     else
     {
         // Houston.. yet again
         throw std::runtime_error( "Unknown addressing mode: " + addr_mode );
     }
+
+    // Pad the assembly string with spaces, for fixed length
+    output += assembly_str + std::string( 15 - assembly_str.size(), ' ' );
+
+    // Add more log info
+    if ( verbose )
+    {
+        std::string registers_str;
+        // Format
+        // a: 00 x: 00 y: 00 s: FD
+        registers_str += "a: " + utils::toHex( _a, 2 ) + " ";
+        registers_str += "x: " + utils::toHex( _x, 2 ) + " ";
+        registers_str += "y: " + utils::toHex( _y, 2 ) + " ";
+        registers_str += "s: " + utils::toHex( _s, 2 ) + " ";
+
+        // status register
+        // Will return a formatted status string
+        // p: hex value, status string (NV-BDIZC). Letter present is flag set, dash is flag unset
+        std::string status_str;
+        status_str += "p: " + utils::toHex( _p, 2 ) + "  ";
+
+        std::string status_flags = "NV-BDIZC";
+        std::string status_flags_lower = "nv-bdizc";
+        std::string status_flags_str;
+        for ( int i = 7; i >= 0; i-- )
+        {
+            status_flags_str +=
+                ( _p & ( 1 << i ) ) != 0 ? status_flags[7 - i] : status_flags_lower[7 - i];
+        }
+        status_str += status_flags_str;
+
+        // Combine to the output string
+        output += registers_str + status_str;
+
+        // Horizontal scanline, pad for 3 characters + space
+        u16 const   ppu_cycles = _bus->GetPpuCycles();
+        std::string ppu_cycles_str = std::to_string( ppu_cycles + 2 );
+        ppu_cycles_str += std::string( 4 - ppu_cycles_str.size(), ' ' );
+        output += "  PPU: " + ppu_cycles_str;
+
+        // cycle count
+        output += "  cycle: " + std::to_string( _cycles + 1 );
+    }
+
     return output;
 }
 void CPU::Reset()
@@ -556,12 +604,23 @@ void CPU::Reset()
     _y = 0x00;
     _s = 0xFD;
     _p = 0x00 | Unused;
-    _cycles = 0;
 
     // The program counter is usually read from the reset vector of a game, which is
     // located at 0xFFFC and 0xFFFD. If no cartridge, we'll assume these values are
     // initialized to 0x00
     _pc = Read( 0xFFFD ) << 8 | Read( 0xFFFC );
+
+    // Add 7 cycles
+    if ( !_bus->IsTestMode() )
+    {
+
+        _cycles += 7;
+        _bus->SyncPPU( _cycles );
+    }
+    else
+    {
+        _cycles = 0;
+    }
 }
 
 /*
@@ -650,6 +709,7 @@ auto CPU::ABSX() -> u16
     if ( _currentPageCrossPenalty && ( final_address & 0xFF00 ) != ( address & 0xFF00 ) )
     {
         _cycles++;
+        _bus->SyncPPU( _cycles );
     }
 
     return final_address;
@@ -672,6 +732,7 @@ auto CPU::ABSY() -> u16
     if ( _currentPageCrossPenalty && ( final_address & 0xFF00 ) != ( address & 0xFF00 ) )
     {
         _cycles++;
+        _bus->SyncPPU( _cycles );
     }
 
     return final_address;
@@ -742,6 +803,7 @@ auto CPU::INDY() -> u16
     if ( _currentPageCrossPenalty && ( address & 0xFF00 ) != ( ptr_high << 8 ) )
     {
         _cycles++;
+        _bus->SyncPPU( _cycles );
     }
     return address;
 }
@@ -886,6 +948,8 @@ void CPU::BranchOnStatus( u16 offsetAddress, u8 flag, bool isSet )
         {
             _cycles += 1;
         }
+
+        _bus->SyncPPU( _cycles );
     }
     // Path will not branch, nothing to do
 }

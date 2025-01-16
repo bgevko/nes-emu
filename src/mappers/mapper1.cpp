@@ -2,7 +2,11 @@
 #include "mappers/mapper-base.h"
 #include <stdexcept>
 
-Mapper1::Mapper1( u8 prg_rom_banks, u8 chr_rom_banks ) : Mapper( prg_rom_banks, chr_rom_banks ) {}
+Mapper1::Mapper1( u8 prg_rom_banks, u8 chr_rom_banks )
+    : Mapper( prg_rom_banks, chr_rom_banks ), _prg_bank_16_hi( prg_rom_banks - 1 )
+
+{
+}
 
 MirrorMode Mapper1::GetMirrorMode() { return _mirror_mode; }
 
@@ -13,7 +17,7 @@ MirrorMode Mapper1::GetMirrorMode() { return _mirror_mode; }
 ||                            ||
 ################################
 */
-[[nodiscard]] u16 Mapper1::TranslateCPUAddress( u16 address )
+[[nodiscard]] u32 Mapper1::TranslateCPUAddress( u16 address )
 {
     /**
      * @details
@@ -49,26 +53,26 @@ MirrorMode Mapper1::GetMirrorMode() { return _mirror_mode; }
      * internal registers, to swap PRG ROM banks as needed during gameplay.
      */
 
+    // 16 KiB mode
     if ( ( _control_register & 0b00001000 ) != 0 )
     {
-        // 16 KiB mode
         if ( address >= 0x8000 && address <= 0xBFFF )
         {
             // Swap out the lower 16 KiB bank.
-            u16 const bank_offset = _prg_bank_16_lo * 0x4000;
+            u32 const bank_offset = _prg_bank_16_lo * 0x4000;
             return bank_offset + ( address & 0x3FFF );
         }
         if ( address >= 0xC000 && address <= 0xFFFF )
         {
             // Swap out the upper 16 KiB bank.
 
-            u16 const bank_offset = _prg_bank_16_hi * 0x4000;
+            u32 const bank_offset = _prg_bank_16_hi * 0x4000;
             return bank_offset + ( address & 0x3FFF );
         }
     }
 
     // 32 KiB mode
-    u16 const bank_offset = _prg_bank_32 * 0x8000;
+    u32 const bank_offset = _prg_bank_32 * 0x8000;
     return bank_offset + ( address & 0x7FFF );
 }
 
@@ -243,7 +247,7 @@ void Mapper1::HandleCPUWrite( u16 address, u8 data )
 ||                            ||
 ################################
 */
-[[nodiscard]] u16 Mapper1::TranslatePPUAddress( u16 address )
+[[nodiscard]] u32 Mapper1::TranslatePPUAddress( u16 address )
 {
     // If no chr rom banks, the address is directly mapped
     if ( GetChrBankCount() == 0 )
@@ -257,20 +261,20 @@ void Mapper1::HandleCPUWrite( u16 address, u8 data )
         // 4 KiB, read the lower 4 KiB bank
         if ( address >= 0x0000 && address <= 0x0FFF )
         {
-            const u16 bank_offset = _chr_bank_4_lo * 0x1000;
+            const u32 bank_offset = _chr_bank_4_lo * 0x1000;
             return bank_offset + ( address & 0x0FFF );
         }
         // 4 KiB, read the upper 4 KiB bank
         if ( address >= 0x1000 && address <= 0x1FFF )
         {
-            const u16 bank_offset = _chr_bank_4_hi * 0x1000;
+            const u32 bank_offset = _chr_bank_4_hi * 0x1000;
             return bank_offset + ( address & 0x0FFF );
         }
     }
     else
     {
         // 8 KiB, read the 8 KiB bank
-        const u16 bank_offset = _chr_bank_8 * 0x2000;
+        const u32 bank_offset = _chr_bank_8 * 0x2000;
         return bank_offset + ( address & 0x1FFF );
     }
 

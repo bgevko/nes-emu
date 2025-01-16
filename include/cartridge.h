@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cpu.h"
 #include "mappers/mapper-base.h"
 #include <array>
 #include <string>
@@ -39,15 +38,39 @@ class Cartridge
 
     [[nodiscard]] MirrorMode GetMirrorMode();
 
-    // PRG and CHR data
-    vector<u8>      _prg_rom;
-    vector<u8>      _chr_rom;
-    array<u8, 8192> _chr_ram{}; // 8 KiB CHR RAM, used when CHR ROM is not present
+    // PRG ROM: Program ROM
+    vector<u8> _prg_rom;
 
-    // Usage will be determined by individual mapper
-    array<u8, 8192> _prg_ram{}; // 8KiB PRG RAM, also known as Save RAM (SRAM) or Work RAM sometimes
-    array<u8, 8160> _expansion_memory{}; // 8160 bytes expansion memory. Rarely used, but
-                                         // sometimes used as RAM, ROM, or both
+    /* CHR ROM and RAM
+      These store pattern table data
+
+      Games use either CHR ROM or CHR RAM, but never both
+      If CHR ROM is not present, CHR RAM is used by default
+      CHR ROM is read-only, while CHR RAM is writable.
+
+      In both cases, addresses $0000 - $1FFF are addressed by the PPU,
+      and used to store pattern tables:
+      $0000 - $0FFF: Pattern Table 0, background tiles
+      $1000 - $1FFF: Pattern Table 1, sprite tiles
+
+      If a game uses CHR RAM, it starts empty and the CPU fills in the pattern
+      table data dynamically. Having dynamic pattern tables allowed devs to
+      create dynamic tiles, though they had to be careful to avoid overwriting
+      essential data.
+    */
+
+    vector<u8>        _chr_rom;
+    array<u8, 0x1FFF> _chr_ram{}; // 8192 bytes (8 KiB)
+
+    // PRG RAM: Program RAM, also known as Save RAM (SRAM) or Work RAM sometimes
+    // Its usage is determined by the mapper
+    array<u8, 0x1FFF>
+        _prg_ram{}; // 8KiB PRG RAM, also known as Save RAM (SRAM) or Work RAM sometimes
+
+    // Expansion ROM
+    // Almost never used, but here it is anyway.
+    // Can be both ROM or RAM, determined by the mapper
+    array<u8, 0x1FFF> _expansion_memory{};
 
     // Mapper
     shared_ptr<Mapper> _mapper;

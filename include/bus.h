@@ -1,5 +1,4 @@
 #pragma once
-#include "cpu.h"
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -17,10 +16,10 @@ class Bus
 {
   public:
     // Will eventually pass other components to the constructor
-    // Bus( PPU &ppu, APU &apu, bool use_flat_memory = false );
+    // Bus( PPU *ppu, APU *apu, bool use_flat_memory = false );
 
     // Initialized with flat memory disabled by default. Enabled in json tests only
-    Bus( bool use_flat_memory = false );
+    explicit Bus( PPU *ppu, bool use_flat_memory = false );
 
     // Memory read/write interface
     [[nodiscard]] u8 Read( uint16_t address ) const;
@@ -29,13 +28,22 @@ class Bus
     // Load or change the cartridge during runtime
     void LoadCartridge( std::shared_ptr<Cartridge> cartridge );
 
+    // PPU sync helper
+    void SyncPPU( u64 cycles );
+
+    // Is test mode
+    [[nodiscard]] bool IsTestMode() const;
+
+    // Debug getters
+    [[nodiscard]] u16 GetPpuCycles() const;
+    [[nodiscard]] u16 GetPpuScanline() const;
+
   private:
     // Shared ownership for dynamic life cycle management, leave off for now
     std::shared_ptr<Cartridge> _cartridge;
 
-    // APU and PPU stubs
-    /* PPU &_ppu; */
-    /* APU &_apu; */
+    PPU *_ppu;
+    // APU *_apu;
 
     // Flat memory for early implementation
     bool                  _use_flat_memory; // For testing purposes
@@ -45,6 +53,5 @@ class Bus
     std::array<u8, 0x0800> _ram{}; // 2KB internal cpu RAM
 
     // Stubs
-    std::array<u8, 0x2000> _ppu_memory{};    // 8KB PPU memory (temp)
     std::array<u8, 0x0020> _apu_io_memory{}; // 32 bytes APU and I/O registers
 };

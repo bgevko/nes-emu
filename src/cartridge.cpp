@@ -1,5 +1,4 @@
 #include "cartridge.h"
-#include "cpu.h"
 #include <array>
 #include <cstddef>
 #include <fstream>
@@ -229,7 +228,7 @@ void Cartridge::Write( u16 address, u8 data )
      */
     if ( address >= 0x8000 && address <= 0xFFFF )
     {
-        u16 const translated_address = _mapper->TranslateCPUAddress( address );
+        u32 const translated_address = _mapper->TranslateCPUAddress( address );
         return _prg_rom[translated_address];
     }
     return 0xFF;
@@ -242,7 +241,7 @@ void Cartridge::Write( u16 address, u8 data )
      */
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
-        u16 const translated_address = _mapper->TranslatePPUAddress( address );
+        u32 const translated_address = _mapper->TranslatePPUAddress( address );
         return _chr_rom[translated_address];
     }
     return 0xFF;
