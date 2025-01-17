@@ -39,8 +39,12 @@ class CPU
 
     // public cpu methods
     void               Reset();
+    void               DecodeExecute();
     void               Tick();
     [[nodiscard]] auto Read( u16 address ) const -> u8;
+    [[nodiscard]] auto ReadAndTick( u16 address ) -> u8;
+    void               Write( u16 address, u8 data ) const;
+    void               WriteAndTick( u16 address, u8 data );
 
     // public helpers
     std::string LogLineAtPC( bool verbose = true );
@@ -52,24 +56,29 @@ class CPU
   private:
     friend class CPUTestFixture; // Sometimes used for testing private methods
 
-    Bus *_bus;         // Pointer to the Bus class
-    bool _imp = false; // Implicit addressing mode flag
-    bool _did_vblank = false;
+    Bus *_bus; // Pointer to the Bus class
+
+    // Heper flags
+    bool        _did_vblank = false;
+    bool        _is_write_modify = false;
+    u8          _opcode = 0x00;
+    std::string _instruction_name;
+    std::string _addr_mode;
 
     // Registers
-    u16 _pc = 0x0000; // Program counter (PC)
-    u8  _a = 0x00;    // Accumulator register (A)
-    u8  _x = 0x00;    // X register
-    u8  _y = 0x00;    // Y register
-    u8  _s = 0xFD;    // Stack pointer (SP)
-    u8  _p =
-        0x00 | Unused; // Status register (P), per the specs, the unused flag should always be set
-    u64 _cycles = 0;   // Number of cycles
+    u16 _pc = 0x0000;       // Program counter (PC)
+    u8  _a = 0x00;          // Accumulator register (A)
+    u8  _x = 0x00;          // X register
+    u8  _y = 0x00;          // Y register
+    u8  _s = 0xFD;          // Stack pointer (SP)
+    u8  _p = 0x00 | Unused; // Status register (P), per the specs, the unused flag should always be set
+    u64 _cycles = 0;        // Number of cycles
 
     // Instruction data
     struct InstructionData
     {
         std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
+        std::string addr_mode;                   // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
@@ -78,6 +87,8 @@ class CPU
         // cases the extra cycle is not taken if the operation is a read. This will be set
         // selectively for a handful of opcodes, but otherwise will be set to true by default
         bool pageCrossPenalty = true;
+        bool isWriteModify = false; // Write/modify instructions use a dummy read before writing,
+                                    // spending an extra cycle
     };
 
     bool _currentPageCrossPenalty = true;
@@ -87,9 +98,6 @@ class CPU
 
     // Fetch/decode/execute cycle
     [[nodiscard]] u8 Fetch();
-
-    // Read/write methods
-    void Write( u16 address, u8 data ) const;
 
     /*
     ################################################################
@@ -120,7 +128,7 @@ class CPU
 
     // LDA, LDX, and LDY helper
     void LoadRegister( u16 address, u8 &reg );
-    void StoreRegister( u16 address, u8 reg ) const;
+    void StoreRegister( u16 address, u8 reg );
 
     // Branch helper
     void BranchOnStatus( u16 offsetAddress, u8 flag, bool isSet );
@@ -244,6 +252,7 @@ class CPU
     ||                                                            ||
     ################################################################
     */
+    void NOP2( u16 address );
     void JAM( u16 address );
     void SLO( u16 address );
     void RLA( u16 address );

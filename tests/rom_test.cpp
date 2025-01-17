@@ -221,7 +221,7 @@ TEST( RomTests, Nestest )
             break;
         }
 
-        cpu.Tick(); // Run one CPU cycle
+        cpu.DecodeExecute(); // Run one CPU cycle
         line_index++;
     }
 
@@ -280,7 +280,7 @@ TEST( RomTests, InstructionTestV5 )
         // {
         //     cout << "made it here." << '\n';
         // }
-        cpu.Tick();
+        cpu.DecodeExecute();
         instr_count++;
 
         // Read test status from $6000

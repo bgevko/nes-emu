@@ -64,8 +64,7 @@ class Cartridge
 
     // PRG RAM: Program RAM, also known as Save RAM (SRAM) or Work RAM sometimes
     // Its usage is determined by the mapper
-    array<u8, 0x1FFF>
-        _prg_ram{}; // 8KiB PRG RAM, also known as Save RAM (SRAM) or Work RAM sometimes
+    array<u8, 0x1FFF> _prg_ram{}; // 8KiB PRG RAM, also known as Save RAM (SRAM) or Work RAM sometimes
 
     // Expansion ROM
     // Almost never used, but here it is anyway.

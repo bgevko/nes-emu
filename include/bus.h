@@ -29,7 +29,7 @@ class Bus
     void LoadCartridge( std::shared_ptr<Cartridge> cartridge );
 
     // PPU sync helper
-    void SyncPPU( u64 cycles );
+    void TickPPU();
 
     // Is test mode
     [[nodiscard]] bool IsTestMode() const;
