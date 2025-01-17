@@ -20,8 +20,8 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 
     // Non-readable registers: 2000 (PPUCTRL), 2001 (PPUMASK), 2003 (OAMADDR), 2005 (PPUSCROLL),
     // 2006 (PPUADDR)
-    if ( _isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 ||
-         address == 0x2005 || address == 0x2006 )
+    if ( _isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 || address == 0x2005 ||
+         address == 0x2006 )
     {
         return 0x00;
     }
@@ -211,23 +211,4 @@ void PPU::Tick()
     //    - Incrementing horizontal/vertical scroll bits
     //    etc.
     // ---------------------------------------------
-}
-
-void PPU::SyncPPU( u64 current_cpu_cycles )
-{
-    // Edge where the cpu cycle overflows
-    // just kidding, that would take lifetimes for a 64 bit int..
-
-    if ( _isDisabled )
-    {
-        return;
-    }
-
-    u64 const cycles_since_sync = current_cpu_cycles - _lastSync;
-    u64 const ppu_cycles = cycles_since_sync * 3;
-    for ( u64 i = 0; i < ppu_cycles; i++ )
-    {
-        Tick();
-    }
-    _lastSync = current_cpu_cycles;
 }

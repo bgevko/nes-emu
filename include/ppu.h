@@ -51,9 +51,6 @@ class PPU
     void WritePatternTable( u16 addr, u8 data );
     void WriteNameTable( u16 addr, u8 data );
     u16  ResolveNameTableAddress( u16 addr );
-
-    void SyncPPU( u64 current_cpu_cycles );
-
     void Tick();
 
   private:
