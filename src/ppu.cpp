@@ -3,8 +3,8 @@
 
 PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 
-[[nodiscard]] u16 PPU::GetScanline() const { return _scanline; }
-[[nodiscard]] u16 PPU::GetCycle() const { return _cycle; }
+[[nodiscard]] s16 PPU::GetScanline() const { return _scanline; }
+[[nodiscard]] u16 PPU::GetCycles() const { return _cycle; }
 [[nodiscard]] u8  PPU::GetControlFlag( ControlFlag flag ) const
 {
     u8 const mask = 1 << flag;
@@ -46,6 +46,7 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
          * blank flag is cleared after constructing the return value, ensuring the
          * CPU sees the state before the read's side effects.
       */
+
         // Status grabs the top 3 bits of the status register
         u8 const status = _ppuStatus & 0xE0;
 
@@ -63,6 +64,8 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
         // Reset the address latch
         _addrLatch = false;
 
+        _isCpuReadingPpuStatus = false;
+        _preventVBlank = false;
         return data;
     }
 
@@ -153,12 +156,9 @@ void PPU::Tick()
     {
         return;
     }
-
-    // ---------------------------------------------
-    // 1. Handle the special "skip dot" on odd frames
-    //    Only applies if rendering is enabled.
-    // ---------------------------------------------
-    if ( _scanline == 261 && _cycle == 339 && _isOddFrame && _isRenderingEnabled )
+    // 1. Handle the odd-frame skip dot (when rendering is enabled)
+    //    Happens at scanline = -1, cycle = 339.
+    if ( _scanline == -1 && _cycle == 339 && _isOddFrame && _isRenderingEnabled )
     {
         _cycle = 0;
         _scanline = 0;
@@ -167,48 +167,56 @@ void PPU::Tick()
     }
 
     _cycle++;
-    // ---------------------------------------------
-    // 2. If we've hit the end of a scanline (341 cycles),
-    //    move to the next line, or wrap around to 0
-    // ---------------------------------------------
+
+    // 2. Check if reached end of scanline
+    // (NTSC has 341 PPU cycles per line)
     if ( _cycle > 340 )
     {
         _cycle = 0;
         _scanline++;
 
-        if ( _scanline > 261 )
+        // After scanline 260, wrap around to -1 (pre-render line)
+        if ( _scanline > 260 )
         {
-            _scanline = 0;
+            _scanline = -1;
             _isOddFrame = !_isOddFrame;
+            _frame++;
         }
     }
 
-    // ---------------------------------------------
-    // 3. Set VBlank flag
-    //    Happens at scanline 241, cycle 1
-    // ---------------------------------------------
+    // if we happen to do a read on scanline 241, cycle 0, Vblank
+    // Doesn't get set. It's a hardward quirk. We can simulate it by just
+    // turning it off here
+    if ( _scanline == 241 && _cycle == 0 && _isCpuReadingPpuStatus )
+    {
+        _preventVBlank = true;
+    }
+
+    // 3. Set Vblank flag on scanline 241, cycle 1
     if ( _scanline == 241 && _cycle == 1 )
     {
-        _ppuStatus |= Status::VerticalBlank;
-
-        // TODO: Trigger NMI
+        if ( !_preventVBlank )
+        {
+            _ppuStatus |= Status::VerticalBlank;
+            // TODO: Trigger NMI if control bits allow
+        }
+        // Reset this flag each frame if you need Mesen’s "prevent vbl" behavior
+        _preventVBlank = false;
     }
 
-    // ---------------------------------------------
-    // 4. Clear VBlank flag
-    //    Happens at scanline 261, cycle 1 (start of pre-render)
-    // ---------------------------------------------
-    if ( _scanline == 261 && _cycle == 1 )
+    // 4. Clear VBlank flag at the start of the pre-render line
+    //    (scanline = -1, cycle = 1)
+    if ( _scanline == -1 && _cycle == 1 )
     {
         _ppuStatus &= ~Status::VerticalBlank;
-        _frame++;
     }
-    // ---------------------------------------------
-    // 5. (Placeholder) Additional PPU logic
+
+    // 5. Additional PPU logic (placeholder)
     //    - Background fetches
     //    - Sprite evaluation
-    //    - Checking for sprite 0 hits
-    //    - Incrementing horizontal/vertical scroll bits
+    //    - Sprite 0 hit checks
+    //    - Scrolling increments
     //    etc.
-    // ---------------------------------------------
 }
+
+void PPU::SetIsPpuReadingPpuStatus( bool isReading ) { _isCpuReadingPpuStatus = isReading; }

@@ -6,6 +6,7 @@
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u64 = uint64_t;
+using s16 = int16_t;
 
 // forward declarations
 class Cartridge;
@@ -28,22 +29,15 @@ class Bus
     // Load or change the cartridge during runtime
     void LoadCartridge( std::shared_ptr<Cartridge> cartridge );
 
-    // PPU sync helper
-    void TickPPU();
-
     // Is test mode
     [[nodiscard]] bool IsTestMode() const;
 
-    // Debug getters
-    [[nodiscard]] u16 GetPpuCycles() const;
-    [[nodiscard]] u16 GetPpuScanline() const;
+    PPU *ppu; // NOLINT
 
+    // APU *apu;
   private:
     // Shared ownership for dynamic life cycle management, leave off for now
     std::shared_ptr<Cartridge> _cartridge;
-
-    PPU *_ppu;
-    // APU *_apu;
 
     // Flat memory for early implementation
     bool                  _use_flat_memory; // For testing purposes

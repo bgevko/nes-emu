@@ -6,7 +6,7 @@
 #include <utility>
 
 // Constructor to initialize the bus with a flat memory model
-Bus::Bus( PPU *ppu, const bool use_flat_memory ) : _ppu( ppu ), _use_flat_memory( use_flat_memory )
+Bus::Bus( PPU *ppu, const bool use_flat_memory ) : ppu( ppu ), _use_flat_memory( use_flat_memory )
 {
     _ram.fill( 0 );
     _apu_io_memory.fill( 0 );
@@ -29,7 +29,7 @@ u8 Bus::Read( const u16 address ) const
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         const u16 ppu_register = 0x2000 + ( address & 0x0007 );
-        return _ppu->HandleCpuRead( ppu_register );
+        return ppu->HandleCpuRead( ppu_register );
     }
 
     // APU and I/O Registers: 0x4000 - 0x401F
@@ -70,7 +70,7 @@ void Bus::Write( const u16 address, const u8 data )
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         const u16 ppu_register = 0x2000 + ( address & 0x0007 );
-        _ppu->HandleCpuWrite( ppu_register, data );
+        ppu->HandleCpuWrite( ppu_register, data );
         return;
     }
 
@@ -93,8 +93,4 @@ void Bus::Write( const u16 address, const u8 data )
 
 void Bus::LoadCartridge( std::shared_ptr<Cartridge> cartridge ) { _cartridge = std::move( cartridge ); }
 
-void Bus::TickPPU() { _ppu->Tick(); }
-
 [[nodiscard]] bool Bus::IsTestMode() const { return _use_flat_memory; }
-[[nodiscard]] u16  Bus::GetPpuCycles() const { return _ppu->GetCycle(); }
-[[nodiscard]] u16  Bus::GetPpuScanline() const { return _ppu->GetScanline(); }

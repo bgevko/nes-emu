@@ -5,6 +5,7 @@
 
 using u8 = std::uint8_t;
 using u16 = std::uint16_t;
+using s16 = std::int16_t;
 
 using namespace std;
 
@@ -35,9 +36,12 @@ class PPU
     PPU( bool isDisabled = false );
 
     // Getters
-    [[nodiscard]] u16 GetScanline() const;
-    [[nodiscard]] u16 GetCycle() const;
+    [[nodiscard]] s16 GetScanline() const;
+    [[nodiscard]] u16 GetCycles() const;
     [[nodiscard]] u8  GetControlFlag( ControlFlag flag ) const;
+
+    // Setters
+    void SetIsPpuReadingPpuStatus( bool isReading );
 
     // Reads / Writes
     [[nodiscard]] u8 HandleCpuRead( u16 addr );
@@ -58,12 +62,14 @@ class PPU
     bool _isDisabled = false;
 
     // Timing
-    u16  _scanline = 0;
+    s16  _scanline = 0;
     u16  _cycle = 4;
     u64  _lastSync = 0; // Last cpu cycle synced
     u64  _frame = 1;
     bool _isOddFrame = false;
     bool _isRenderingEnabled = false;
+    bool _preventVBlank = false;
+    bool _isCpuReadingPpuStatus = false;
 
     // CPU Memory Mappings
     u8  _ppuCtrl = 0x00;   // $2000

@@ -157,6 +157,7 @@ add_executable(cpu_test
   src/ppu.cpp
   src/mappers/mapper0.cpp
   src/mappers/mapper1.cpp
+  src/utils.cpp
 )
 
 add_executable(rom_test
@@ -167,6 +168,7 @@ add_executable(rom_test
   src/ppu.cpp
   src/mappers/mapper0.cpp
   src/mappers/mapper1.cpp
+  src/utils.cpp
 )
 # add other test executables here
 

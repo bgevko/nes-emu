@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "bus.h"
+#include "ppu.h"
 #include "utils.h"
 #include <cstdint>
 #include <stdexcept>
@@ -348,7 +349,7 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     // USBC
     _opcodeTable[0xEB] = InstructionData{ "*SBC", "IMM", &CPU::SBC, &CPU::IMM, 2, 2 };
 
-    // ALR, ARR, ANE
+    // ALR, ARR
     _opcodeTable[0x4B] = InstructionData{ "*ALR", "IMM", &CPU::ALR, &CPU::IMM, 2, 2 };
     _opcodeTable[0x6B] = InstructionData{ "*ARR", "IMM", &CPU::ARR, &CPU::IMM, 2, 2 };
 
@@ -424,8 +425,12 @@ void CPU::Write( u16 address, u8 data ) const { _bus->Write( address, data ); }
 // Read with cycle spend
 auto CPU::ReadAndTick( u16 address ) -> u8
 {
-    u8 const data = Read( address );
+    if ( address == 0x2002 )
+    {
+        _bus->ppu->SetIsPpuReadingPpuStatus( true );
+    }
     Tick();
+    u8 const data = Read( address );
     return data;
 }
 
@@ -450,9 +455,9 @@ void CPU::Tick()
 {
     // Increment the cycle count
     _cycles++;
-    _bus->TickPPU();
-    _bus->TickPPU();
-    _bus->TickPPU();
+    _bus->ppu->Tick();
+    _bus->ppu->Tick();
+    _bus->ppu->Tick();
 }
 
 /**
@@ -515,8 +520,8 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
      */
     std::string output;
 
-    std::string       name = _instruction_name;
-    std::string const addr_mode = _addr_mode;
+    std::string name = _opcodeTable[Read( _pc )].name;
+    std::string addr_mode = _opcodeTable[Read( _pc )].addr_mode;
 
     // Program counter address
     // i.e. FFFF
@@ -633,14 +638,19 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
         // Combine to the output string
         output += registers_str + status_str;
 
-        // Horizontal scanline, pad for 3 characters + space
-        u16 const   ppu_cycles = _bus->GetPpuCycles();
-        std::string ppu_cycles_str = std::to_string( ppu_cycles + 2 );
+        // Scanline num (V)
+        std::string scanline_str = std::to_string( _bus->ppu->GetScanline() );
+        // std::string scanline_str_adjusted = std::string( 4 - scanline_str.size(), ' ' );
+        output += "  V: " + scanline_str;
+
+        // PPU cycles (H), pad for 3 characters + space
+        u16 const   ppu_cycles = _bus->ppu->GetCycles();
+        std::string ppu_cycles_str = std::to_string( ppu_cycles );
         ppu_cycles_str += std::string( 4 - ppu_cycles_str.size(), ' ' );
-        output += "  PPU cycle: " + ppu_cycles_str;
+        output += "  H: " + ppu_cycles_str; // PPU cycle
 
         // cycle count
-        output += "  CPU cycle: " + std::to_string( _cycles + 1 );
+        output += "  Cycle: " + std::to_string( _cycles );
     }
 
     return output;
@@ -1014,12 +1024,12 @@ void CPU::BranchOnStatus( u16 offsetAddress, u8 flag, bool isSet )
         _pc = offsetAddress;
 
         // +1 cycles because we're taking a branch
-        _cycles++;
+        Tick();
 
         // Add another cycle if page boundary is crossed
         if ( ( _pc & 0xFF00 ) != ( prev_pc & 0xFF00 ) )
         {
-            _cycles += 1;
+            Tick();
         }
     }
     // Path will not branch, nothing to do
