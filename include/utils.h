@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <unordered_set>
 #include <sstream>
+#include <regex>
 
 using u8 = std::uint8_t;
 using u16 = std::uint16_t;
@@ -13,6 +14,19 @@ using namespace std;
 namespace utils
 {
 
+using MatchResult = std::vector<std::string>;
+using MatchResults = std::vector<MatchResult>;
+MatchResult  parseLogLine( const std::string &line, const std::regex &pattern, std::size_t expectedMatches );
+MatchResults parseLog( const std::string &filename, const std::regex &pattern, std::size_t expectedMatches );
+
+/*
+################################
+||                            ||
+||       String Related       ||
+||                            ||
+################################
+* Various string related utilities
+*/
 inline std::string toHex( u16 num, u8 width = 4 )
 {
     /*
@@ -27,6 +41,14 @@ inline std::string toHex( u16 num, u8 width = 4 )
     return hex_str;
 }
 
+/*
+################################
+||                            ||
+||  Address String Validator  ||
+||                            ||
+################################
+* Validates address mode strings in the lookup table (cpu.cpp)
+*/
 inline const std::unordered_set<std::string> &getAddrModeSet()
 {
     static const std::unordered_set<std::string> addr_mode_set = {
@@ -49,7 +71,6 @@ inline std::string getAvailableAddrModes()
         oss << addr_mode << ", ";
     }
     std::string result = oss.str();
-    // Remove trailing comma and space
     if ( !result.empty() )
     {
         result.pop_back();
@@ -58,6 +79,14 @@ inline std::string getAvailableAddrModes()
     return result;
 }
 
+/*
+################################
+||                            ||
+||    Opcode Name Validator   ||
+||                            ||
+################################
+* Validates names defined in the opcode lookup table (cpu.cpp)
+*/
 inline const std::unordered_set<std::string> &getOpcodeNameSet()
 {
     static const std::unordered_set<std::string> name_set = {
@@ -94,4 +123,5 @@ inline std::string getAvailableOpcodeNames()
     }
     return result;
 }
+
 } // namespace utils
