@@ -10,18 +10,7 @@
 #include <iostream>
 #include <memory>
 
-// Structure to hold expected CPU state from the log
-struct ExpectedLine
-{
-    uint16_t        address;
-    vector<uint8_t> opcode; // Changed to vector to handle multiple opcode bytes
-    uint8_t         a;
-    uint8_t         x;
-    uint8_t         y;
-    uint8_t         p;
-    uint8_t         sp;
-    uint64_t        cycles;
-};
+void loadStateFromLogline( const string &logline, const regex &pattern, int nFields, CPU &cpu, PPU &ppu );
 
 /*
 ################################################
@@ -68,7 +57,7 @@ TEST( RomTests, Nestest )
         u8  y;
         u8  p;
         u8  sp;
-        s16 ppu_cycles;
+        u16 ppu_cycles;
         u64 cpu_cycles;
     };
     std::vector<NestestLogInfo> expected_lines;
@@ -81,7 +70,7 @@ TEST( RomTests, Nestest )
         entry.y = static_cast<u8>( stoul( match[3], nullptr, 16 ) );
         entry.p = static_cast<u8>( stoul( match[4], nullptr, 16 ) );
         entry.sp = static_cast<u8>( stoul( match[5], nullptr, 16 ) );
-        entry.ppu_cycles = static_cast<s16>( stoul( match[6], nullptr, 10 ) );
+        entry.ppu_cycles = static_cast<u16>( stoul( match[6], nullptr, 10 ) );
         entry.cpu_cycles = stoull( match[7], nullptr, 10 );
         expected_lines.push_back( entry );
     }
@@ -219,8 +208,13 @@ TEST( RomTests, InstructionTestV5 )
     }
 
     // Pattern for default mesen log output
-    regex pattern(
-        R"(^([A-F0-9]{4}).*?:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:(.{8}).*?:(\d+).*?:(\d+).*?:(\d+))",
+    regex mesen_log_pattern(
+        R"(^([A-F0-9]{4}).*?A:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:\d{2}([A-F0-9]{2}).*?:(.{8}).*?:(-*\d+).*?:(\d+).*?:(\d+))",
+        regex_constants::ECMAScript );
+
+    // Pattern for local log output
+    regex local_log_pattern(
+        R"(^([A-F0-9]{4}):.*?a: ([A-F0-9]{2}).*?: ([A-F0-9]{2}).*?: ([A-F0-9]{2}).*?: ([A-F0-9]{2}).*?: [A-F0-9]{2}  (.{8}).*?: (-*\d+).*?: (\d+).*?: (\d+))",
         regex_constants::ECMAScript );
 
     // Instead of parsing the entire log file, which may be 1+ million lines
@@ -235,20 +229,30 @@ TEST( RomTests, InstructionTestV5 )
     size_t      line_num = 0;
     bool        did_fail = false;
 
-    struct InstrV5LogInfo
+    size_t start_line = 0;
+
+    struct LogInfo
     {
-        uint16_t pc;
-        uint8_t  a;
-        uint8_t  x;
-        uint8_t  y;
-        uint8_t  p;
-        uint8_t  sp;
-        uint16_t ppu_cycles;
-        uint16_t scanline;
-        uint64_t cpu_cycles;
+        u16    pc;
+        u8     a;
+        u8     x;
+        u8     y;
+        u8     sp;
+        string p;
+        u16    ppu_cycles;
+        s16    scanline;
+        u64    cpu_cycles;
     };
     while ( std::getline( mesen_log, line ) )
     {
+        // Skip ahead to the starting line
+        if ( line_num < start_line )
+        {
+            line_num++;
+            cpu.DecodeExecute();
+            continue;
+        }
+
         /*
         ################################
         ||                            ||
@@ -256,33 +260,17 @@ TEST( RomTests, InstructionTestV5 )
         ||                            ||
         ################################
         */
-        InstrV5LogInfo     expected{};
-        utils::MatchResult match = utils::parseLogLine( line, pattern, 8 );
-        expected.pc = static_cast<uint16_t>( stoul( match[0], nullptr, 16 ) );
-        expected.a = static_cast<uint8_t>( stoul( match[1], nullptr, 16 ) );
-        expected.x = static_cast<uint8_t>( stoul( match[2], nullptr, 16 ) );
-        expected.y = static_cast<uint8_t>( stoul( match[3], nullptr, 16 ) );
-        expected.sp = static_cast<uint8_t>( stoul( match[4], nullptr, 16 ) );
-        expected.scanline = static_cast<uint16_t>( stoul( match[6], nullptr, 10 ) );
-
-        // Mesen shows +1 CPU cycle and +2 PPU cycle more than what's in its internal state..
-        expected.ppu_cycles = static_cast<uint16_t>( stoul( match[7], nullptr, 10 ) ) - 2;
-        expected.cpu_cycles = stoull( match[8], nullptr, 10 ) - 1;
-
-        // Status
-        // Mesen status come in form of string: nv--dIZC
-        // We'll convert it to a byte
-        std::string status_str = match[5];
-        uint8_t     status = 0;
-        for ( int i = 0; i < 8; ++i )
-        {
-            // ignore '-', 'I' and lower case
-            if ( status_str[i] != '-' && ( std::isupper( status_str[i] ) == 1 ) && status_str[i] != 'I' )
-            {
-                status |= 1 << ( 7 - i );
-            }
-        }
-        expected.p = status | 0x20; // Unused bit to 1
+        LogInfo            expected{};
+        utils::MatchResult match = utils::parseLogLine( line, mesen_log_pattern, 8 );
+        expected.pc = static_cast<u16>( stoul( match[0], nullptr, 16 ) );
+        expected.a = static_cast<u8>( stoul( match[1], nullptr, 16 ) );
+        expected.x = static_cast<u8>( stoul( match[2], nullptr, 16 ) );
+        expected.y = static_cast<u8>( stoul( match[3], nullptr, 16 ) );
+        expected.sp = static_cast<u8>( stoul( match[4], nullptr, 16 ) );
+        expected.p = match[5];
+        expected.scanline = static_cast<s16>( stoul( match[6], nullptr, 10 ) );
+        expected.ppu_cycles = static_cast<u16>( stoul( match[7], nullptr, 10 ) );
+        expected.cpu_cycles = static_cast<u64>( stoull( match[8], nullptr, 10 ) );
 
         /*
         ################################
@@ -291,109 +279,130 @@ TEST( RomTests, InstructionTestV5 )
         ||                            ||
         ################################
         */
-        // Log current state to output file
-        actual_output << cpu.LogLineAtPC() << '\n';
 
         // color codes
         const std::string red = "\033[31m";
+        const std::string green = "\033[32m";
         const std::string reset = "\033[0m";
 
-        // compare actual vs expected state
-        if ( cpu.GetProgramCounter() != expected.pc )
+        // Run one CPU cycle
+        cpu.EnableTracelog();
+        cpu.DecodeExecute();
+        std::string trace_line = cpu.GetTrace();
+        actual_output << trace_line << '\n';
+
+        LogInfo            actual{};
+        utils::MatchResult trace_match = utils::parseLogLine( trace_line, local_log_pattern, 8 );
+        actual.pc = static_cast<u16>( stoul( trace_match[0], nullptr, 16 ) );
+        actual.a = static_cast<u8>( stoul( trace_match[1], nullptr, 16 ) );
+        actual.x = static_cast<u8>( stoul( trace_match[2], nullptr, 16 ) );
+        actual.y = static_cast<u8>( stoul( trace_match[3], nullptr, 16 ) );
+        actual.sp = static_cast<u8>( stoul( trace_match[4], nullptr, 16 ) );
+        actual.p = trace_match[5];
+        actual.scanline = static_cast<s16>( stoul( trace_match[6], nullptr, 10 ) );
+        actual.ppu_cycles = static_cast<u16>( stoul( trace_match[7], nullptr, 10 ) );
+        actual.cpu_cycles = stoull( trace_match[8], nullptr, 10 );
+
+        // Compare Mesen's trace log to our own
+        if ( actual.pc != expected.pc )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "PC mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << utils::toHex( expected.pc, 4 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetProgramCounter(), 4 ) << '\n';
+                 << "Actual: " << utils::toHex( actual.pc, 4 ) << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetAccumulator() != expected.a )
+        if ( actual.a != expected.a )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "A mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << utils::toHex( expected.a, 2 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetAccumulator(), 2 ) << '\n';
+                 << "Actual: " << utils::toHex( actual.a, 2 ) << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetXRegister() != expected.x )
+        if ( actual.x != expected.x )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "X mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << utils::toHex( expected.x, 2 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetXRegister(), 2 ) << '\n';
+                 << "Actual: " << utils::toHex( actual.x, 2 ) << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetYRegister() != expected.y )
+        if ( actual.y != expected.y )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "Y mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << utils::toHex( expected.y, 2 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetYRegister(), 2 ) << '\n';
+                 << "Actual: " << utils::toHex( actual.y, 2 ) << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetStackPointer() != expected.sp )
+        if ( actual.sp != expected.sp )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "SP mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << utils::toHex( expected.sp, 2 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetStackPointer(), 2 ) << '\n';
+                 << "Actual: " << utils::toHex( actual.sp, 2 ) << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetStatusRegister() != expected.p )
+        if ( actual.p != expected.p )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "P mismatch at line " << line_num << reset << '\n';
-            cerr << "Expected: " << utils::toHex( expected.p, 2 ) << "    "
-                 << "Actual: " << utils::toHex( cpu.GetStatusRegister(), 2 ) << '\n';
+            cerr << "Expected: " << expected.p << "    "
+                 << "Actual: " << actual.p << '\n';
             cerr << '\n';
         }
-        if ( ppu.GetScanline() != expected.scanline )
+        if ( actual.scanline != expected.scanline )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "Scanline mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << expected.scanline << "    "
-                 << "Actual: " << ppu.GetScanline() << '\n';
+                 << "Actual: " << actual.scanline << '\n';
             cerr << '\n';
         }
-        if ( ppu.GetCycles() != expected.ppu_cycles )
+        if ( actual.ppu_cycles != expected.ppu_cycles )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "PPU Cycles mismatch at line " << line_num << reset << '\n';
 
             cerr << "Expected: " << expected.ppu_cycles << "    "
-                 << "Actual: " << ppu.GetCycles() << '\n';
+                 << "Actual: " << actual.ppu_cycles << '\n';
             cerr << '\n';
         }
-        if ( cpu.GetCycles() != expected.cpu_cycles )
+        if ( actual.cpu_cycles != expected.cpu_cycles )
         {
             did_fail = true;
             cerr << '\n';
             cerr << red << "CPU Cycles mismatch at line " << line_num << reset << '\n';
             cerr << "Expected: " << expected.cpu_cycles << "    "
-                 << "Actual: " << cpu.GetCycles() << '\n';
+                 << "Actual: " << actual.cpu_cycles << '\n';
             cerr << '\n';
         }
         if ( did_fail )
         {
+            string actual_line = cpu.GetTrace();
+
+            loadStateFromLogline( line, mesen_log_pattern, 8, cpu, ppu );
+            string expected_line = cpu.LogLineAtPC();
+
             // Print the state of the cpu at failure
             std::cerr << "\n";
-            std::cerr << "CPU STATE:\n";
-            std::cerr << red << cpu.LogLineAtPC() << reset << '\n';
+            std::cerr << "Actual Vs. Expected:\n";
+            std::cerr << red << actual_line << reset << '\n';
+            std::cerr << green << expected_line << reset << '\n';
             std::cerr << "\n";
             FAIL();
             break;
         }
 
-        // Run one CPU cycle
-        cpu.DecodeExecute();
         line_num++;
     }
 
@@ -414,4 +423,40 @@ int main( int argc, char **argv )
 {
     ::testing::InitGoogleTest( &argc, argv );
     return RUN_ALL_TESTS();
+}
+
+/*
+################################
+||                            ||
+||        Test Helpers        ||
+||                            ||
+################################
+*/
+
+void loadStateFromLogline( const string &logline, const regex &pattern, int nFields, CPU &cpu, PPU &ppu )
+{
+    utils::MatchResult trace_match = utils::parseLogLine( logline, pattern, nFields );
+    cpu.SetProgramCounter( static_cast<u16>( stoul( trace_match[0], nullptr, 16 ) ) );
+    cpu.SetAccumulator( static_cast<u8>( stoul( trace_match[1], nullptr, 16 ) ) );
+    cpu.SetXRegister( static_cast<u8>( stoul( trace_match[2], nullptr, 16 ) ) );
+    cpu.SetYRegister( static_cast<u8>( stoul( trace_match[3], nullptr, 16 ) ) );
+    cpu.SetStackPointer( static_cast<u8>( stoul( trace_match[4], nullptr, 16 ) ) );
+    ppu.SetScanline( static_cast<s16>( stoul( trace_match[6], nullptr, 10 ) ) );
+    ppu.SetCycles( static_cast<u16>( stoul( trace_match[7], nullptr, 10 ) ) );
+    cpu.SetCycles( stoull( trace_match[8], nullptr, 10 ) );
+
+    // Status
+    // Mesen status come in form of string: nv--dIZC
+    // We'll convert it to a byte
+    std::string status_str = trace_match[5];
+    uint8_t     status = 0;
+    for ( int i = 0; i < 8; ++i )
+    {
+        // ignore '-' and lower case letters
+        if ( status_str[i] != '-' && ( std::isupper( status_str[i] ) == 1 ) )
+        {
+            status |= 1 << ( 7 - i );
+        }
+    }
+    cpu.SetStatusRegister( status | 0x20 );
 }

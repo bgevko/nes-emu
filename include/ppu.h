@@ -41,7 +41,9 @@ class PPU
     [[nodiscard]] u8  GetControlFlag( ControlFlag flag ) const;
 
     // Setters
-    void SetIsPpuReadingPpuStatus( bool isReading );
+    void SetScanline( s16 scanline );
+    void SetCycles( u16 cycles );
+    void SetIsCpuReadingPpuStatus( bool isReading );
 
     // Reads / Writes
     [[nodiscard]] u8 HandleCpuRead( u16 addr );
@@ -66,7 +68,6 @@ class PPU
     u16  _cycle = 4;
     u64  _lastSync = 0; // Last cpu cycle synced
     u64  _frame = 1;
-    bool _isOddFrame = false;
     bool _isRenderingEnabled = false;
     bool _preventVBlank = false;
     bool _isCpuReadingPpuStatus = false;
@@ -90,7 +91,7 @@ class PPU
     bool _addrLatch = false;
 
     // PPU Data Buffer
-    // Holds data from the previous read
+    // Holds data from the previous read or write
     u8 _dataBuffer = 0x00;
 
     // PPU Memory Mappings

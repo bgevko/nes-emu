@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 
 /*
@@ -36,7 +37,13 @@ MatchResult parseLogLine( const std::string &line, const std::regex &pattern, st
     }
     else
     {
-        throw std::runtime_error( "Regex did not match line: " + line );
+        string red = "\033[31m";
+        string reset = "\033[0m";
+        cerr << '\n';
+        std::cerr << red << "Regex did not match line:\n" << line << reset << '\n';
+        cerr << '\n';
+
+        throw std::runtime_error( "parseLogLine:Error: Regex did not match line." );
     }
     return fields;
 }

@@ -3,6 +3,13 @@
 
 PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 
+/*
+################################
+||                            ||
+||      Getters / Setters     ||
+||                            ||
+################################
+*/
 [[nodiscard]] s16 PPU::GetScanline() const { return _scanline; }
 [[nodiscard]] u16 PPU::GetCycles() const { return _cycle; }
 [[nodiscard]] u8  PPU::GetControlFlag( ControlFlag flag ) const
@@ -10,7 +17,17 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
     u8 const mask = 1 << flag;
     return static_cast<u8>( ( _ppuCtrl & mask ) > 0 );
 }
+void PPU::SetScanline( s16 scanline ) { _scanline = scanline; }
+void PPU::SetCycles( u16 cycles ) { _cycle = cycles; }
+void PPU::SetIsCpuReadingPpuStatus( bool isReading ) { _isCpuReadingPpuStatus = isReading; }
 
+/*
+################################
+||                            ||
+||       Handle CPU Read      ||
+||                            ||
+################################
+*/
 [[nodiscard]] u8 PPU::HandleCpuRead( u16 address )
 {
     /* @brief: CPU reads to the PPU
@@ -23,6 +40,7 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
     if ( _isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 || address == 0x2005 ||
          address == 0x2006 )
     {
+        _dataBuffer = 0x00;
         return 0x00;
     }
 
@@ -66,6 +84,7 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
 
         _isCpuReadingPpuStatus = false;
         _preventVBlank = false;
+        _dataBuffer = data;
         return data;
     }
 
@@ -73,6 +92,7 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
     if ( address == 0x2004 )
     {
         // TODO: Handle OAM read
+        _dataBuffer = 0x00;
         return 0x00;
     }
 
@@ -80,17 +100,27 @@ PPU::PPU( bool isDisabled ) : _isDisabled( isDisabled ) {}
     if ( address == 0x2007 )
     {
         // TODO: Handle PPU Data read
+        _dataBuffer = 0x00;
         return 0x00;
     }
 
+    _dataBuffer = 0x00;
     return 0x00;
 }
 
+/*
+################################
+||                            ||
+||      Handle CPU Write      ||
+||                            ||
+################################
+*/
 void PPU::HandleCpuWrite( u16 address, u8 data )
 {
     /* @brief: CPU writes to the PPU
      */
 
+    _dataBuffer = data;
     if ( _isDisabled )
     {
         return;
@@ -110,8 +140,14 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
         }
 
         case 0x2001:
+        {
+            // Bits 3 = BG enable, 4 = Sprite enable
+            bool bg_enabled = ( data & 0x08 ) != 0;
+            bool sprite_enabled = ( data & 0x10 ) != 0;
+            _isRenderingEnabled = bg_enabled || sprite_enabled;
             _ppuMask = data;
             break;
+        }
         case 0x2002: // Status, not writable
             break;
         case 0x2003:
@@ -150,19 +186,26 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
     }
 }
 
+/*
+################################
+||                            ||
+||       PPU Cycle Tick       ||
+||                            ||
+################################
+*/
 void PPU::Tick()
 {
+    bool is_odd_frame = _frame % 2 == 1;
     if ( _isDisabled )
     {
         return;
     }
     // 1. Handle the odd-frame skip dot (when rendering is enabled)
     //    Happens at scanline = -1, cycle = 339.
-    if ( _scanline == -1 && _cycle == 339 && _isOddFrame && _isRenderingEnabled )
+    if ( _scanline == -1 && _cycle == 339 && is_odd_frame && _isRenderingEnabled )
     {
         _cycle = 0;
         _scanline = 0;
-        _isOddFrame = !_isOddFrame;
         return;
     }
 
@@ -179,7 +222,6 @@ void PPU::Tick()
         if ( _scanline > 260 )
         {
             _scanline = -1;
-            _isOddFrame = !_isOddFrame;
             _frame++;
         }
     }
@@ -218,5 +260,3 @@ void PPU::Tick()
     //    - Scrolling increments
     //    etc.
 }
-
-void PPU::SetIsPpuReadingPpuStatus( bool isReading ) { _isCpuReadingPpuStatus = isReading; }

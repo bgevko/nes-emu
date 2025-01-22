@@ -1,4 +1,4 @@
-// cpu.cp
+// cpu.cpp
 
 #include "cpu.h"
 #include "bus.h"
@@ -14,11 +14,10 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     /*
     ################################################################
     ||                                                            ||
-    ||                      Set Opcodes here                      ||
+    ||                           Opcodes                          ||
     ||                                                            ||
     ################################################################
     */
-
     // NOP
     _opcodeTable[0xEA] = InstructionData{ "NOP", "IMM", &CPU::NOP, &CPU::IMP, 2, 1 };
 
@@ -220,13 +219,10 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0x98] = InstructionData{ "TYA", "IMP", &CPU::TYA, &CPU::IMP, 2, 1 };
 
     /*
-    ################################################################
-    ||                                                            ||
-    ||                      Illegal Opcodes                       ||
-    ||                                                            ||
-    ################################################################
+    ################################
+    ||       Illegal Opcodes      ||
+    ################################
     */
-
     // Jams (does nothing)
     _opcodeTable[0x02] = InstructionData{ "*JAM", "IMP", &CPU::JAM, &CPU::IMP, 3, 1 };
     _opcodeTable[0x12] = InstructionData{ "*JAM", "IMP", &CPU::JAM, &CPU::IMP, 3, 1 };
@@ -346,7 +342,7 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     _opcodeTable[0xE3] = InstructionData{ "*ISC", "INDX", &CPU::ISC, &CPU::INDX, 8, 2 };
     _opcodeTable[0xF3] = InstructionData{ "*ISC", "INDY", &CPU::ISC, &CPU::INDY, 8, 2, false, true };
 
-    // USBC
+    // SBC2
     _opcodeTable[0xEB] = InstructionData{ "*SBC", "IMM", &CPU::SBC, &CPU::IMM, 2, 2 };
 
     // ALR, ARR
@@ -363,6 +359,11 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     // SBX
     _opcodeTable[0xCB] = InstructionData{ "*SBX", "IMM", &CPU::SBX, &CPU::IMM, 2, 2 };
 
+    /*
+    ################################
+    ||         Validation         ||
+    ################################
+    */
     // Validate Opcode names and address mode strings
     for ( int i = 0; i < 256; i++ )
     {
@@ -392,7 +393,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
     }
 };
 
-// Getters
+/*
+################################################
+||                                            ||
+||                   Getters                  ||
+||                                            ||
+################################################
+*/
 [[nodiscard]] u8  CPU::GetAccumulator() const { return _a; }
 [[nodiscard]] u8  CPU::GetXRegister() const { return _x; }
 [[nodiscard]] u8  CPU::GetYRegister() const { return _y; }
@@ -401,7 +408,13 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 [[nodiscard]] u8  CPU::GetStackPointer() const { return _s; }
 [[nodiscard]] u64 CPU::GetCycles() const { return _cycles; }
 
-// Setters
+/*
+################################################
+||                                            ||
+||                   Setters                  ||
+||                                            ||
+################################################
+*/
 void CPU::SetAccumulator( u8 value ) { _a = value; }
 void CPU::SetXRegister( u8 value ) { _x = value; }
 void CPU::SetYRegister( u8 value ) { _y = value; }
@@ -411,106 +424,16 @@ void CPU::SetStackPointer( u8 value ) { _s = value; }
 void CPU::SetCycles( u64 value ) { _cycles = value; }
 
 /*
-################################################################
-||                                                            ||
-||                        CPU Methods                         ||
-||                                                            ||
-################################################################
+################################################
+||                                            ||
+||                Debug Methods               ||
+||                                            ||
+################################################
 */
+[[nodiscard]] std::string CPU::GetTrace() const { return _trace; }
 
-// Pass off reads and writes to the bus
-auto CPU::Read( u16 address ) const -> u8 { return _bus->Read( address ); }
-void CPU::Write( u16 address, u8 data ) const { _bus->Write( address, data ); }
-
-// Read with cycle spend
-auto CPU::ReadAndTick( u16 address ) -> u8
-{
-    if ( address == 0x2002 )
-    {
-        _bus->ppu->SetIsPpuReadingPpuStatus( true );
-    }
-    Tick();
-    u8 const data = Read( address );
-    return data;
-}
-
-// Write and spend a cycle
-auto CPU::WriteAndTick( u16 address, u8 data ) -> void
-{
-    Write( address, data );
-    Tick();
-}
-
-u8 CPU::Fetch()
-{
-    // Read the current PC location and increment it
-    // return Read( _pc++ );
-
-    u8 const opcode = ReadAndTick( _pc++ );
-    _opcode = opcode;
-    return opcode;
-}
-
-void CPU::Tick()
-{
-    // Increment the cycle count
-    _cycles++;
-    _bus->ppu->Tick();
-    _bus->ppu->Tick();
-    _bus->ppu->Tick();
-}
-
-/**
- * @brief Decode and execute an instruction
- *
- * This function fetches the next opcode from memory, decodes it using the opcode table,
- * and executes that instruction.
- *
- * If the opcode is invalid, an error message is printed to stderr.
- */
-void CPU::DecodeExecute()
-{
-
-    // Fetch the next opcode and increment the program counter
-    u8 const opcode = Fetch();
-
-    // Decode the opcode
-    auto const &instruction = _opcodeTable[opcode];
-    auto        instruction_handler = instruction.instructionMethod;
-    auto        addressing_mode_handler = instruction.addressingModeMethod;
-
-    if ( instruction_handler != nullptr && addressing_mode_handler != nullptr )
-    {
-        // Set the page cross penalty for the current instruction
-        // Used in addressing modes: ABSX, ABSY, INDY
-        _currentPageCrossPenalty = instruction.pageCrossPenalty;
-
-        // Write / modify instructions use a dummy read before writing, so
-        // we should set a flag for those
-        _is_write_modify = instruction.isWriteModify;
-
-        // Set current instr mnemonic globally
-        _instruction_name = instruction.name;
-
-        // Set current address mode string globally
-        _addr_mode = instruction.addr_mode;
-
-        // Calculate the address using the addressing mode
-        u16 const address = ( this->*addressing_mode_handler )();
-
-        // Execute the instruction fetched from the opcode table
-        ( this->*instruction_handler )( address );
-
-        // Reset flags
-        _is_write_modify = false;
-    }
-    else
-    {
-        // Houston, we have a problem. No opcode was found.
-        throw std::runtime_error( "Invalid opcode: " + std::to_string( opcode ) );
-    }
-    last_pc = _pc;
-}
+void CPU::EnableTracelog() { _trace_enabled = true; }
+void CPU::DisableTracelog() { _trace_enabled = false; }
 
 std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 {
@@ -627,7 +550,7 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
         status_str += "p: " + utils::toHex( _p, 2 ) + "  ";
 
         std::string status_flags = "NV-BDIZC";
-        std::string status_flags_lower = "nv-bdizc";
+        std::string status_flags_lower = "nv--dizc";
         std::string status_flags_str;
         for ( int i = 7; i >= 0; i-- )
         {
@@ -655,13 +578,127 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 
     return output;
 }
+
+/*
+################################################
+||                                            ||
+||                 CPU Methods                ||
+||                                            ||
+################################################
+*/
+// Pass off reads and writes to the bus
+auto CPU::Read( u16 address ) const -> u8 { return _bus->Read( address ); }
+void CPU::Write( u16 address, u8 data ) const { _bus->Write( address, data ); }
+
+// Read with cycle spend
+auto CPU::ReadAndTick( u16 address ) -> u8
+{
+    if ( address == 0x2002 )
+    {
+        _bus->ppu->SetIsCpuReadingPpuStatus( true );
+    }
+    Tick();
+    u8 const data = Read( address );
+    return data;
+}
+
+// Write and spend a cycle
+auto CPU::WriteAndTick( u16 address, u8 data ) -> void
+{
+    Write( address, data );
+    Tick();
+}
+
+u8 CPU::Fetch()
+{
+    // Read the current PC location and increment it
+
+    u8 const opcode = ReadAndTick( _pc++ );
+    return opcode;
+}
+
+void CPU::Tick()
+{
+    // Increment the cycle count
+    _cycles++;
+    _bus->ppu->Tick();
+    _bus->ppu->Tick();
+
+    // Do a trace once per instruction at this point, to match how Mesen traces
+    // Useful for debugging
+    if ( !_did_trace && _trace_enabled )
+    {
+        _pc--;
+        _trace = LogLineAtPC( true );
+        _pc++;
+        _did_trace = true;
+    }
+
+    _bus->ppu->Tick();
+}
+
+void CPU::DecodeExecute()
+{
+
+    /**
+     * @brief Decode and execute an instruction
+     *
+     * This function fetches the next opcode from memory, decodes it using the opcode table,
+     * and executes that instruction.
+     *
+     * If the opcode is invalid, an error message is printed to stderr.
+     */
+
+    _did_trace = false;
+
+    // Fetch the next opcode and increment the program counter
+    u8 const opcode = Fetch();
+
+    // Decode the opcode
+    auto const &instruction = _opcodeTable[opcode];
+    auto        instruction_handler = instruction.instructionMethod;
+    auto        addressing_mode_handler = instruction.addressingModeMethod;
+
+    if ( instruction_handler != nullptr && addressing_mode_handler != nullptr )
+    {
+        // Set the page cross penalty for the current instruction
+        // Used in addressing modes: ABSX, ABSY, INDY
+        _currentPageCrossPenalty = instruction.pageCrossPenalty;
+
+        // Write / modify instructions use a dummy read before writing, so
+        // we should set a flag for those
+        _is_write_modify = instruction.isWriteModify;
+
+        // Set current instr mnemonic globally
+        _instruction_name = instruction.name;
+
+        // Set current address mode string globally
+        _addr_mode = instruction.addr_mode;
+
+        // Calculate the address using the addressing mode
+        u16 const address = ( this->*addressing_mode_handler )();
+
+        // Execute the instruction fetched from the opcode table
+        ( this->*instruction_handler )( address );
+
+        // Reset flags
+        _is_write_modify = false;
+        _did_trace = false;
+    }
+    else
+    {
+        // Houston, we have a problem. No opcode was found.
+        throw std::runtime_error( "Invalid opcode: " + std::to_string( opcode ) );
+    }
+}
+
 void CPU::Reset()
 {
     _a = 0x00;
     _x = 0x00;
     _y = 0x00;
     _s = 0xFD;
-    _p = 0x00 | Unused;
+    _p = 0x00 | Unused | InterruptDisable;
 
     // The program counter is usually read from the reset vector of a game, which is
     // located at 0xFFFC and 0xFFFD. If no cartridge, we'll assume these values are
@@ -2219,9 +2256,13 @@ void CPU::JAM( const u16 address ) // NOLINT
      * Tom Harte tests include these, though, so for completeness, I'll add them
      */
     (void) address;
-    Tick();
-    // Do nothing (undo the pc increment)
-    _pc--;
+
+    // We're not going to freeze the cpu, we'll just waste 9 cycles, as per the
+    // Tom Harte tests
+    for ( int i = 0; i < 9; i++ )
+    {
+        Tick();
+    }
 }
 
 void CPU::SLO( const u16 address )
