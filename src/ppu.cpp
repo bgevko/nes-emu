@@ -42,8 +42,7 @@ void PPU::SetIsCpuReadingPpuStatus( bool isReading ) { _isCpuReadingPpuStatus = 
     if ( _isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 || address == 0x2005 ||
          address == 0x2006 )
     {
-        _dataBuffer = 0x00;
-        return 0x00;
+        return 0xFF;
     }
 
     // 2002: PPU Status Register
@@ -126,8 +125,7 @@ void PPU::SetIsCpuReadingPpuStatus( bool isReading ) { _isCpuReadingPpuStatus = 
         return data;
     }
 
-    _dataBuffer = 0x00;
-    return 0x00;
+    return 0xFF;
 }
 
 /*
@@ -142,7 +140,6 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
     /* @brief: CPU writes to the PPU
      */
 
-    _dataBuffer = data;
     if ( _isDisabled )
     {
         return;
@@ -153,6 +150,15 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
         case 0x2000:
         {
             _ppuCtrl = data;
+
+            // Trigger NMI if NMI is enabled and VBlank is set
+            // This is to ensure NMI can be called any time during the vblank period, not just
+            // on the first cycle
+            if ( _ppuCtrl & ControlFlag::NmiEnable && ( _ppuStatus & Status::VerticalBlank ) )
+            {
+                _bus->cpu.NMI();
+            }
+
             u8 const nametable_x = GetControlFlag( ControlFlag::NametableX );
             u8 const nametable_y = GetControlFlag( ControlFlag::NametableY );
 
@@ -218,12 +224,12 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
                 // Fine y is the first 3 bits of the data
                 // We'll push it to bit position 12-14, as that's where it is stored in the temp address
                 // register
-                u8 const fine_y = ( ( data & 0x07 ) << 12 );
+                u16 const fine_y = ( ( data & 0x07 ) << 12 );
                 _tempAddr = ( _tempAddr & 0x8FFF ) | fine_y;
 
                 // Coarse y is the next 5 bits of the data
                 // We'll slide it left 2 bits to slot into bits 5-9 of the temp address register
-                u8 const coarse_y = data & 0xF8 << 2;
+                u16 const coarse_y = ( data & 0xF8 ) << 2;
                 _tempAddr = ( _tempAddr & 0xFC1F ) | coarse_y;
 
                 _addrLatch = false;
@@ -309,17 +315,50 @@ void PPU::DmaTransfer( u8 data )
         return _bus->cartridge->Read( address );
     }
 
-    // $2000-$2FFF: Name Tables
-    if ( address >= 0x2000 && address <= 0x2FFF )
+    // $2000-$3EFF: Name Tables
+    if ( address >= 0x2000 && address <= 0x3EFF )
     {
+        // Address 3000-3EFF is not not valid and can be mirrored to 2000-2EFF
+        address &= 0x2FFF;
+
+        // In four screen mode, there are 4 unique name tables
+        // The PPU only has 2KiB of vram, so the other 2KiB is stored in the cartridge
+        if ( _bus->cartridge->GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 )
+        {
+            return _bus->cartridge->ReadCartridgeVRAM( address );
+        }
+
         u16 nametable_addr = ResolveNameTableAddress( address );
+
         return _nameTables[nametable_addr];
     }
 
     // $3F00-$3FFF: Palettes
     if ( address >= 0x3F00 && address <= 0x3FFF )
     {
-        return _paletteMemory[address & 0x1F]; // Mirror 32 bytes
+        /*
+        Background Palettes
+        Palette 0: $3F00 (bg color), $3F01, $3F02, $3F03.
+        Palette 1: $3F04 (bg color), $3F05, $3F06, $3F07.
+        Palette 2: $3F08 (bg color), $3F09, $3F0A, $3F0B.
+        Palette 3: $3F0C (bg color), $3F0D, $3F0E, $3F0F.
+
+        Sprite Palettes
+        Palette 4: $3F10 (mirrors 3F00), $3F11, $3F12, $3F13.
+        Palette 5: $3F14 (mirrors 3F04), $3F15, $3F16, $3F17.
+        Palette 6: $3F18 (mirrors 3F08), $3F19, $3F1A, $3F1B.
+        Palette 7: $3F1C (mirrors 3F0C), $3F1D, $3F1E, $3F1F.
+        */
+        address &= 0x001F; // Mask to 32 bytes
+
+        // Mirror backgrounds of palettes 4-7 to 0-3
+        if ( address >= 0x0010 && ( address & 0x0003 ) == 0 )
+        {
+            address -= 0x0010;
+        }
+
+        // Return as a 6 bit value (0-63)
+        return _paletteMemory[address] & 0x3F;
     }
 
     return 0xFF;
@@ -347,9 +386,33 @@ void PPU::Write( u16 address, u8 data )
     }
     if ( address >= 0x2000 && address <= 0x2FFF )
     {
+        // Address 3000-3EFF is not not valid and can be mirrored to 2000-2EFF
+        address &= 0x2FFF;
+
+        // In four screen mode, there are 4 unique name tables
+        // The PPU only has 2KiB of vram, so the other 2KiB is stored in the cartridge
+        if ( _bus->cartridge->GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 )
+        {
+            _bus->cartridge->WriteCartridgeVRAM( address, data );
+            return;
+        }
         u16 nametable_addr = ResolveNameTableAddress( address );
         _nameTables[nametable_addr] = data;
         return;
+    }
+
+    // $3F00-$3FFF: Palettes
+    if ( address >= 0x3F00 && address <= 0x3FFF )
+    {
+        address &= 0x001F; // Mask to 32 bytes
+
+        // Mirror backgrounds of palettes 4-7 to 0-3
+        if ( address >= 0x0010 && ( address & 0x0003 ) == 0 )
+        {
+            address -= 0x0010;
+        }
+
+        _paletteMemory[address] = data;
     }
 }
 
@@ -394,7 +457,7 @@ void PPU::Tick()
     }
 
     // if we happen to do a read on scanline 241, cycle 0, Vblank
-    // Doesn't get set. It's a hardward quirk. We can simulate it by just
+    // Doesn't get set. It's a hardware quirk. We can simulate it by just
     // turning it off here
     if ( _scanline == 241 && _cycle == 0 && _isCpuReadingPpuStatus )
     {
@@ -407,7 +470,12 @@ void PPU::Tick()
         if ( !_preventVBlank )
         {
             _ppuStatus |= Status::VerticalBlank;
-            _bus->cpu.NMI();
+
+            // Trigger NMI if NMI is enabled
+            if ( _ppuCtrl & ControlFlag::NmiEnable )
+            {
+                _bus->cpu.NMI();
+            }
         }
         _preventVBlank = false;
     }
@@ -440,19 +508,55 @@ void PPU::Tick()
 
 u16 PPU::ResolveNameTableAddress( u16 addr )
 {
-    addr &= 0x0FFF;
     MirrorMode mirror_mode = _bus->cartridge->GetMirrorMode();
 
     switch ( mirror_mode )
     {
-        case MirrorMode::Horizontal:
-            break;
+        case MirrorMode::SingleUpper:
+            // All addresses fall within 2000-23FF, nametable 0
+            return addr & 0x03FF;
+        case MirrorMode::SingleLower:
+            // All addresses fall within 2800-2BFF, nametable 2
+            return ( addr & 0x03FF ) + 0x800;
         case MirrorMode::Vertical:
-            break;
+            /* Vertical Mirroring
+              The two horizontal sections are unique, but the two vertical sections are mirrored
+              2800-2FFF is a mirror of 2000-27FF
+
+              2000 2400
+              ^    ^
+              v    v
+              2800 2C00
+
+              Horizontal scrolling games will use this mode. When screen data exceeds 27FF, it's
+              wrapped back to 2000.
+             */
+
+            return addr & 0x07FF; // 0000-07FF local (2000-27FF actual)
+        case MirrorMode::Horizontal:
+            /* Horizontal Mirroring
+              The two vertical sections are unique, but the two horizontal sections are mirrored
+              2400-27FF is a mirror of 2000-23FF
+              2C00-2FFF is a mirror of 2800-2BFF
+
+              2000 < > 2400
+              2800 < > 2C00
+
+              Horizontal mode is used for vertical scrolling games, like Kid Icarus.
+             */
+            if ( addr >= 0x2800 )
+            {
+                return ( addr & 0x03FF ) + 0x800; // 0800-0BFF local (2800-2BFF actual)
+            }
+            return addr & 0x03FF; // 0000-03FF local (2000-23FF actual)
         case MirrorMode::FourScreen:
-            break;
+            /* Four-Screen Mirroring
+               All four nametables are unique and backed by cartridge VRAM. There's no mirroring.
+             */
+            return addr & 0x0FFF;
         default:
-            break;
+            // Default to vertical mirroring
+            return addr & 0x07FF;
     }
     return 0xFF;
 }

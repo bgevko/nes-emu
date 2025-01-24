@@ -69,11 +69,17 @@ Cartridge::Cartridge( const std::string &file_path )
 
     // Mirror mode
     // Provided by the 0th bit of byte 6.
-    _mirror_mode = header[6] & 0b00000001;
+    u8 mirror_mode = header[6] & 0b00000001;
+    ( mirror_mode == 0 ) ? _mirror_mode = MirrorMode::Horizontal : _mirror_mode = MirrorMode::Vertical;
 
     // Four screen mode
     // Provided by the 3rd bit of byte 6.
-    _four_screen_mode = ( flags6 & 0b00001000 );
+    // If provided, it overrides info in byte 0
+    _four_screen_mode = ( flags6 & 0b00001000 ) != 0;
+    if ( _four_screen_mode )
+    {
+        _mirror_mode = MirrorMode::FourScreen;
+    }
 
     // PRG and CHR banks, derived from bytes 4 and 5
     u8 const     prg_rom_banks = header[4];
@@ -83,7 +89,7 @@ Cartridge::Cartridge( const std::string &file_path )
 
     // Mapper number
     // Derived from the upper 4 bits of byte 7 and the lower 4 bits of byte 6
-    u8 const mapper_number = ( flags7 & 0b11110000 ) | ( flags6 >> 4 );
+    _mapper_number = ( flags7 & 0b11110000 ) | ( flags6 >> 4 );
 
     // Does it have a save battery?
     // Derived from the 1st bit of byte 6
@@ -133,7 +139,7 @@ Cartridge::Cartridge( const std::string &file_path )
     ||                            ||
     ################################
     */
-    switch ( mapper_number )
+    switch ( _mapper_number )
     {
         case 0:
             _mapper = std::make_shared<Mapper0>( prg_rom_banks, chr_rom_banks );
@@ -142,7 +148,7 @@ Cartridge::Cartridge( const std::string &file_path )
             _mapper = std::make_shared<Mapper1>( prg_rom_banks, chr_rom_banks );
             break;
         default:
-            throw std::runtime_error( "Unsupported mapper: " + std::to_string( mapper_number ) );
+            throw std::runtime_error( "Unsupported mapper: " + std::to_string( _mapper_number ) );
     };
 
     rom_file.close();
@@ -165,6 +171,10 @@ Cartridge::Cartridge( const std::string &file_path )
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
         return ReadChrROM( address );
+    }
+    if ( address >= 2800 && address <= 0x2FFF )
+    {
+        return ReadCartridgeVRAM( address );
     }
 
     // From the CPU
@@ -192,6 +202,11 @@ void Cartridge::Write( u16 address, u8 data )
     if ( address >= 0x0000 && address <= 0x1FFF )
     {
         WriteChrRAM( address, data );
+        return;
+    }
+    if ( address >= 2800 && address <= 0x2FFF )
+    {
+        WriteCartridgeVRAM( address, data );
         return;
     }
 
@@ -274,6 +289,18 @@ void Cartridge::Write( u16 address, u8 data )
     return 0xFF;
 }
 
+[[nodiscard]] u8 Cartridge::ReadCartridgeVRAM( u16 address )
+{
+    /** @brief Reads from the cartridge VRAM, ranges from 0x2800 to 0x2FFF
+     * This is used by the PPU in four-screen mode
+     */
+    if ( address >= 0x2800 && address <= 0x2FFF )
+    {
+        return _cartridge_vram[address & 0x07FF]; // Mask to 2Kib
+    }
+    return 0xFF;
+}
+
 /*
 ################################
 ||                            ||
@@ -347,6 +374,17 @@ void Cartridge::WriteExpansionRAM( u16 address, u8 data )
     }
 }
 
+void Cartridge::WriteCartridgeVRAM( u16 address, u8 data )
+{
+    /** @brief Writes to the cartridge VRAM, ranges from 0x2800 to 0x2FFF
+     * This is used by the PPU in four-screen mode
+     */
+    if ( address >= 0x2800 && address <= 0x2FFF )
+    {
+        _cartridge_vram[address & 0x07FF] = data;
+    }
+}
+
 /*
 ################################
 ||                            ||
@@ -354,11 +392,32 @@ void Cartridge::WriteExpansionRAM( u16 address, u8 data )
 ||                            ||
 ################################
 */
+
 MirrorMode Cartridge::GetMirrorMode()
 {
     /** @brief Returns the mirror mode of the cartridge
-     * The mirror mode determines how the PPU should handle nametable mirroring
-     * We'll let each mapper determine the mirror mode
+     * The mirror mode determines how the PPU should handle nametable mirroring.
+     *
+     * Mapper 0:
+     *   - Mirroring mode is statically defined in the iNES header (bit 0 of byte 6).
+     *   - It cannot change dynamically and is "soldered" for each specific game.
+     *
+     * Four-Screen Mode:
+     *   - Indicated by bit 3 of byte 6 in the iNES header.
+     *   - Overrides any mirroring mode (horizontal or vertical) defined in bit 0.
+     *   - This mode provides unique nametables for all four screens using extra cartridge VRAM.
+     *
+     * Other mappers:
+     *   - Mirroring mode is controlled dynamically via mapper logic.
+     *   - The specific mirroring configuration depends on the mapper implementation.
      */
+
+    // Mapper 0 or Four-Screen Mode: Static mirroring, determined by iNES header
+    if ( _mapper_number == 0 || _four_screen_mode )
+    {
+        return _mirror_mode;
+    }
+
+    // Other mappers: Dynamic mirroring, determined by mapper logic
     return _mapper->GetMirrorMode();
 }

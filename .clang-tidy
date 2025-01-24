@@ -15,6 +15,7 @@ Checks: >
   ,-cppcoreguidelines-pro-bounds-constant-array-index
   ,readability-identifier-naming
   ,-readability-avoid-nested-conditional-operator
+  ,-readability-implicit-bool-conversion
 CheckOptions:
   # Standardized naming conventions:
   - key: readability-identifier-naming.ClassCase

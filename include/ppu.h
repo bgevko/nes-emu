@@ -139,13 +139,45 @@ class PPU
     */
     array<u8, 2048> _nameTables{};
 
-    // Palette Memory
-    // Internal: 0x3F00 - 0x3F1F, and $3F20 - $3FFF (mirrored)
-    // These are the colors used by the PPU. They can be overwritten by the cartridge
-    // but there are default starting values as well.
-    array<u8, 0x20> _paletteMemory = { 0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08,
-                                       0x24, 0x00, 0x00, 0x04, 0x2C, 0x09, 0x01, 0x34, 0x03, 0x00, 0x04,
-                                       0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08 };
+    /*
+       Palette Memory
+      $3F00-$3F0F: Background Palettes
+      $3F10-$3F1F: Sprite Palettes
+
+      A palette is a group of 4 indices, each index ranging from 0-63
+      The NES has 64 fixed colors, so each index represents a color
+
+      The colors won't be defined here, but somewhere in the SDL
+      rendering logic. We'll use .pal files to easily define and swap fixed colors
+      It's worth documenting what the palettes are, as this concept can be confusing
+
+      Background Palettes
+      Palette 0: $3F00 (bg color), $3F01, $3F02, $3F03.
+      Palette 1: $3F04 (bg color), $3F05, $3F06, $3F07.
+      Palette 2: $3F08 (bg color), $3F09, $3F0A, $3F0B.
+      Palette 3: $3F0C (bg color), $3F0D, $3F0E, $3F0F.
+
+      Sprite Palettes
+      Palette 4: $3F10 (mirrors 3F00), $3F11, $3F12, $3F13.
+      Palette 5: $3F14 (mirrors 3F04), $3F15, $3F16, $3F17.
+      Palette 6: $3F18 (mirrors 3F08), $3F19, $3F1A, $3F1B.
+      Palette 7: $3F1C (mirrors 3F0C), $3F1D, $3F1E, $3F1F.
+
+      Sprite backgrounds, despite being mirrored, are ignored and treated
+      as transparent.
+    */
+
+    // Default boot palette, will get changed by the cartridge
+    array<u8, 0x20> _paletteMemory = {
+        0x09, 0x01, 0x00, 0x01, // bg1
+        0x00, 0x02, 0x02, 0x0D, // bg2
+        0x08, 0x10, 0x08, 0x24, // bg3
+        0x00, 0x00, 0x04, 0x2C, // bg4
+        0x09, 0x01, 0x34, 0x03, // sprite1
+        0x00, 0x04, 0x00, 0x14, // sprite2
+        0x08, 0x3A, 0x00, 0x02, // sprite3
+        0x00, 0x20, 0x2C, 0x08  // sprite4
+    };
 
     /* Object Attribute Memory (OAM)
        This is a 256 byte region internal to the PPU

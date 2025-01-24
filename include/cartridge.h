@@ -24,20 +24,24 @@ class Cartridge
     void             Write( u16 address, u8 data );
 
     // Reads
-    [[nodiscard]] u8 ReadChrROM( u16 address );       // 0x0000 - 0x1FFF: PPU
-    [[nodiscard]] u8 ReadExpansionROM( u16 address ); // 0x4020 - 0x5FFF: CPU
-    [[nodiscard]] u8 ReadPrgRAM( u16 address );       // 0x6000 - 0x7FFF: CPU
-    [[nodiscard]] u8 ReadPrgROM( u16 address );       // 0x8000 - 0xFFFF: CPU
+    [[nodiscard]] u8 ReadChrROM( u16 address );        // 0x0000 - 0x1FFF: PPU
+    [[nodiscard]] u8 ReadCartridgeVRAM( u16 address ); // 0x2800 - 0x2FFF: PPU (four screen mode)
+    [[nodiscard]] u8 ReadExpansionROM( u16 address );  // 0x4020 - 0x5FFF: CPU
+    [[nodiscard]] u8 ReadPrgRAM( u16 address );        // 0x6000 - 0x7FFF: CPU
+    [[nodiscard]] u8 ReadPrgROM( u16 address );        // 0x8000 - 0xFFFF: CPU
 
     // Writes
-    void WriteChrRAM( u16 address, u8 data );       // 0x0000 - 0x1FFF: PPU
-    void WriteExpansionRAM( u16 address, u8 data ); // 0x4020 - 0x5FFF: CPU
-    void WritePrgRAM( u16 address, u8 data );       // 0x6000 - 0x7FFF: CPU
-    void WritePrgROM( u16 address, u8 data );       // 0x8000 - 0xFFFF: CPU
+    void WriteChrRAM( u16 address, u8 data );        // 0x0000 - 0x1FFF: PPU
+    void WriteCartridgeVRAM( u16 address, u8 data ); // 0x2800 - 0x2FFF: PPU (four screen mode)
+    void WriteExpansionRAM( u16 address, u8 data );  // 0x4020 - 0x5FFF: CPU
+    void WritePrgRAM( u16 address, u8 data );        // 0x6000 - 0x7FFF: CPU
+    void WritePrgROM( u16 address, u8 data );        // 0x8000 - 0xFFFF: CPU
 
     [[nodiscard]] MirrorMode GetMirrorMode();
 
   private:
+    u8 _mapper_number = 0;
+
     // PRG ROM: Program ROM
     vector<u8> _prg_rom;
 
@@ -71,12 +75,18 @@ class Cartridge
     // Can be both ROM or RAM, determined by the mapper
     array<u8, 0x1FFF> _expansion_memory{};
 
+    // Cartrdige VRAM
+    // The PPU has 2KiB of vram for nametables. Some cartridges provided 2Kib extra
+    // which allowed for four unique nametables without mirroring. Staying true to
+    // the hardware design, we'll define them here rather than in the PPU.
+    array<u8, 2048> _cartridge_vram{};
+
     // Mapper
     shared_ptr<Mapper> _mapper;
 
     // Cartridge flags
-    u8   _has_battery = 0;
-    u8   _four_screen_mode = 0;
-    u8   _mirror_mode = 0;
-    bool _uses_chr_ram = false;
+    u8         _has_battery = 0;
+    bool       _four_screen_mode = false;
+    MirrorMode _mirror_mode = MirrorMode::Vertical;
+    bool       _uses_chr_ram = false;
 };
