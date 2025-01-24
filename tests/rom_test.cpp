@@ -21,9 +21,9 @@ void loadStateFromLogline( const string &logline, const regex &pattern, int nFie
 */
 TEST( RomTests, Nestest )
 {
-    PPU ppu{};
-    Bus bus( &ppu );
-    CPU cpu( &bus );
+    Bus bus;
+    CPU cpu = bus.cpu;
+    PPU ppu = bus.ppu;
 
     // Create a shared pointer to Cartridge
     shared_ptr<Cartridge> cartridge = make_shared<Cartridge>( "tests/roms/nestest.nes" );
@@ -189,9 +189,9 @@ TEST( RomTests, Nestest )
 
 TEST( RomTests, InstructionTestV5 )
 {
-    PPU ppu{};
-    Bus bus( &ppu );
-    CPU cpu( &bus );
+    Bus bus;
+    CPU cpu = bus.cpu;
+    PPU ppu = bus.ppu;
 
     //     // Load the v5 instruction test ROM
     shared_ptr<Cartridge> cartridge = make_shared<Cartridge>( "tests/roms/instr_test-v5.nes" );

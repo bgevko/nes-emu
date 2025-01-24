@@ -23,7 +23,6 @@ class Cartridge
     [[nodiscard]] u8 Read( u16 address );
     void             Write( u16 address, u8 data );
 
-  private:
     // Reads
     [[nodiscard]] u8 ReadChrROM( u16 address );       // 0x0000 - 0x1FFF: PPU
     [[nodiscard]] u8 ReadExpansionROM( u16 address ); // 0x4020 - 0x5FFF: CPU
@@ -38,6 +37,7 @@ class Cartridge
 
     [[nodiscard]] MirrorMode GetMirrorMode();
 
+  private:
     // PRG ROM: Program ROM
     vector<u8> _prg_rom;
 

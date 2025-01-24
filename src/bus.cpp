@@ -6,13 +6,13 @@
 #include <utility>
 
 // Constructor to initialize the bus with a flat memory model
-Bus::Bus( PPU *ppu, const bool use_flat_memory ) : ppu( ppu ), _use_flat_memory( use_flat_memory )
+Bus::Bus( const bool use_flat_memory ) : cpu( this ), ppu( this ), _use_flat_memory( use_flat_memory )
 {
     _ram.fill( 0 );
     _apu_io_memory.fill( 0 );
 }
 
-u8 Bus::Read( const u16 address ) const
+u8 Bus::Read( const u16 address )
 {
     if ( _use_flat_memory )
     {
@@ -29,7 +29,7 @@ u8 Bus::Read( const u16 address ) const
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         const u16 ppu_register = 0x2000 + ( address & 0x0007 );
-        return ppu->HandleCpuRead( ppu_register );
+        return ppu.HandleCpuRead( ppu_register );
     }
 
     // APU and I/O Registers: 0x4000 - 0x401F
@@ -43,7 +43,7 @@ u8 Bus::Read( const u16 address ) const
     // 4020 and up is cartridge territory
     if ( address >= 0x4020 && address <= 0xFFFF )
     {
-        return _cartridge->Read( address );
+        return cartridge->Read( address );
     }
 
     // Unhandled address ranges return open bus value
@@ -70,7 +70,14 @@ void Bus::Write( const u16 address, const u8 data )
     if ( address >= 0x2000 && address <= 0x3FFF )
     {
         const u16 ppu_register = 0x2000 + ( address & 0x0007 );
-        ppu->HandleCpuWrite( ppu_register, data );
+        ppu.HandleCpuWrite( ppu_register, data );
+        return;
+    }
+
+    // PPU DMA: 0x4014
+    if ( address == 0x4014 )
+    {
+        ppu.DmaTransfer( data );
         return;
     }
 
@@ -84,13 +91,16 @@ void Bus::Write( const u16 address, const u8 data )
     // 4020 and up is cartridge territory
     if ( address >= 0x4020 && address <= 0xFFFF )
     {
-        _cartridge->Write( address, data );
+        cartridge->Write( address, data );
         return;
     }
     // Unhandled address ranges
     std::cout << "Unhandled write to address: " << std::hex << address << "\n";
 }
 
-void Bus::LoadCartridge( std::shared_ptr<Cartridge> cartridge ) { _cartridge = std::move( cartridge ); }
+void Bus::LoadCartridge( std::shared_ptr<Cartridge> loaded_cartridge )
+{
+    cartridge = std::move( loaded_cartridge );
+}
 
 [[nodiscard]] bool Bus::IsTestMode() const { return _use_flat_memory; }

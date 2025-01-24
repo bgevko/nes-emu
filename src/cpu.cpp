@@ -562,12 +562,12 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
         output += registers_str + status_str;
 
         // Scanline num (V)
-        std::string scanline_str = std::to_string( _bus->ppu->GetScanline() );
+        std::string scanline_str = std::to_string( _bus->ppu.GetScanline() );
         // std::string scanline_str_adjusted = std::string( 4 - scanline_str.size(), ' ' );
         output += "  V: " + scanline_str;
 
         // PPU cycles (H), pad for 3 characters + space
-        u16 const   ppu_cycles = _bus->ppu->GetCycles();
+        u16 const   ppu_cycles = _bus->ppu.GetCycles();
         std::string ppu_cycles_str = std::to_string( ppu_cycles );
         ppu_cycles_str += std::string( 4 - ppu_cycles_str.size(), ' ' );
         output += "  H: " + ppu_cycles_str; // PPU cycle
@@ -595,7 +595,7 @@ auto CPU::ReadAndTick( u16 address ) -> u8
 {
     if ( address == 0x2002 )
     {
-        _bus->ppu->SetIsCpuReadingPpuStatus( true );
+        _bus->ppu.SetIsCpuReadingPpuStatus( true );
     }
     Tick();
     u8 const data = Read( address );
@@ -605,8 +605,17 @@ auto CPU::ReadAndTick( u16 address ) -> u8
 // Write and spend a cycle
 auto CPU::WriteAndTick( u16 address, u8 data ) -> void
 {
-    Write( address, data );
     Tick();
+
+    // Writing to PPUCTRL, PPUMASK, PPUSCROLL, and PPUADDR is ignored until after cycle ~29658
+    if ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 )
+    {
+        if ( _cycles < 29658 )
+        {
+            return;
+        }
+    }
+    Write( address, data );
 }
 
 u8 CPU::Fetch()
@@ -621,8 +630,8 @@ void CPU::Tick()
 {
     // Increment the cycle count
     _cycles++;
-    _bus->ppu->Tick();
-    _bus->ppu->Tick();
+    _bus->ppu.Tick();
+    _bus->ppu.Tick();
 
     // Do a trace once per instruction at this point, to match how Mesen traces
     // Useful for debugging
@@ -634,7 +643,86 @@ void CPU::Tick()
         _did_trace = true;
     }
 
-    _bus->ppu->Tick();
+    _bus->ppu.Tick();
+}
+
+void CPU::Reset()
+{
+    _a = 0x00;
+    _x = 0x00;
+    _y = 0x00;
+    _s = 0xFD;
+    _p = 0x00 | Unused | InterruptDisable;
+
+    // The program counter is usually read from the reset vector of a game, which is
+    // located at 0xFFFC and 0xFFFD. If no cartridge, we'll assume 0x00 for both
+    _pc = Read( 0xFFFD ) << 8 | Read( 0xFFFC );
+
+    // Add 7 cycles
+    if ( !_bus->IsTestMode() )
+    {
+
+        for ( u8 i = 0; i < 7; i++ )
+        {
+            Tick();
+        }
+    }
+    else
+    {
+        _cycles = 0;
+    }
+}
+
+void CPU::NMI()
+{
+    /* @details: Non-maskable Interrupt, called by the PPU during the VBlank period.
+     * It interrupts whatever the CPU is doing at its current cycle to go update the PPU.
+     * Uses 7 cycles, cannot be disabled.
+     */
+    // 1) Two dummy cycles (hardware reads the same PC twice, discarding the data)
+    Tick();
+    Tick();
+
+    // 2) Push PC high, then PC low
+    StackPush( ( _pc >> 8 ) & 0xFF );
+    StackPush( _pc & 0xFF );
+
+    // 3) Push status register with B=0; bit 5 (Unused) = 1
+    u8 pushed_status = ( _p & ~Break ) | Unused;
+    StackPush( pushed_status );
+
+    // 4) Fetch low byte of NMI vector ($FFFA)
+    u8 low = ReadAndTick( 0xFFFA );
+
+    // 5) Set I flag
+    SetFlags( InterruptDisable );
+
+    // 6) Fetch high byte of NMI vector ($FFFB)
+    u8 high = ReadAndTick( 0xFFFB );
+
+    // 7) Update PC
+    _pc = static_cast<u16>( high ) << 8 | low;
+}
+
+void CPU::IRQ()
+{
+    /* @brief: IRQ, can be called when interrupt disable is turned off.
+     * Uses 7 cycles
+     */
+    if ( ( _p & InterruptDisable ) != 0 )
+    {
+        return;
+    }
+    Tick();
+    Tick();
+    StackPush( ( _pc >> 8 ) & 0xFF );
+    StackPush( _pc & 0xFF );
+    u8 pushed_status = ( _p & ~Break ) | Unused;
+    StackPush( pushed_status );
+    u8 low = ReadAndTick( 0xFFFE );
+    SetFlags( InterruptDisable );
+    u8 high = ReadAndTick( 0xFFFF );
+    _pc = static_cast<u16>( high ) << 8 | low;
 }
 
 void CPU::DecodeExecute()
@@ -689,34 +777,6 @@ void CPU::DecodeExecute()
     {
         // Houston, we have a problem. No opcode was found.
         throw std::runtime_error( "Invalid opcode: " + std::to_string( opcode ) );
-    }
-}
-
-void CPU::Reset()
-{
-    _a = 0x00;
-    _x = 0x00;
-    _y = 0x00;
-    _s = 0xFD;
-    _p = 0x00 | Unused | InterruptDisable;
-
-    // The program counter is usually read from the reset vector of a game, which is
-    // located at 0xFFFC and 0xFFFD. If no cartridge, we'll assume these values are
-    // initialized to 0x00
-    _pc = Read( 0xFFFD ) << 8 | Read( 0xFFFC );
-
-    // Add 7 cycles
-    if ( !_bus->IsTestMode() )
-    {
-
-        for ( u8 i = 0; i < 7; i++ )
-        {
-            Tick();
-        }
-    }
-    else
-    {
-        _cycles = 0;
     }
 }
 

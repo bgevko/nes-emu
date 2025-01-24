@@ -1,4 +1,6 @@
 #pragma once
+#include "cpu.h"
+#include "ppu.h"
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -10,6 +12,7 @@ using s16 = int16_t;
 
 // forward declarations
 class Cartridge;
+class CPU;
 class PPU;
 class APU;
 
@@ -20,10 +23,15 @@ class Bus
     // Bus( PPU *ppu, APU *apu, bool use_flat_memory = false );
 
     // Initialized with flat memory disabled by default. Enabled in json tests only
-    explicit Bus( PPU *ppu, bool use_flat_memory = false );
+    // explicit Bus( PPU *ppu, bool use_flat_memory = false );
+    Bus( bool _use_flat_memory = false );
+
+    CPU                        cpu;       // NOLINT
+    PPU                        ppu;       // NOLINT
+    std::shared_ptr<Cartridge> cartridge; // NOLINT
 
     // Memory read/write interface
-    [[nodiscard]] u8 Read( uint16_t address ) const;
+    [[nodiscard]] u8 Read( uint16_t address );
     void             Write( u16 address, u8 data );
 
     // Load or change the cartridge during runtime
@@ -32,13 +40,7 @@ class Bus
     // Is test mode
     [[nodiscard]] bool IsTestMode() const;
 
-    PPU *ppu; // NOLINT
-
-    // APU *apu;
   private:
-    // Shared ownership for dynamic life cycle management, leave off for now
-    std::shared_ptr<Cartridge> _cartridge;
-
     // Flat memory for early implementation
     bool                  _use_flat_memory; // For testing purposes
     std::array<u8, 65536> _flat_memory{};   // 64KB memory, for early testing

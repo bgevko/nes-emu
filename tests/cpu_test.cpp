@@ -24,12 +24,12 @@ class CPUTestFixture : public ::testing::Test
 // This class is a test fixture that provides shared setup and teardown for all tests
 {
   protected:
-    CPU cpu; // NOLINT
-    Bus bus; // NOLINT
-    PPU ppu; // NOLINT
+    Bus bus = Bus( true ); // NOLINT
+    PPU ppu;               // NOLINT
+    CPU cpu;               // NOLINT
 
     // All tests assume flat memory model, which is why true is passed to Bus constructor
-    CPUTestFixture() : ppu( true ), bus( &ppu, true ), cpu( &bus ) {}
+    CPUTestFixture() : ppu( bus.ppu ), cpu( bus.cpu ) {}
 
     void                      RunTestCase( const json &testCase );
     void                      LoadStateFromJson( const json &jsonData, const std::string &state );

@@ -30,10 +30,12 @@ enum ControlFlag : u8
     NmiEnable = 1 << 7               // Enables Non-Maskable Interrupts
 };
 
+class Bus;
+
 class PPU
 {
   public:
-    PPU( bool isDisabled = false );
+    explicit PPU( Bus *bus, bool isDisabled = false );
 
     // Getters
     [[nodiscard]] s16 GetScanline() const;
@@ -45,21 +47,28 @@ class PPU
     void SetCycles( u16 cycles );
     void SetIsCpuReadingPpuStatus( bool isReading );
 
-    // Reads / Writes
+    // External Read / Write
     [[nodiscard]] u8 HandleCpuRead( u16 addr );
     void             HandleCpuWrite( u16 addr, u8 data );
+
+    // Internal Read / Write
+    [[nodiscard]] u8 Read( u16 addr );
+    void             Write( u16 addr, u8 data );
 
     // PPU Methods
     [[nodiscard]] u8         ReadPatternTable( u16 addr );
     [[nodiscard]] u8         ReadNameTable( u16 addr );
     [[nodiscard]] MirrorMode GetMirrorMode();
 
+    void DmaTransfer( u8 data );
     void WritePatternTable( u16 addr, u8 data );
     void WriteNameTable( u16 addr, u8 data );
     u16  ResolveNameTableAddress( u16 addr );
     void Tick();
 
   private:
+    Bus *_bus;
+
     // Debugging
     bool _isDisabled = false;
 
@@ -82,9 +91,22 @@ class PPU
     u16 _ppuAddr = 0x00;   // $2006
     u8  _ppuData = 0x00;   // $2007
 
-    // Internal temp register
-    // This register helps the PPU with various operations
+    // $4014: OAM DMA, handled in the write method
+
+    // This register is just like the _tempAddr
+    // It gets updated by the _tempAddr when the Vblank period ends
+    // It holds state as follows:
+    // Bits 0-4: Coarse x scroll
+    // Bits 5-9: Coarse y scroll
+    // Bits 10: Nametable X
+    // Bits 11: Nametable Y
+    // Bits 12-14: Fine y scroll
+    // Bits 15: Unused
+    u16 _vramAddr = 0x00;
     u16 _tempAddr = 0x00;
+
+    // Internal fine X scroll register
+    u8 _fineX = 0x00;
 
     // Address latch
     // This is used to help break up operations that require two writes
@@ -97,7 +119,7 @@ class PPU
     // PPU Memory Mappings
 
     // Pattern Tables
-    // $0000-$1FFF: Pattern Table 1
+    // $0000-$0FFF: Pattern Table 1
     // $1000-$1FFF: Pattern Table 2
     // Defined in cartridge.h as _char_rom / _chr_ram
 
@@ -116,4 +138,30 @@ class PPU
         The PPU provides 2 KiB of VRAM to store two physical nametables.
     */
     array<u8, 2048> _nameTables{};
+
+    // Palette Memory
+    // Internal: 0x3F00 - 0x3F1F, and $3F20 - $3FFF (mirrored)
+    // These are the colors used by the PPU. They can be overwritten by the cartridge
+    // but there are default starting values as well.
+    array<u8, 0x20> _paletteMemory = { 0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08,
+                                       0x24, 0x00, 0x00, 0x04, 0x2C, 0x09, 0x01, 0x34, 0x03, 0x00, 0x04,
+                                       0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08 };
+
+    /* Object Attribute Memory (OAM)
+       This is a 256 byte region internal to the PPU
+       It holds metadata for up to 64 sprites, with each sprite taking up 4 bytes.
+
+      Byte 0: Y position of the sprite
+      Byte 1: Tile index number
+        Bit 0: Bank (0 = $0000, 1 = $1000) of tiles
+        Bits 1-7: Tile number of top of sprite, 0-254
+      Byte 2: Attributes
+        Bits 0-1: Palette (4 to 7) of the sprite
+        Bits 2-4: Unused
+        Bit 5: Priority (0 = in front of background, 1 = behind background)
+        Bit 6: Flip sprite horizontally
+        Bit 7: Flip sprite vertically
+      Byte 3: X position of the sprite
+    */
+    array<u8, 256> _oam{};
 };
