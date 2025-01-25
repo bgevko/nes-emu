@@ -5,13 +5,17 @@
 #include <memory>
 #include <utility>
 
-// Constructor to initialize the bus with a flat memory model
 Bus::Bus( const bool use_flat_memory ) : cpu( this ), ppu( this ), _use_flat_memory( use_flat_memory )
 {
     _ram.fill( 0 );
     _apu_io_memory.fill( 0 );
 }
 
+/*
+################################
+||          CPU Read          ||
+################################
+*/
 u8 Bus::Read( const u16 address )
 {
     if ( _use_flat_memory )
@@ -51,6 +55,11 @@ u8 Bus::Read( const u16 address )
     return 0xFF;
 }
 
+/*
+################################
+||          CPU Write         ||
+################################
+*/
 void Bus::Write( const u16 address, const u8 data )
 {
     if ( _use_flat_memory )
@@ -98,9 +107,19 @@ void Bus::Write( const u16 address, const u8 data )
     std::cout << "Unhandled write to address: " << std::hex << address << "\n";
 }
 
+/*
+################################
+||       Load Cartridge       ||
+################################
+*/
 void Bus::LoadCartridge( std::shared_ptr<Cartridge> loaded_cartridge )
 {
     cartridge = std::move( loaded_cartridge );
 }
 
+/*
+################################
+||        Debug Methods       ||
+################################
+*/
 [[nodiscard]] bool Bus::IsTestMode() const { return _use_flat_memory; }
