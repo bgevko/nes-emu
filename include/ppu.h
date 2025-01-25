@@ -9,27 +9,6 @@ using s16 = std::int16_t;
 
 using namespace std;
 
-// PPU Status
-enum Status : u8
-{
-    SpriteOverflow = 1 << 5, // 0b00100000
-    SpriteZeroHit = 1 << 6,  // 0b01000000
-    VerticalBlank = 1 << 7   // 0b10000000
-};
-
-// Control Register Status
-enum ControlFlag : u8
-{
-    NametableX = 1 << 0,             // Horizontal selection, 0 = left, 1 = right
-    NametableY = 1 << 1,             // Vertical selection, 0 = top, 1 = bottom
-    VramIncrementMode = 1 << 2,      // 0 = add 1, 1 = add 32
-    SpritePatternTable = 1 << 3,     // 0 = $0000, 1 = $1000
-    BackgroundPatternTable = 1 << 4, // 0 = $0000, 1 = $1000
-    SpriteSize = 1 << 5,             // 0 = 8x8, 1 = 8x16
-    MasterSlaveSelect = 1 << 6,      // Unused
-    NmiEnable = 1 << 7               // Enables Non-Maskable Interrupts
-};
-
 class Bus;
 
 class PPU
@@ -37,91 +16,219 @@ class PPU
   public:
     explicit PPU( Bus *bus, bool isDisabled = false );
 
-    // Getters
-    [[nodiscard]] s16 GetScanline() const;
-    [[nodiscard]] u16 GetCycles() const;
-    [[nodiscard]] u8  GetControlFlag( ControlFlag flag ) const;
+    /*
+    ################################
+    ||           Getters          ||
+    ################################
+    */
+    [[nodiscard]] s16        GetScanline() const;
+    [[nodiscard]] u16        GetCycles() const;
+    [[nodiscard]] MirrorMode GetMirrorMode();
 
-    // Setters
+    /*
+    ################################
+    ||           Setters          ||
+    ################################
+    */
     void SetScanline( s16 scanline );
     void SetCycles( u16 cycles );
     void SetIsCpuReadingPpuStatus( bool isReading );
 
-    // External Read / Write
+    /*
+    ################################
+    ||      CPU Read / Write      ||
+    ################################
+    */
     [[nodiscard]] u8 HandleCpuRead( u16 addr );
     void             HandleCpuWrite( u16 addr, u8 data );
 
-    // Internal Read / Write
+    /*
+    ################################
+    ||       Internal Reads       ||
+    ################################
+    */
     [[nodiscard]] u8 Read( u16 addr );
-    void             Write( u16 addr, u8 data );
+    [[nodiscard]] u8 ReadPatternTable( u16 addr );
+    [[nodiscard]] u8 ReadNameTable( u16 addr );
 
-    // PPU Methods
-    [[nodiscard]] u8         ReadPatternTable( u16 addr );
-    [[nodiscard]] u8         ReadNameTable( u16 addr );
-    [[nodiscard]] MirrorMode GetMirrorMode();
-
-    void DmaTransfer( u8 data );
+    /*
+    ################################
+    ||       Internal Writes      ||
+    ################################
+    */
+    void Write( u16 addr, u8 data );
     void WritePatternTable( u16 addr, u8 data );
     void WriteNameTable( u16 addr, u8 data );
+
+    /*
+    ################################
+    ||         PPU Methods        ||
+    ################################
+    */
+    void DmaTransfer( u8 data );
     u16  ResolveNameTableAddress( u16 addr );
     void Tick();
 
   private:
-    Bus *_bus;
-
-    // Debugging
-    bool _isDisabled = false;
-
-    // Timing
+    /*
+    ################################
+    ||      Global Variables      ||
+    ################################
+    */
     s16  _scanline = 0;
     u16  _cycle = 4;
-    u64  _lastSync = 0; // Last cpu cycle synced
     u64  _frame = 1;
     bool _isRenderingEnabled = false;
     bool _preventVBlank = false;
     bool _isCpuReadingPpuStatus = false;
 
-    // CPU Memory Mappings
-    u8  _ppuCtrl = 0x00;   // $2000
-    u8  _ppuMask = 0x00;   // $2001
-    u8  _ppuStatus = 0x00; // $2002
-    u8  _oamAddr = 0x00;   // $2003
-    u8  _oamData = 0x00;   // $2004
-    u16 _ppuScroll = 0x00; // $2005
-    u16 _ppuAddr = 0x00;   // $2006
-    u8  _ppuData = 0x00;   // $2007
+    /*
+    ################################
+    ||       Debug Variables      ||
+    ################################
+    */
+    bool _isDisabled = false;
 
-    // $4014: OAM DMA, handled in the write method
+    /*
+    ######################################
+    ||  Background Rendering Variables  ||
+    ######################################
+    */
+    u8 _nametableByte = 0x00;
+    u8 _attributeByte = 0x00;
+    u8 _bgPlane0Byte = 0x00;
+    u8 _bgPlane1Byte = 0x00;
 
-    // This register is just like the _tempAddr
-    // It gets updated by the _tempAddr when the Vblank period ends
-    // It holds state as follows:
-    // Bits 0-4: Coarse x scroll
-    // Bits 5-9: Coarse y scroll
-    // Bits 10: Nametable X
-    // Bits 11: Nametable Y
-    // Bits 12-14: Fine y scroll
-    // Bits 15: Unused
-    u16 _vramAddr = 0x00;
-    u16 _tempAddr = 0x00;
+    /*
+    ################################
+    ||         Peripherals        ||
+    ################################
+    */
+    Bus *_bus;
+
+    /*
+    ################################
+    ||    CPU-facing Registers    ||
+    ################################
+    */
+    union PPUCTRL
+    {
+        struct
+        {
+            u8 nametable_x : 1;
+            u8 nametable_y : 1;
+            u8 vram_increment : 1;
+            u8 pattern_sprite : 1;
+            u8 pattern_background : 1;
+            u8 sprite_size : 1;
+            u8 slave_mode : 1; // unused
+            u8 nmi_enable : 1;
+        } bit;
+        u8 value = 0x00;
+    };
+    PPUCTRL _ppuCtrl; // $2000
+
+    union PPUMASK
+    {
+        struct
+        {
+            u8 grayscale : 1;
+            u8 render_background_left : 1;
+            u8 render_sprites_left : 1;
+            u8 render_background : 1;
+            u8 render_sprites : 1;
+            u8 enhance_red : 1;
+            u8 enhance_green : 1;
+            u8 enhance_blue : 1;
+        } bit;
+        u8 value = 0x00;
+    };
+    PPUMASK _ppuMask; // $2001
+
+    union PPUSTATUS
+    {
+        struct
+        {
+            u8 unused : 5;
+            u8 sprite_overflow : 1;
+            u8 sprite_zero_hit : 1;
+            u8 vertical_blank : 1;
+        } bit;
+        u8 value = 0x00;
+    };
+    PPUSTATUS _ppuStatus; // $2002
+
+    u8 _oamAddr = 0x00;   // $2003
+    u8 _oamData = 0x00;   // $2004
+    u8 _ppuScroll = 0x00; // $2005
+    u8 _ppuAddr = 0x00;   // $2006
+    u8 _ppuData = 0x00;   // $2007
+    // $4014: OAM DMA, handled in bus read/write, see bus.cpp
+
+    /*
+    ################################
+    ||     Internal Registers     ||
+    ################################
+    */
+
+    /* v: Current VRAM address (15 bits)
+
+       t: Temporary VRAM address (15 bits)
+      The v (and t) register has multiple purposes
+      - It allows the CPU to write to the PPU memory through _ppuAddr and _ppuData registers
+      - It points to the nametable data currently being drawn
+
+        yyy NN YYYYY XXXXX
+        ||| || ||||| +++++-- coarse X scroll
+        ||| || +++++-------- coarse Y scroll
+        ||| ++-------------- nametable select
+        +++----------------- fine Y scroll
+
+        There's also a temporary VRAM address, t, which is identical to v and is used to store
+        data temporarily until it is copied to v.
+
+        Both of these registers are sometimes referred to as "Loopy Registers", named
+        after the developer who discovered how they work.
+     */
+
+    union LoopyRegister
+    {
+        struct
+        {
+            u16 coarse_x : 5;
+            u16 coarse_y : 5;
+            u16 nametable_x : 1;
+            u16 nametable_y : 1;
+            u16 fine_y : 3;
+            u16 unused : 1;
+        } bit;
+        u16 value = 0x00;
+    };
+
+    LoopyRegister _vramAddr;
+    LoopyRegister _tempAddr;
 
     // Internal fine X scroll register
     u8 _fineX = 0x00;
 
     // Address latch
-    // This is used to help break up operations that require two writes
+    // Used in writes that require two steps: _ppuAddr and _ppuData
     bool _addrLatch = false;
 
     // PPU Data Buffer
     // Holds data from the previous read or write
     u8 _dataBuffer = 0x00;
 
-    // PPU Memory Mappings
+    /*
+    ################################
+    ||      Memory Variables      ||
+    ################################
+    */
 
     // Pattern Tables
     // $0000-$0FFF: Pattern Table 1
     // $1000-$1FFF: Pattern Table 2
-    // Defined in cartridge.h as _char_rom / _chr_ram
+    // Defined and documented in cartridge.h
 
     /* Name Table Memory
         The $2000 address for the PPU control register in the CPU's memory map
@@ -185,15 +292,20 @@ class PPU
 
       Byte 0: Y position of the sprite
       Byte 1: Tile index number
-        Bit 0: Bank (0 = $0000, 1 = $1000) of tiles
-        Bits 1-7: Tile number of top of sprite, 0-254
+        76543210
+        ||||||||
+        |||||||+- Bank ($0000 or $1000) of tiles
+        +++++++-- Tile number of top of sprite (0 to 254; bottom half gets the next tile)
       Byte 2: Attributes
-        Bits 0-1: Palette (4 to 7) of the sprite
-        Bits 2-4: Unused
-        Bit 5: Priority (0 = in front of background, 1 = behind background)
-        Bit 6: Flip sprite horizontally
-        Bit 7: Flip sprite vertically
+        76543210
+        ||||||||
+        ||||||++- Palette (4 to 7) of sprite
+        |||+++--- Unimplemented (read 0)
+        ||+------ Priority (0: in front of background; 1: behind background)
+        |+------- Flip sprite horizontally
+        +-------- Flip sprite vertically
       Byte 3: X position of the sprite
     */
+
     array<u8, 256> _oam{};
 };

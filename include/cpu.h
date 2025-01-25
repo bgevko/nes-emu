@@ -58,8 +58,8 @@ class CPU
     [[nodiscard]] auto ReadAndTick( u16 address ) -> u8;
     void               Write( u16 address, u8 data ) const;
     void               WriteAndTick( u16 address, u8 data );
-    void               IRQ();
     void               NMI();
+    void               IRQ();
 
     /*
     ################################

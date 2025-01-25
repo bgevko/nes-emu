@@ -21,12 +21,11 @@ AlignTrailingComments: true
 # float b = 10.0;   // Variable b
 # char  c = 'c';    // Variable c
 
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Linux
 # Example:
 # void Function()
 # {
-#     if (condition)
-#     {
+#     if (condition) {
 #         // Do something
 #     }
 # }

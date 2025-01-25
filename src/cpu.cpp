@@ -608,7 +608,8 @@ auto CPU::WriteAndTick( u16 address, u8 data ) -> void
     Tick();
 
     // Writing to PPUCTRL, PPUMASK, PPUSCROLL, and PPUADDR is ignored until after cycle ~29658
-    if ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 )
+    if ( !_bus->IsTestMode() &&
+         ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 ) )
     {
         if ( _cycles < 29658 )
         {
