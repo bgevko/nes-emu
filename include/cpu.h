@@ -92,19 +92,19 @@ class CPU
     ||      Global Variables      ||
     ################################
     */
-    bool        _did_vblank = false;
-    bool        _is_write_modify = false;
+    bool        _didVblank = false;
+    bool        _isWriteModify = false;
     bool        _currentPageCrossPenalty = true;
-    std::string _instruction_name;
-    std::string _addr_mode;
+    std::string _instructionName;
+    std::string _addrMode;
 
     /*
     ################################
     ||       Debug Variables      ||
     ################################
     */
-    bool        _trace_enabled = false;
-    bool        _did_trace = false;
+    bool        _traceEnabled = false;
+    bool        _didTrace = false;
     std::string _trace;
 
     /*
@@ -119,10 +119,9 @@ class CPU
     ||        Opcode Table        ||
     ################################
     */
-    struct InstructionData
-    {
+    struct InstructionData {
         std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
-        std::string addr_mode;                   // Addressing mode mnemonic (e.g. ABS, ZPG)
+        std::string addrMode;                    // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
@@ -143,8 +142,7 @@ class CPU
     ################################
     */
     // Enum for Status Register
-    enum Status : u8
-    {
+    enum Status : u8 {
         Carry = 1 << 0,            // 0b00000001
         Zero = 1 << 1,             // 0b00000010
         InterruptDisable = 1 << 2, // 0b00000100
