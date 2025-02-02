@@ -111,4 +111,7 @@ void Bus::LoadCartridge( std::shared_ptr<Cartridge> loadedCartridge )
 ||        Debug Methods       ||
 ################################
 */
-[[nodiscard]] bool Bus::IsTestMode() const { return _useFlatMemory; }
+[[nodiscard]] bool Bus::IsTestMode() const
+{
+    return _useFlatMemory;
+}

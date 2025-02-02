@@ -8,7 +8,10 @@ Mapper1::Mapper1( u8 prgRomBanks, u8 chrRomBanks )
 {
 }
 
-MirrorMode Mapper1::GetMirrorMode() { return _mirrorMode; }
+MirrorMode Mapper1::GetMirrorMode()
+{
+    return _mirrorMode;
+}
 
 /*
 ################################

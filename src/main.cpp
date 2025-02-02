@@ -1,10 +1,12 @@
 #include "SDL2/SDL_error.h"
-#include "SDL2/SDL_events.h"
 #include "SDL2/SDL_pixels.h"
 #include "SDL2/SDL_render.h"
 #include "SDL2/SDL_video.h"
 #include "bus.h"
 #include "cartridge.h"
+#include <cstdint>
+// #include <cstring>
+#include <memory>
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <iostream>
@@ -17,20 +19,20 @@ constexpr int SCREEN_WIDTH = 512;  // NOLINT
 constexpr int SCREEN_HEIGHT = 480; // NOLINT
 constexpr int NES_WIDTH = 256;     // NOLINT
 constexpr int NES_HEIGHT = 240;    // NOLINT
-constexpr int BUFFER_SIZE = 61440; // NOLINT
+// constexpr int BUFFER_SIZE = 61440; // NOLINT
 
 SDL_Texture *texture = nullptr; // NOLINT
 
-void renderFrame( const u32 *frameBufferData )
-{
-    void *pixels = nullptr;
-    int   pitch = 0;
-
-    if ( SDL_LockTexture( texture, nullptr, &pixels, &pitch ) == 0 ) {
-        memcpy( pixels, frameBufferData, BUFFER_SIZE * sizeof( u32 ) );
-        SDL_UnlockTexture( texture );
-    }
-}
+// static void renderFrame( const u32 *frameBufferData )
+// {
+//     void *pixels = nullptr;
+//     int   pitch = 0;
+//
+//     if ( SDL_LockTexture( texture, nullptr, &pixels, &pitch ) == 0 ) {
+//         memcpy( pixels, frameBufferData, BUFFER_SIZE * sizeof( u32 ) );
+//         SDL_UnlockTexture( texture );
+//     }
+// }
 
 int main()
 {
@@ -70,22 +72,21 @@ int main()
     // Initiate the emulator
     Bus bus;
     CPU cpu = bus.cpu;
-    PPU ppu = bus.ppu;
+    // PPU ppu = bus.ppu;
 
     // Load the ROM
-    shared_ptr<Cartridge> cartridge = make_shared<Cartridge>( "tests/roms/mario.nes" );
+    shared_ptr<Cartridge> const cartridge = make_shared<Cartridge>( "tests/roms/mario.nes" );
     bus.LoadCartridge( cartridge );
     cpu.Reset();
 
     // PPU render callback
-    ppu.onFrameReady = renderFrame;
+    // ppu.onFrameReady = renderFrame;
 
     // SDL_Event event;
 
     // Benchmark stuff
     using Clock = chrono::high_resolution_clock;
     auto start = Clock::now();
-    u64  totalCycles = 0;
 
     bool running = true;
     while ( running ) {
@@ -97,14 +98,12 @@ int main()
 
         // Execute the CPU
         cpu.DecodeExecute();
-        totalCycles += cpu.GetLastInstrCycleCost();
-        // cout << cpu.GetCycles() << "\n";
 
-        if ( totalCycles > 1790000 ) {
+        if ( cpu.GetCycles() > 1790000 ) {
             auto now = Clock::now();
             auto elapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
             cout << "Elapsed time: " << elapsed << "ms\n";
-            cout << "Total cycles: " << totalCycles << "\n";
+            cout << "Total cycles: " << cpu.GetCycles() << "\n";
             running = false;
         }
 

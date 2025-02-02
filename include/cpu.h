@@ -60,10 +60,10 @@ class CPU
     void               WriteAndTick( u16 address, u8 data );
     void               NMI();
     void               IRQ();
-    u8  DummyRead() { return ReadAndTick( _pc ); }                                                 // 1 cycle
-    u8  ReadBytePC() { return ReadAndTick( _pc++ ); }                                              // 1 cycle
-    u8  ReadByte( u16 address ) { return ReadAndTick( address ); }                                 // 1 cycle
-    u16 ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }                              // 2 cycles
+    u8                 DummyRead() { return ReadAndTick( _pc ); }                                  // 1 cycle
+    u8                 ReadBytePC() { return ReadAndTick( _pc++ ); }                               // 1 cycle
+    u8                 ReadByte( u16 address ) { return ReadAndTick( address ); }                  // 1 cycle
+    u16                ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }               // 2 cycles
     u16 ReadWord( u16 address ) { return ReadByte( address ) | ( ReadByte( address + 1 ) << 8 ); } // 2 cycles
 
     /*

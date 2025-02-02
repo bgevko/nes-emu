@@ -62,8 +62,8 @@ add_custom_command(TARGET emu POST_BUILD
 if(MSVC)
   target_compile_options(emu PRIVATE /W4 /WX)
 else()
-  target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
-  # target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror -O2 -march=native -flto)
+  # target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror -O2)
 endif()
 
 # ----------------------- LIBRARIES -----------------------
@@ -168,8 +168,8 @@ add_executable(cpu_test
   src/utils.cpp
 )
 
-target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
-# target_compile_options(cpu_test PRIVATE -Wall -Wextra -Wpedantic -Werror -O2 -march=native -flto)
+# target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(cpu_test PRIVATE -Wall -Wextra -Wpedantic -Werror -O2 )
 
 add_executable(rom_test
   tests/rom_test.cpp

@@ -298,6 +298,10 @@ void PPU::DmaTransfer( u8 data )
     /*@brief: Internal PPU reads to the cartridge
      */
 
+    if ( _bus->cartridge == nullptr ) {
+        return 0xFF;
+    }
+
     // $0000-$1FFF: Pattern Tables
     if ( address >= 0x0000 && address <= 0x1FFF ) {
         return _bus->cartridge->Read( address );
@@ -359,6 +363,9 @@ void PPU::Write( u16 address, u8 data )
 {
     /*@brief: Internal PPU reads to the cartridge
      */
+    if ( _bus->cartridge == nullptr ) {
+        return;
+    }
 
     address &= 0x3FFF;
 
@@ -590,12 +597,12 @@ void PPU::Tick() // NOLINT
     ||                            ||
     ################################
     */
-    u8  bgPalette = GetBgPalette();
-    u8  spritePalette = GetSpritePalette();
-    u8  bgPixel = GetBgPixel();
-    u8  spritePixel = GetSpritePixel();
-    u32 outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-    u16 bufferIndex = ( _scanline * 256 ) + _cycle;
+    u8 const  bgPalette = GetBgPalette();
+    u8 const  spritePalette = GetSpritePalette();
+    u8 const  bgPixel = GetBgPixel();
+    u8 const  spritePixel = GetSpritePixel();
+    u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
+    u16 const bufferIndex = ( _scanline * 256 ) + _cycle;
     _frameBuffer[bufferIndex] = outputPixel;
 
     _cycle++;
