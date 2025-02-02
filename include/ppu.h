@@ -23,6 +23,7 @@ class PPU
     */
     [[nodiscard]] s16        GetScanline() const;
     [[nodiscard]] u16        GetCycles() const;
+    [[nodiscard]] u16        GetFrame() const;
     [[nodiscard]] MirrorMode GetMirrorMode();
 
     /*
@@ -48,8 +49,6 @@ class PPU
     ################################
     */
     [[nodiscard]] u8 Read( u16 addr );
-    [[nodiscard]] u8 ReadPatternTable( u16 addr );
-    [[nodiscard]] u8 ReadNameTable( u16 addr );
 
     /*
     ################################
@@ -57,8 +56,6 @@ class PPU
     ################################
     */
     void Write( u16 addr, u8 data );
-    void WritePatternTable( u16 addr, u8 data );
-    void WriteNameTable( u16 addr, u8 data );
 
     /*
     ################################
@@ -68,6 +65,26 @@ class PPU
     void DmaTransfer( u8 data );
     u16  ResolveNameTableAddress( u16 addr );
     void Tick();
+    void LoadNextBgShiftRegisters();
+    void UpdateShiftRegisters();
+    void LoadNametableByte();
+    void LoadAttributeByte();
+    void LoadPatternPlane0Byte();
+    void LoadPatternPlane1Byte();
+    void IncrementScrollX();
+    void IncrementScrollY();
+    u8   GetBgPalette();
+    u8   GetSpritePalette();
+    u8   GetBgPixel();
+    u8   GetSpritePixel();
+    u32  GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette );
+
+    /*
+    ################################
+    ||        SDL Callback        ||
+    ################################
+    */
+    void ( *onFrameReady )( const u32 *frameBuffer ) = nullptr;
 
   private:
     /*
@@ -81,6 +98,13 @@ class PPU
     bool _isRenderingEnabled = false;
     bool _preventVBlank = false;
     bool _isCpuReadingPpuStatus = false;
+
+    /*
+    ################################
+    ||        SDL Variables       ||
+    ################################
+    */
+    array<u32, 61440> _frameBuffer{};
 
     /*
     ################################
@@ -98,8 +122,10 @@ class PPU
     u8  _attributeByte = 0x00;
     u8  _bgPlane0Byte = 0x00;
     u8  _bgPlane1Byte = 0x00;
-    u16 _bgShiftLow = 0x0000;
-    u16 _bgShiftHigh = 0x0000;
+    u16 _bgShiftPatternLow = 0x0000;
+    u16 _bgShiftPatternHigh = 0x0000;
+    u16 _bgShiftAttributeLow = 0x0000;
+    u16 _bgShiftAttributeHigh = 0x0000;
 
     /*
     ################################

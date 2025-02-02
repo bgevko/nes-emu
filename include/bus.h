@@ -37,6 +37,7 @@ class Bus
     [[nodiscard]] u8 Read( uint16_t address );
     void             Write( u16 address, u8 data );
     void             LoadCartridge( std::shared_ptr<Cartridge> cartridge );
+    void             ResetFlatMemory() { _flatMemory.fill( 0 ); }
 
     /*
     ################################

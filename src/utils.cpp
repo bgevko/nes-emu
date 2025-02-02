@@ -2,13 +2,11 @@
 #include <cstddef>
 #include <exception>
 #include <cstdint>
-#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 /*
 ################################
@@ -86,36 +84,4 @@ struct InstrV5LogInfo {
     uint64_t cpuCycles;
 };
 
-static std::vector<InstrV5LogInfo> parseV5Log( const std::string &filename, const std::regex &pattern )
-{
-    std::vector<InstrV5LogInfo> logInfo;
-
-    MatchResults const matches = parseLog( filename, pattern, 9 );
-    for ( const auto &match : matches ) {
-        InstrV5LogInfo entry{};
-        entry.pc = static_cast<uint16_t>( stoul( match[0], nullptr, 16 ) );
-        entry.a = static_cast<uint8_t>( stoul( match[1], nullptr, 16 ) );
-        entry.x = static_cast<uint8_t>( stoul( match[2], nullptr, 16 ) );
-        entry.y = static_cast<uint8_t>( stoul( match[3], nullptr, 16 ) );
-        entry.sp = static_cast<uint8_t>( stoul( match[4], nullptr, 16 ) );
-        entry.scanline = static_cast<uint16_t>( stoul( match[6], nullptr, 10 ) );
-        entry.ppuCycles = static_cast<uint16_t>( stoul( match[7], nullptr, 10 ) );
-        entry.cpuCycles = stoull( match[8], nullptr, 10 );
-
-        // Status
-        // Mesen status come in form of string: nv--dIZC
-        // We'll convert it to a byte
-        const std::string &statusStr = match[5];
-        uint8_t            status = 0;
-        for ( int i = 0; i < 8; ++i ) {
-            // ignore '-', 'I' and lower case
-            if ( statusStr[i] != '-' && ( std::isupper( statusStr[i] ) == 0 ) && statusStr[i] != 'I' ) {
-                status |= 1 << ( 7 - i );
-            }
-        }
-        entry.p = status;
-        logInfo.push_back( entry );
-    }
-    return logInfo;
-}
 } // namespace utils
