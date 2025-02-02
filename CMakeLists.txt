@@ -3,8 +3,8 @@ cmake_minimum_required( VERSION 3.15 )
 # Enable compile_commands.json (for non-IDE builds)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
-# C++ 17 standard
-set( CMAKE_CXX_STANDARD 17 )
+# C++ 23 standard
+set( CMAKE_CXX_STANDARD 23 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 # Set clang as the default compiler if available
@@ -51,11 +51,19 @@ add_executable(emu
         src/mappers/mapper1.cpp
 )
 
+# Copy roms to build directory, for testing purposes
+add_custom_command(TARGET emu POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/tests/roms
+    ${CMAKE_BINARY_DIR}/tests/roms
+)
+
 # Apply compiler options to emu target
 if(MSVC)
   target_compile_options(emu PRIVATE /W4 /WX)
 else()
-  target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  # target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror -O2)
 endif()
 
 # ----------------------- LIBRARIES -----------------------
@@ -157,7 +165,11 @@ add_executable(cpu_test
   src/ppu.cpp
   src/mappers/mapper0.cpp
   src/mappers/mapper1.cpp
+  src/utils.cpp
 )
+
+# target_compile_options(emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_compile_options(cpu_test PRIVATE -Wall -Wextra -Wpedantic -Werror -O2 )
 
 add_executable(rom_test
   tests/rom_test.cpp
@@ -167,6 +179,7 @@ add_executable(rom_test
   src/ppu.cpp
   src/mappers/mapper0.cpp
   src/mappers/mapper1.cpp
+  src/utils.cpp
 )
 # add other test executables here
 

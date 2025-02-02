@@ -19,7 +19,11 @@ class CPU
   public:
     explicit CPU( Bus *bus ); // Must pass a pointer to a Bus class on initialization
 
-    // Getters for registers
+    /*
+    ################################
+    ||           Getters          ||
+    ################################
+    */
     [[nodiscard]] u8  GetAccumulator() const;
     [[nodiscard]] u8  GetXRegister() const;
     [[nodiscard]] u8  GetYRegister() const;
@@ -28,7 +32,11 @@ class CPU
     [[nodiscard]] u16 GetProgramCounter() const;
     [[nodiscard]] u64 GetCycles() const;
 
-    // Setters for registers
+    /*
+    ################################
+    ||           Setters          ||
+    ################################
+    */
     void SetAccumulator( u8 value );
     void SetXRegister( u8 value );
     void SetYRegister( u8 value );
@@ -37,48 +45,89 @@ class CPU
     void SetProgramCounter( u16 value );
     void SetCycles( u64 value );
 
-    // public cpu methods
+    /*
+    ################################
+    ||         CPU Methods        ||
+    ################################
+    */
     void               Reset();
+    [[nodiscard]] u8   Fetch();
     void               DecodeExecute();
     void               Tick();
     [[nodiscard]] auto Read( u16 address ) const -> u8;
     [[nodiscard]] auto ReadAndTick( u16 address ) -> u8;
     void               Write( u16 address, u8 data ) const;
     void               WriteAndTick( u16 address, u8 data );
+    void               NMI();
+    void               IRQ();
+    u8                 DummyRead() { return ReadAndTick( _pc ); }                                  // 1 cycle
+    u8                 ReadBytePC() { return ReadAndTick( _pc++ ); }                               // 1 cycle
+    u8                 ReadByte( u16 address ) { return ReadAndTick( address ); }                  // 1 cycle
+    u16                ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }               // 2 cycles
+    u16 ReadWord( u16 address ) { return ReadByte( address ) | ( ReadByte( address + 1 ) << 8 ); } // 2 cycles
 
-    // public helpers
-    std::string LogLineAtPC( bool verbose = true );
-
-    // public cpu members
-    bool is_halted = false; // NOLINT
-    u16  last_pc = 0x00;    // NOLINT for debugging only
+    /*
+    ################################
+    ||        Debug Methods       ||
+    ################################
+    */
+    std::string               LogLineAtPC( bool verbose = true );
+    [[nodiscard]] std::string GetTrace() const;
+    void                      EnableTracelog();
+    void                      DisableTracelog();
 
   private:
-    friend class CPUTestFixture; // Sometimes used for testing private methods
+    friend class CPUTestFixture; // Used for testing private methods
 
-    Bus *_bus; // Pointer to the Bus class
+    /*
+    ################################
+    ||          Registers         ||
+    ################################
+    */
+    u16 _pc = 0x0000;
+    u8  _a = 0x00;
+    u8  _x = 0x00;
+    u8  _y = 0x00;
+    u8  _s = 0xFD;
+    u8  _p = 0x00 | Unused | InterruptDisable;
+    u64 _cycles = 0;
 
-    // Heper flags
-    bool        _did_vblank = false;
-    bool        _is_write_modify = false;
-    u8          _opcode = 0x00;
-    std::string _instruction_name;
-    std::string _addr_mode;
+    /*
+    ################################
+    ||      Global Variables      ||
+    ################################
+    */
+    bool        _didVblank = false;
+    bool        _isWriteModify = false;
+    bool        _currentPageCrossPenalty = true;
+    std::string _instructionName;
+    std::string _addrMode;
 
-    // Registers
-    u16 _pc = 0x0000;       // Program counter (PC)
-    u8  _a = 0x00;          // Accumulator register (A)
-    u8  _x = 0x00;          // X register
-    u8  _y = 0x00;          // Y register
-    u8  _s = 0xFD;          // Stack pointer (SP)
-    u8  _p = 0x00 | Unused; // Status register (P), per the specs, the unused flag should always be set
-    u64 _cycles = 0;        // Number of cycles
+    /*
+    ################################
+    ||       Debug Variables      ||
+    ################################
+    */
+    bool        _isTestMode = false;
+    bool        _traceEnabled = false;
+    bool        _didTrace = false;
+    std::string _trace;
 
-    // Instruction data
-    struct InstructionData
-    {
+    /*
+    ################################
+    ||         Peripherals        ||
+    ################################
+    */
+    Bus *_bus;
+
+    /*
+    ################################
+    ||        Opcode Table        ||
+    ################################
+    */
+    struct InstructionData {
         std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
-        std::string addr_mode;                   // Addressing mode mnemonic (e.g. ABS, ZPG)
+        std::string addrMode;                    // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
@@ -90,26 +139,16 @@ class CPU
         bool isWriteModify = false; // Write/modify instructions use a dummy read before writing,
                                     // spending an extra cycle
     };
-
-    bool _currentPageCrossPenalty = true;
-
     // Opcode table
     std::array<InstructionData, 256> _opcodeTable;
 
-    // Fetch/decode/execute cycle
-    [[nodiscard]] u8 Fetch();
-
     /*
-    ################################################################
-    ||                                                            ||
-    ||                    Instruction Helpers                     ||
-    ||                                                            ||
-    ################################################################
+    ################################
+    ||     Instruction Helpers    ||
+    ################################
     */
-
     // Enum for Status Register
-    enum Status : u8
-    {
+    enum Status : u8 {
         Carry = 1 << 0,            // 0b00000001
         Zero = 1 << 1,             // 0b00000010
         InterruptDisable = 1 << 2, // 0b00000100
@@ -126,7 +165,7 @@ class CPU
     [[nodiscard]] auto IsFlagSet( u8 flag ) const -> bool;
     void               SetZeroAndNegativeFlags( u8 value );
 
-    // LDA, LDX, and LDY helper
+    // Load and store helpers
     void LoadRegister( u16 address, u8 &reg );
     void StoreRegister( u16 address, u8 reg );
 
@@ -141,11 +180,9 @@ class CPU
     [[nodiscard]] auto StackPop() -> u8;
 
     /*
-    ################################################################
-    ||                                                            ||
-    ||                      Addressing Modes                      ||
-    ||                                                            ||
-    ################################################################
+    ################################
+    ||      Addressing Modes      ||
+    ################################
     */
     auto IMP() -> u16;  // Implicit
     auto IMM() -> u16;  // Immediate
@@ -159,15 +196,12 @@ class CPU
     auto INDX() -> u16; // Indirect X
     auto INDY() -> u16; // Indirect Y
     auto REL() -> u16;  // Relative
-    /*
-    ################################################################
-    ||                                                            ||
-    ||                        Instructions                        ||
-    ||                                                            ||
-    ################################################################
-      */
 
-    // NOP
+    /*
+    ################################
+    ||     Instruction Methods    ||
+    ################################
+    */
     void NOP( u16 address );
 
     // Load/Store
@@ -246,11 +280,9 @@ class CPU
     void TYA( u16 address );
 
     /*
-    ################################################################
-    ||                                                            ||
-    ||                      Illegal Opcodes                       ||
-    ||                                                            ||
-    ################################################################
+    ################################
+    ||   Unofficial Instructions  ||
+    ################################
     */
     void NOP2( u16 address );
     void JAM( u16 address );
@@ -264,13 +296,11 @@ class CPU
     void ISC( u16 address );
     void ALR( u16 address );
     void ARR( u16 address );
-    void ANE( u16 address );
     void SHA( u16 address );
     void TAS( u16 address );
     void LXA( u16 address );
     void LAS( u16 address );
     void SBX( u16 address );
-    void USBC( u16 address );
     void SHY( u16 address );
     void SHX( u16 address );
     void ANC( u16 address );
