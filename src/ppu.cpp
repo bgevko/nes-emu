@@ -1,50 +1,18 @@
 #include "ppu.h"
 #include "bus.h"
+#include "utils.h"
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
+#include <iostream>
+#include <ostream>
 
-PPU::PPU( Bus *bus, bool isDisabled ) : _isDisabled( isDisabled ), _bus( bus )
+PPU::PPU( Bus *bus ) : _bus( bus )
 {
-}
-
-/*
-################################
-||                            ||
-||           Getters          ||
-||                            ||
-################################
-*/
-[[nodiscard]] s16 PPU::GetScanline() const
-{
-    return _scanline;
-}
-[[nodiscard]] u16 PPU::GetCycles() const
-{
-    return _cycle;
-}
-[[nodiscard]] u16 PPU::GetFrame() const
-{
-    return _frame;
-}
-
-/*
-################################
-||                            ||
-||           Setters          ||
-||                            ||
-################################
-*/
-void PPU::SetScanline( s16 scanline )
-{
-    _scanline = scanline;
-}
-void PPU::SetCycles( u16 cycles )
-{
-    _cycle = cycles;
-}
-void PPU::SetIsCpuReadingPpuStatus( bool isReading )
-{
-    _isCpuReadingPpuStatus = isReading;
+    try {
+        _nesPaletteRgbValues = utils::readPalette( "palettes/palette1.pal" );
+    } catch ( std::exception &e ) {
+        exit( EXIT_FAILURE );
+    }
 }
 
 /*
@@ -81,24 +49,12 @@ void PPU::SetIsCpuReadingPpuStatus( bool isReading )
          * CPU sees the state before the read's side effects.
       */
 
-        // Status grabs the top 3 bits of the status register
         u8 const status = _ppuStatus.value & 0xE0;
-
-        // The ppu data buffer has remnant data from the last read, which some games use
         u8 const noise = _dataBuffer & 0x1F;
-
-        // The CPU expects the state of the PPU at the time of the read
-        // the read does have a side effect of clearing the VerticalBlank flag, but
-        // this is not reflected in the data returned by the read
         u8 const data = status | noise;
-
-        // Clear the vertical blank flag
         _ppuStatus.bit.verticalBlank = 0;
-
-        // Reset the address latch
         _addrLatch = false;
-
-        _isCpuReadingPpuStatus = false;
+        _bus->cpu.SetReading2002( false );
         _preventVBlank = false;
         _dataBuffer = data;
         return data;
@@ -106,14 +62,16 @@ void PPU::SetIsCpuReadingPpuStatus( bool isReading )
 
     // 2004: OAM Data
     if ( address == 0x2004 ) {
+        /*
+          Return the contents of _oam[_oamaddr]
+          If called while _renderingEnabled and in visible scanline range (0-239),
+          Returns corrupted data (0xFF)
+        */
         if ( _isRenderingEnabled && _scanline >= 0 && _scanline < 240 ) {
-            // Not not supposed to read OAM data during rendering, or it will cause visual glitches
-            // Real hardware return corrunted data
             return 0xFF;
         }
 
-        // Return the oam data at the current oam address, (held in register 2003)
-        return _oam[_oamAddr];
+        return _oam.at( _oamAddr );
     }
 
     // 2007: PPU Data
@@ -130,7 +88,7 @@ void PPU::SetIsCpuReadingPpuStatus( bool isReading )
         }
 
         // Increment VRAM address based on ppuctrl increment mode
-        _vramAddr.value += _ppuCtrl.bit.vramIncrement == 0 ? 1 : 32;
+        _vramAddr.value += _ppuCtrl.bit.vramIncrement ? 32 : 0;
         return data;
     }
 
@@ -162,7 +120,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
             // on the first cycle
 
             if ( _ppuCtrl.bit.nmiEnable && _ppuStatus.bit.verticalBlank ) {
-                _bus->cpu.NMI();
+                TriggerNmi();
             }
 
             // Copy bits 0-1 of ppuctrl to the temp address register,
@@ -193,7 +151,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
                 return;
             }
             // Write to OAM
-            _oam[_oamAddr] = data;
+            _oam.at( _oamAddr ) = data;
 
             // Increment OAM address
             _oamAddr = ( _oamAddr + 1 ) & 0xFF;
@@ -262,7 +220,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
 ||                            ||
 ################################
 */
-void PPU::DmaTransfer( u8 data )
+void PPU::DmaTransfer( u8 data ) // NOLINT
 {
     /* @details CPU writes to address $4014 to initiate a DMA transfer
      * DMA transfer is a way to quickly transfer data from CPU memory to the OAM.
@@ -279,6 +237,9 @@ void PPU::DmaTransfer( u8 data )
      * This is not the only way to update the OAM, registers 2004 and 2003 can be used
      * but those are slower, and are used for partial updates mostly
      */
+    if ( _bus == nullptr ) {
+        return;
+    }
 
     u16 const address = data << 8;
     for ( u16 i = 0; i < 256; i++ ) {
@@ -320,7 +281,7 @@ void PPU::DmaTransfer( u8 data )
 
         u16 const nametableAddr = ResolveNameTableAddress( address );
 
-        return _nameTables[nametableAddr];
+        return _nameTables.at( nametableAddr );
     }
 
     // $3F00-$3FFF: Palettes
@@ -346,7 +307,7 @@ void PPU::DmaTransfer( u8 data )
         }
 
         // Return as a 6 bit value (0-63)
-        return _paletteMemory[address] & 0x3F;
+        return _paletteMemory.at( address ) & 0x3F;
     }
 
     return 0xFF;
@@ -385,7 +346,7 @@ void PPU::Write( u16 address, u8 data )
             return;
         }
         u16 const nametableAddr = ResolveNameTableAddress( address );
-        _nameTables[nametableAddr] = data;
+        _nameTables.at( nametableAddr ) = data;
         return;
     }
 
@@ -398,7 +359,7 @@ void PPU::Write( u16 address, u8 data )
             address -= 0x0010;
         }
 
-        _paletteMemory[address] = data;
+        _paletteMemory.at( address ) = data;
     }
 }
 
@@ -411,9 +372,9 @@ void PPU::Write( u16 address, u8 data )
 */
 void PPU::Tick() // NOLINT
 {
-    if ( _isDisabled ) {
-        return;
-    }
+    // if ( _isDisabled ) {
+    //     return;
+    // }
 
     /*
     ################################
@@ -422,6 +383,7 @@ void PPU::Tick() // NOLINT
     ||                            ||
     ################################
     */
+
     if ( _scanline == -1 ) {
 
         /*
@@ -567,7 +529,7 @@ void PPU::Tick() // NOLINT
     if ( _scanline == 241 ) {
         // If the CPU is reading register 2002 on cycle 0 of scanline 241
         // Vblank will not be set until the next frame due to a hardware race condition bug
-        if ( _cycle == 0 && _isCpuReadingPpuStatus ) {
+        if ( _cycle == 0 && _bus->cpu.IsReading2002() ) {
             _preventVBlank = true;
         }
 
@@ -575,7 +537,9 @@ void PPU::Tick() // NOLINT
         if ( _cycle == 1 ) {
 
             // SDL Callback for rendering the framebuffer
-            onFrameReady( _frameBuffer.data() );
+            if ( onFrameReady != nullptr ) {
+                onFrameReady( _frameBuffer.data() );
+            }
 
             // Vblank and NMI
             if ( !_preventVBlank ) {
@@ -583,7 +547,7 @@ void PPU::Tick() // NOLINT
 
                 // Trigger NMI if NMI is enabled
                 if ( _ppuCtrl.bit.nmiEnable ) {
-                    _bus->cpu.NMI();
+                    TriggerNmi();
                 }
             }
             _preventVBlank = false;
@@ -597,13 +561,23 @@ void PPU::Tick() // NOLINT
     ||                            ||
     ################################
     */
-    u8 const  bgPalette = GetBgPalette();
-    u8 const  spritePalette = GetSpritePalette();
-    u8 const  bgPixel = GetBgPixel();
-    u8 const  spritePixel = GetSpritePixel();
-    u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-    u16 const bufferIndex = ( _scanline * 256 ) + _cycle;
-    _frameBuffer[bufferIndex] = outputPixel;
+    if ( _scanline >= 0 && _scanline < 240 && _cycle >= 0 && _cycle < 256 ) {
+        u8 const  bgPalette = GetBgPalette();
+        u8 const  spritePalette = GetSpritePalette();
+        u8 const  bgPixel = GetBgPixel();
+        u8 const  spritePixel = GetSpritePixel();
+        u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
+        u16       bufferIndex = ( _scanline * 256 ) + _cycle;
+
+        try {
+            _frameBuffer.at( bufferIndex ) = outputPixel;
+        } catch ( std::out_of_range &e ) {
+            std::cerr << e.what() << '\n';
+            std::cerr << "Buffer Index: " << bufferIndex << '\n';
+            std::cerr << "Scanline: " << _scanline << '\n';
+            std::cerr << "Cycle: " << _cycle << '\n';
+        }
+    }
 
     _cycle++;
 
@@ -631,6 +605,16 @@ void PPU::Tick() // NOLINT
 ################################
 */
 
+void PPU::TriggerNmi()
+{
+    if ( _bus == nullptr ) {
+        return;
+    }
+    if ( !_bus->cpu.IsNmiInProgress() ) {
+        _bus->cpu.NMI();
+    }
+}
+
 u16 PPU::ResolveNameTableAddress( u16 addr )
 {
     /* @brief: Resolve the name table address according to the mirror mode, defined in the cartridge.
@@ -643,6 +627,10 @@ u16 PPU::ResolveNameTableAddress( u16 addr )
        by the cartridge before they make it here. 4 Screen mode will return an unmirrored part of the
        address space that's lower than 27FF, and the cartridge will handle the higher part.
      */
+    if ( _bus == nullptr ) {
+        return 0x00;
+    }
+
     MirrorMode const mirrorMode = _bus->cartridge->GetMirrorMode();
 
     switch ( mirrorMode ) {
@@ -1001,5 +989,5 @@ u32 PPU::GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePale
     (void) spritePixel;
     (void) bgPalette;
     (void) spritePalette;
-    return 0xFF0000FF;
+    return _nesPaletteRgbValues[0x31];
 }
