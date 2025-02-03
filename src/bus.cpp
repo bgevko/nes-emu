@@ -5,10 +5,8 @@
 #include <memory>
 #include <utility>
 
-Bus::Bus( const bool useFlatMemory ) : cpu( this ), ppu( this ), _useFlatMemory( useFlatMemory )
+Bus::Bus() : cpu( this ), ppu( this )
 {
-    _ram.fill( 0 );
-    _apuIoMemory.fill( 0 );
 }
 
 /*
@@ -19,7 +17,7 @@ Bus::Bus( const bool useFlatMemory ) : cpu( this ), ppu( this ), _useFlatMemory(
 u8 Bus::Read( const u16 address )
 {
     if ( _useFlatMemory ) {
-        return _flatMemory[address];
+        return _flatMemory.at( address );
     }
 
     // System RAM: 0x0000 - 0x1FFF (mirrored every 2KB)
@@ -58,7 +56,7 @@ u8 Bus::Read( const u16 address )
 void Bus::Write( const u16 address, const u8 data )
 {
     if ( _useFlatMemory ) {
-        _flatMemory[address] = data;
+        _flatMemory.at( address ) = data;
         return;
     }
 

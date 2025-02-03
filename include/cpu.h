@@ -32,6 +32,8 @@ class CPU
     [[nodiscard]] u16 GetProgramCounter() const;
     [[nodiscard]] u64 GetCycles() const;
 
+    [[nodiscard]] bool IsReading2002() const { return _reading2002; }
+
     /*
     ################################
     ||           Setters          ||
@@ -44,6 +46,8 @@ class CPU
     void SetStackPointer( u8 value );
     void SetProgramCounter( u16 value );
     void SetCycles( u64 value );
+
+    void SetReading2002( bool value ) { _reading2002 = value; };
 
     /*
     ################################
@@ -65,6 +69,8 @@ class CPU
     u8                 ReadByte( u16 address ) { return ReadAndTick( address ); }                  // 1 cycle
     u16                ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }               // 2 cycles
     u16 ReadWord( u16 address ) { return ReadByte( address ) | ( ReadByte( address + 1 ) << 8 ); } // 2 cycles
+    bool IsNmiInProgress() const { return _nmiInProgress; }
+    void SetNmiInProgress( bool value ) { _nmiInProgress = value; }
 
     /*
     ################################
@@ -72,9 +78,11 @@ class CPU
     ################################
     */
     std::string               LogLineAtPC( bool verbose = true );
-    [[nodiscard]] std::string GetTrace() const;
-    void                      EnableTracelog();
-    void                      DisableTracelog();
+    [[nodiscard]] std::string GetTrace() const { return _trace; }
+    void                      EnableTracelog() { _traceEnabled = true; }
+    void                      DisableTracelog() { _traceEnabled = false; }
+    void                      EnableJsonTestMode() { _isTestMode = true; }
+    void                      DisableJsonTestMode() { _isTestMode = false; }
 
   private:
     friend class CPUTestFixture; // Used for testing private methods
@@ -100,6 +108,8 @@ class CPU
     bool        _didVblank = false;
     bool        _isWriteModify = false;
     bool        _currentPageCrossPenalty = true;
+    bool        _reading2002 = false;
+    bool        _nmiInProgress = false;
     std::string _instructionName;
     std::string _addrMode;
 

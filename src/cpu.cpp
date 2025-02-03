@@ -472,19 +472,6 @@ void CPU::SetCycles( u64 value )
 ||                                            ||
 ################################################
 */
-[[nodiscard]] std::string CPU::GetTrace() const
-{
-    return _trace;
-}
-
-void CPU::EnableTracelog()
-{
-    _traceEnabled = true;
-}
-void CPU::DisableTracelog()
-{
-    _traceEnabled = false;
-}
 
 std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 {
@@ -633,7 +620,7 @@ void CPU::Write( u16 address, u8 data ) const
 auto CPU::ReadAndTick( u16 address ) -> u8
 {
     if ( address == 0x2002 ) {
-        _bus->ppu.SetIsCpuReadingPpuStatus( true );
+        SetReading2002( true );
     }
     Tick();
     u8 const data = Read( address );
@@ -646,7 +633,7 @@ auto CPU::WriteAndTick( u16 address, u8 data ) -> void
     Tick();
 
     // Writing to PPUCTRL, PPUMASK, PPUSCROLL, and PPUADDR is ignored until after cycle ~29658
-    if ( !_bus->IsTestMode() &&
+    if ( !_isTestMode &&
          ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 ) ) {
         if ( _cycles < 29658 ) {
             return;
@@ -695,7 +682,7 @@ void CPU::Reset()
     _pc = Read( 0xFFFD ) << 8 | Read( 0xFFFC );
 
     // Add 7 cycles
-    if ( !_bus->IsTestMode() ) {
+    if ( !_isTestMode ) {
 
         for ( u8 i = 0; i < 7; i++ ) {
             Tick();
@@ -711,6 +698,10 @@ void CPU::NMI()
      * It interrupts whatever the CPU is doing at its current cycle to go update the PPU.
      * Uses 7 cycles, cannot be disabled.
      */
+
+    // To prevent infinite recursive calls to Tick, we'll use a global flag
+    SetNmiInProgress( true );
+
     // 1) Two dummy cycles (hardware reads the same PC twice, discarding the data)
     Tick();
     Tick();
@@ -734,6 +725,8 @@ void CPU::NMI()
 
     // 7) Update PC
     _pc = static_cast<u16>( high ) << 8 | low;
+
+    SetNmiInProgress( false );
 }
 
 void CPU::IRQ()

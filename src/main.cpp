@@ -5,12 +5,13 @@
 #include "bus.h"
 #include "cartridge.h"
 #include <cstdint>
-// #include <cstring>
+#include <cstring>
 #include <memory>
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <iostream>
 #include <chrono>
+#include <csignal>
 
 using u32 = uint32_t;
 using namespace std;
@@ -19,23 +20,25 @@ constexpr int SCREEN_WIDTH = 512;  // NOLINT
 constexpr int SCREEN_HEIGHT = 480; // NOLINT
 constexpr int NES_WIDTH = 256;     // NOLINT
 constexpr int NES_HEIGHT = 240;    // NOLINT
-// constexpr int BUFFER_SIZE = 61440; // NOLINT
+constexpr int BUFFER_SIZE = 61440; // NOLINT
 
 SDL_Texture *texture = nullptr; // NOLINT
 
-// static void renderFrame( const u32 *frameBufferData )
-// {
-//     void *pixels = nullptr;
-//     int   pitch = 0;
-//
-//     if ( SDL_LockTexture( texture, nullptr, &pixels, &pitch ) == 0 ) {
-//         memcpy( pixels, frameBufferData, BUFFER_SIZE * sizeof( u32 ) );
-//         SDL_UnlockTexture( texture );
-//     }
-// }
+void emulation();
+void signalHandler( int signal );
+void renderFrame( const u32 *frameBufferData );
 
 int main()
 {
+    /*
+    ################################
+    ||                            ||
+    ||       Initialize SDL       ||
+    ||                            ||
+    ################################
+    */
+    std::signal( SIGSEGV, signalHandler );
+
     if ( SDL_Init( SDL_INIT_VIDEO ) != 0 ) {
         std::cerr << "SDL_Init Error: " << SDL_GetError() << '\n';
         return 1;
@@ -69,51 +72,108 @@ int main()
         return 1;
     }
 
+    SDL_Event event;
+
+    /*
+    ################################
+    ||                            ||
+    ||     Initialize Emulator    ||
+    ||                            ||
+    ################################
+    */
     // Initiate the emulator
     Bus bus;
-    CPU cpu = bus.cpu;
-    // PPU ppu = bus.ppu;
 
-    // Load the ROM
+    /*
+    ################################
+    ||          Load ROM          ||
+    ################################
+    */
     shared_ptr<Cartridge> const cartridge = make_shared<Cartridge>( "tests/roms/mario.nes" );
     bus.LoadCartridge( cartridge );
-    cpu.Reset();
+    bus.cpu.Reset();
 
-    // PPU render callback
-    // ppu.onFrameReady = renderFrame;
+    /*
+    ################################
+    ||     PPU Render Callback    ||
+    ################################
+    */
+    bus.ppu.onFrameReady = renderFrame;
 
-    // SDL_Event event;
-
-    // Benchmark stuff
+    /*
+    ################################
+    ||            Time            ||
+    ################################
+    */
     using Clock = chrono::high_resolution_clock;
     auto start = Clock::now();
+    auto lastFpsTime = Clock::now();
+    auto lastPollTime = Clock::now();
+    auto lastRenderTime = Clock::now();
+    auto now = Clock::now();
+    auto fpsElapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
+    auto pollElapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
+    auto renderElapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
+    u16  lastFrame = 0; // Stores the last known frame count
 
+    /*
+    ################################
+    ||                            ||
+    ||       Emulation Loop       ||
+    ||                            ||
+    ################################
+    */
     bool running = true;
     while ( running ) {
-        // while ( SDL_PollEvent( &event ) != 0 ) {
-        //     if ( event.type == SDL_QUIT ) {
-        //         running = false;
-        //     }
-        // }
+        bus.cpu.DecodeExecute();
+        now = Clock::now();
 
-        // Execute the CPU
-        cpu.DecodeExecute();
+        /*
+        ################################
+        ||             FPS            ||
+        ################################
+        */
+        fpsElapsed = chrono::duration_cast<chrono::milliseconds>( now - lastFpsTime ).count();
+        if ( fpsElapsed >= 1000 ) {
+            u16 currentFrame = bus.ppu.GetFrame();
+            u16 framesRendered = currentFrame - lastFrame; // Calculate FPS
+            cout << "FPS: " << framesRendered << '\n';
 
-        if ( cpu.GetCycles() > 1790000 ) {
-            auto now = Clock::now();
-            auto elapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
-            cout << "Elapsed time: " << elapsed << "ms\n";
-            cout << "Total cycles: " << cpu.GetCycles() << "\n";
-            running = false;
+            lastFrame = currentFrame; // Store current frame count
+            lastFpsTime = now;        // Reset FPS timer
         }
 
-        // Clear screen
-        // SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
-        // SDL_RenderClear( renderer );
+        /*
+        ################################
+        ||         SDL Polling        ||
+        ################################
+        */
+        pollElapsed = chrono::duration_cast<chrono::milliseconds>( now - lastPollTime ).count();
+        if ( pollElapsed >= 16 ) {
 
-        // Copy NES framebuffer texture
-        // SDL_RenderCopy( renderer, texture, nullptr, nullptr );
-        // SDL_RenderPresent( renderer );
+            while ( SDL_PollEvent( &event ) ) {
+                switch ( event.type ) {
+                    case SDL_QUIT:
+                        running = false;
+                    default:
+                        break;
+                }
+            }
+            lastPollTime = now;
+        }
+
+        /*
+        ################################
+        ||          Rendering         ||
+        ################################
+        */
+        renderElapsed = chrono::duration_cast<chrono::milliseconds>( now - lastRenderTime ).count();
+        if ( renderElapsed >= 16 ) {
+            SDL_RenderClear( renderer );
+            SDL_RenderCopy( renderer, texture, nullptr, nullptr );
+            SDL_RenderPresent( renderer );
+            lastRenderTime = now;
+        }
     }
 
     // Cleanup
@@ -123,4 +183,31 @@ int main()
     SDL_Quit();
 
     return 0;
+}
+
+/*
+################################
+||                            ||
+||           Helpers          ||
+||                            ||
+################################
+*/
+
+void renderFrame( const u32 *frameBufferData ) // NOLINT
+{
+    void *pixels = nullptr;
+    int   pitch = 0;
+
+    if ( SDL_LockTexture( texture, nullptr, &pixels, &pitch ) == 0 ) {
+        memcpy( pixels, frameBufferData, BUFFER_SIZE * sizeof( u32 ) );
+        SDL_UnlockTexture( texture );
+    }
+}
+
+void signalHandler( int signal )
+{
+    if ( signal == SIGSEGV ) {
+        std::cerr << "Segmentation Fault Detected (SIGSEGV)!\n";
+        std::exit( EXIT_FAILURE );
+    }
 }

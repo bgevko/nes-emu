@@ -28,6 +28,7 @@ _deps/
 
 # Ignore CMake build directory
 /build/
+/linux-build/
 /build_container/
 CMakeFiles/
 CMakeCache.txt
