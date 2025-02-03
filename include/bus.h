@@ -18,7 +18,7 @@ class APU;
 class Bus
 {
   public:
-    Bus( bool useFlatMemory = false );
+    Bus();
 
     /*
     ################################
@@ -45,6 +45,8 @@ class Bus
     ################################
     */
     [[nodiscard]] bool IsTestMode() const;
+    void               EnableJsonTestMode() { _useFlatMemory = true; }
+    void               DisableJsonTesetMode() { _useFlatMemory = false; }
 
   private:
     /*
@@ -59,8 +61,8 @@ class Bus
     ||       Debug Variables      ||
     ################################
     */
-    bool                  _useFlatMemory; // For testing purposes
-    std::array<u8, 65536> _flatMemory{};  // 64KB memory, for early testing
+    bool                  _useFlatMemory = false;
+    std::array<u8, 65536> _flatMemory{}; // 64KB memory, for early testing
 
     /*
     ################################

@@ -14,26 +14,25 @@ class Bus;
 class PPU
 {
   public:
-    explicit PPU( Bus *bus, bool isDisabled = false );
+    PPU( Bus *bus );
 
     /*
     ################################
     ||           Getters          ||
     ################################
     */
-    [[nodiscard]] s16        GetScanline() const;
-    [[nodiscard]] u16        GetCycles() const;
-    [[nodiscard]] u16        GetFrame() const;
     [[nodiscard]] MirrorMode GetMirrorMode();
+    [[nodiscard]] s16        GetScanline() const { return _scanline; }
+    [[nodiscard]] u16        GetCycles() const { return _cycle; }
+    [[nodiscard]] u16        GetFrame() const { return _frame; }
 
     /*
     ################################
     ||           Setters          ||
     ################################
     */
-    void SetScanline( s16 scanline );
-    void SetCycles( u16 cycles );
-    void SetIsCpuReadingPpuStatus( bool isReading );
+    void SetScanline( s16 scanline ) { _scanline = scanline; }
+    void SetCycles( u16 cycles ) { _cycle = cycles; }
 
     /*
     ################################
@@ -78,6 +77,7 @@ class PPU
     u8   GetBgPixel();
     u8   GetSpritePixel();
     u32  GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette );
+    void TriggerNmi();
 
     /*
     ################################
@@ -85,6 +85,14 @@ class PPU
     ################################
     */
     void ( *onFrameReady )( const u32 *frameBuffer ) = nullptr;
+
+    /*
+    ################################
+    ||        Debug Methods       ||
+    ################################
+    */
+    void EnableJsonTestMode() { _isDisabled = true; }
+    void DisableJsonTestMode() { _isDisabled = false; }
 
   private:
     /*
@@ -97,13 +105,13 @@ class PPU
     u64  _frame = 1;
     bool _isRenderingEnabled = false;
     bool _preventVBlank = false;
-    bool _isCpuReadingPpuStatus = false;
 
     /*
     ################################
     ||        SDL Variables       ||
     ################################
     */
+    array<u32, 64>    _nesPaletteRgbValues{};
     array<u32, 61440> _frameBuffer{};
 
     /*
