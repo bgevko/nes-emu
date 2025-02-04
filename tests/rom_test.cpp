@@ -192,6 +192,9 @@ TEST( RomTests, Nestest )
                 break;
             }
 
+            if ( lineIndex == 1601 ) {
+                // Break point!
+            }
             cpu.DecodeExecute(); // Run one CPU cycle
             lineIndex++;
         } catch ( const std::exception &e ) {

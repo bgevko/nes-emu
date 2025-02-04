@@ -11,6 +11,8 @@ using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
 
+using namespace std;
+
 // Forward declaration for reads and writes
 class Bus;
 
@@ -24,15 +26,15 @@ class CPU
     ||           Getters          ||
     ################################
     */
-    [[nodiscard]] u8  GetAccumulator() const;
-    [[nodiscard]] u8  GetXRegister() const;
-    [[nodiscard]] u8  GetYRegister() const;
-    [[nodiscard]] u8  GetStatusRegister() const;
-    [[nodiscard]] u8  GetStackPointer() const;
-    [[nodiscard]] u16 GetProgramCounter() const;
-    [[nodiscard]] u64 GetCycles() const;
-
-    [[nodiscard]] bool IsReading2002() const { return _reading2002; }
+    u8   GetAccumulator() const;
+    u8   GetXRegister() const;
+    u8   GetYRegister() const;
+    u8   GetStatusRegister() const;
+    u8   GetStackPointer() const;
+    u16  GetProgramCounter() const;
+    u64  GetCycles() const;
+    bool IsReading2002() const { return _reading2002; }
+    bool IsNmiInProgress() const { return _nmiInProgress; }
 
     /*
     ################################
@@ -46,43 +48,42 @@ class CPU
     void SetStackPointer( u8 value );
     void SetProgramCounter( u16 value );
     void SetCycles( u64 value );
-
     void SetReading2002( bool value ) { _reading2002 = value; };
+    void SetNmiInProgress( bool value ) { _nmiInProgress = value; }
 
     /*
     ################################
     ||         CPU Methods        ||
     ################################
     */
-    void               Reset();
-    [[nodiscard]] u8   Fetch();
-    void               DecodeExecute();
-    void               Tick();
-    [[nodiscard]] auto Read( u16 address ) const -> u8;
-    [[nodiscard]] auto ReadAndTick( u16 address ) -> u8;
-    void               Write( u16 address, u8 data ) const;
-    void               WriteAndTick( u16 address, u8 data );
-    void               NMI();
-    void               IRQ();
-    u8                 DummyRead() { return ReadAndTick( _pc ); }                                  // 1 cycle
-    u8                 ReadBytePC() { return ReadAndTick( _pc++ ); }                               // 1 cycle
-    u8                 ReadByte( u16 address ) { return ReadAndTick( address ); }                  // 1 cycle
-    u16                ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }               // 2 cycles
+    u8  Fetch();
+    u8  Read( u16 address ) const;
+    u8  ReadAndTick( u16 address );
+    u8  DummyRead() { return ReadAndTick( _pc ); }                                                 // 1 cycle
+    u8  ReadBytePC() { return ReadAndTick( _pc++ ); }                                              // 1 cycle
+    u8  ReadByte( u16 address ) { return ReadAndTick( address ); }                                 // 1 cycle
+    u16 ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }                              // 2 cycles
     u16 ReadWord( u16 address ) { return ReadByte( address ) | ( ReadByte( address + 1 ) << 8 ); } // 2 cycles
-    bool IsNmiInProgress() const { return _nmiInProgress; }
-    void SetNmiInProgress( bool value ) { _nmiInProgress = value; }
+    void Reset();
+    void DecodeExecute();
+    void Tick();
+    void Write( u16 address, u8 data ) const;
+    void WriteAndTick( u16 address, u8 data );
+    void NMI();
+    void IRQ();
+    void ExecuteFrame();
 
     /*
     ################################
     ||        Debug Methods       ||
     ################################
     */
-    std::string               LogLineAtPC( bool verbose = true );
-    [[nodiscard]] std::string GetTrace() const { return _trace; }
-    void                      EnableTracelog() { _traceEnabled = true; }
-    void                      DisableTracelog() { _traceEnabled = false; }
-    void                      EnableJsonTestMode() { _isTestMode = true; }
-    void                      DisableJsonTestMode() { _isTestMode = false; }
+    string LogLineAtPC( bool verbose = true );
+    string GetTrace() const { return _trace; }
+    void   EnableTracelog() { _traceEnabled = true; }
+    void   DisableTracelog() { _traceEnabled = false; }
+    void   EnableJsonTestMode() { _isTestMode = true; }
+    void   DisableJsonTestMode() { _isTestMode = false; }
 
   private:
     friend class CPUTestFixture; // Used for testing private methods
@@ -105,23 +106,23 @@ class CPU
     ||      Global Variables      ||
     ################################
     */
-    bool        _didVblank = false;
-    bool        _isWriteModify = false;
-    bool        _currentPageCrossPenalty = true;
-    bool        _reading2002 = false;
-    bool        _nmiInProgress = false;
-    std::string _instructionName;
-    std::string _addrMode;
+    bool   _didVblank = false;
+    bool   _isWriteModify = false;
+    bool   _currentPageCrossPenalty = true;
+    bool   _reading2002 = false;
+    bool   _nmiInProgress = false;
+    string _instructionName;
+    string _addrMode;
 
     /*
     ################################
     ||       Debug Variables      ||
     ################################
     */
-    bool        _isTestMode = false;
-    bool        _traceEnabled = false;
-    bool        _didTrace = false;
-    std::string _trace;
+    bool   _isTestMode = false;
+    bool   _traceEnabled = false;
+    bool   _didTrace = false;
+    string _trace;
 
     /*
     ################################
@@ -136,8 +137,8 @@ class CPU
     ################################
     */
     struct InstructionData {
-        std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
-        std::string addrMode;                    // Addressing mode mnemonic (e.g. ABS, ZPG)
+        string name;                             // Instruction mnemonic (e.g. LDA, STA)
+        string addrMode;                         // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
@@ -150,7 +151,7 @@ class CPU
                                     // spending an extra cycle
     };
     // Opcode table
-    std::array<InstructionData, 256> _opcodeTable;
+    array<InstructionData, 256> _opcodeTable;
 
     /*
     ################################
@@ -170,10 +171,10 @@ class CPU
     };
 
     // Flag methods
-    void               SetFlags( u8 flag );
-    void               ClearFlags( u8 flag );
-    [[nodiscard]] auto IsFlagSet( u8 flag ) const -> bool;
-    void               SetZeroAndNegativeFlags( u8 value );
+    void SetFlags( u8 flag );
+    void ClearFlags( u8 flag );
+    bool IsFlagSet( u8 flag ) const;
+    void SetZeroAndNegativeFlags( u8 value );
 
     // Load and store helpers
     void LoadRegister( u16 address, u8 &reg );
@@ -186,26 +187,26 @@ class CPU
     void CompareAddressWithRegister( u16 address, u8 reg );
 
     // Push/Pop helper
-    void               StackPush( u8 value );
-    [[nodiscard]] auto StackPop() -> u8;
+    void StackPush( u8 value );
+    u8   StackPop();
 
     /*
     ################################
     ||      Addressing Modes      ||
     ################################
     */
-    auto IMP() -> u16;  // Implicit
-    auto IMM() -> u16;  // Immediate
-    auto ZPG() -> u16;  // Zero Page
-    auto ZPGX() -> u16; // Zero Page X
-    auto ZPGY() -> u16; // Zero Page Y
-    auto ABS() -> u16;  // Absolute
-    auto ABSX() -> u16; // Absolute X
-    auto ABSY() -> u16; // Absolute Y
-    auto IND() -> u16;  // Indirect
-    auto INDX() -> u16; // Indirect X
-    auto INDY() -> u16; // Indirect Y
-    auto REL() -> u16;  // Relative
+    u16 IMP();  // Implicit
+    u16 IMM();  // Immediate
+    u16 ZPG();  // Zero Page
+    u16 ZPGX(); // Zero Page X
+    u16 ZPGY(); // Zero Page Y
+    u16 ABS();  // Absolute
+    u16 ABSX(); // Absolute X
+    u16 ABSY(); // Absolute Y
+    u16 IND();  // Indirect
+    u16 INDX(); // Indirect X
+    u16 INDY(); // Indirect Y
+    u16 REL();  // Relative
 
     /*
     ################################

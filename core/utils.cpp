@@ -1,6 +1,9 @@
 #include "utils.h"
 #include <cstddef>
+#include <cstdint>
 #include <exception>
+#include <iostream>
+#include <fstream>
 #include <regex>
 #include <stdexcept>
 #include <string>

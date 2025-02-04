@@ -3,8 +3,11 @@
 #include "utils.h"
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
+#include <exception>
+#include <cstdlib>
 #include <iostream>
 #include <ostream>
+#include <stdexcept>
 
 PPU::PPU( Bus *bus ) : _bus( bus )
 {
@@ -56,7 +59,6 @@ PPU::PPU( Bus *bus ) : _bus( bus )
         _addrLatch = false;
         _bus->cpu.SetReading2002( false );
         _preventVBlank = false;
-        _dataBuffer = data;
         return data;
     }
 
@@ -71,7 +73,7 @@ PPU::PPU( Bus *bus ) : _bus( bus )
             return 0xFF;
         }
 
-        return _oam.at( _oamAddr );
+        return _oam.at( _oamAddr & 0xFF );
     }
 
     // 2007: PPU Data
@@ -151,7 +153,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
                 return;
             }
             // Write to OAM
-            _oam.at( _oamAddr ) = data;
+            _oam.at( _oamAddr & 0xFF ) = data;
 
             // Increment OAM address
             _oamAddr = ( _oamAddr + 1 ) & 0xFF;
@@ -281,7 +283,7 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
 
         u16 const nametableAddr = ResolveNameTableAddress( address );
 
-        return _nameTables.at( nametableAddr );
+        return _nameTables.at( nametableAddr & 0x07FF );
     }
 
     // $3F00-$3FFF: Palettes
@@ -346,7 +348,7 @@ void PPU::Write( u16 address, u8 data )
             return;
         }
         u16 const nametableAddr = ResolveNameTableAddress( address );
-        _nameTables.at( nametableAddr ) = data;
+        _nameTables.at( nametableAddr & 0x07FF ) = data;
         return;
     }
 
@@ -359,7 +361,7 @@ void PPU::Write( u16 address, u8 data )
             address -= 0x0010;
         }
 
-        _paletteMemory.at( address ) = data;
+        _paletteMemory.at( address & 0x1F ) = data;
     }
 }
 
@@ -372,9 +374,9 @@ void PPU::Write( u16 address, u8 data )
 */
 void PPU::Tick() // NOLINT
 {
-    // if ( _isDisabled ) {
-    //     return;
-    // }
+    if ( _isDisabled ) {
+        return;
+    }
 
     /*
     ################################
@@ -567,7 +569,7 @@ void PPU::Tick() // NOLINT
         u8 const  bgPixel = GetBgPixel();
         u8 const  spritePixel = GetSpritePixel();
         u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-        u16       bufferIndex = ( _scanline * 256 ) + _cycle;
+        u16 const bufferIndex = ( _scanline * 256 ) + _cycle;
 
         try {
             _frameBuffer.at( bufferIndex ) = outputPixel;
@@ -957,19 +959,44 @@ void PPU::IncrementScrollY()
     _vramAddr.bit.coarseY++;
 }
 
+u8 PPU::GetBgPixel() // NOLINT
+{
+    if ( _ppuMask.bit.renderBackground == 0 ) {
+        return 0x00;
+    }
+
+    if ( _ppuMask.bit.renderBackgroundLeft == 0 && _cycle < 9 ) {
+        return 0x00;
+    }
+
+    // Compute a bitmask to select the correct bit for the current pixel,
+    // taking into account the fine x scrolling offset.
+    u16 const mask = 0x8000 >> _fineX;
+    // Extract the background pixel bits:
+    // - The high pattern shifter gives a value of 2 if its bit is set.
+    // - The low pattern shifter gives a value of 1 if its bit is set.
+    // Combining them yields a 2-bit pixel index (0-3).
+    u8 const bgPixel =
+        ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
+    return bgPixel;
+}
+
 u8 PPU::GetBgPalette() // NOLINT
 {
-    // TODO: Implement
-    return 0x00;
+    if ( _ppuMask.bit.renderBackground == 0 ) {
+        return 0x00;
+    }
+
+    if ( _ppuMask.bit.renderBackgroundLeft == 0 && _cycle < 9 ) {
+        return 0x00;
+    }
+    // Compute a bitmask to select the correct bit for the current pixel
+    u16 const mask = 0x8000 >> _fineX;
+    // Combining them yields a 2-bit pixel index (0-3).
+    return ( ( _bgShiftAttributeHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftAttributeLow & mask ) ? 0b01 : 0 );
 }
 
 u8 PPU::GetSpritePalette() // NOLINT
-{
-    // TODO: Implement
-    return 0x00;
-}
-
-u8 PPU::GetBgPixel() // NOLINT
 {
     // TODO: Implement
     return 0x00;
@@ -984,10 +1011,27 @@ u8 PPU::GetSpritePixel() // NOLINT
 
 u32 PPU::GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette ) // NOLINT
 {
-    // TODO: Implement
+    // u8 fgPriority = 0; // TODO: Fetch from sprite
+    // u8 pixel = 0x00;
+    // u8 palette = 0x00;
+    //
+    // // (fg_pixel != 0) yields 1 if fg_pixel is nonzero (visible).
+    // // (bg_pixel == 0) yields 1 if the background is transparent.
+    // // Their bitwise combination with fg_priority tells us if we should use fg.
+    // int mask = -( ( ( bgPixel != 0 ) & ( ( spritePixel == 0 ) | fgPriority ) ) );
+    //
+    // // If mask == -1 (all ones), the foreground values are chosen.
+    // // If mask == 0, the background values are selected.
+    // pixel = (uint8_t) ( ( mask & spritePixel ) | ( ( ~mask ) & bgPixel ) );
+    // palette = (uint8_t) ( ( mask & spritePalette ) | ( ( ~mask ) & bgPalette ) );
+    //
+    // u16 paletteAddr = 0x3F00 + ( palette << 2 ) + pixel;
+    // u8  paletteIdx = Read( paletteAddr ) & 0x3F;
+    u8 const paletteIdx = Read( 0x3F00 ) & 0x3F;
     (void) bgPixel;
     (void) spritePixel;
     (void) bgPalette;
     (void) spritePalette;
-    return _nesPaletteRgbValues[0x31];
+
+    return _nesPaletteRgbValues[paletteIdx];
 }

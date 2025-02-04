@@ -2,11 +2,14 @@
 #include "SDL2/SDL_pixels.h"
 #include "SDL2/SDL_render.h"
 #include "SDL2/SDL_video.h"
+#include <SDL2/SDL_events.h>
 #include "bus.h"
 #include "cartridge.h"
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <ratio>
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <iostream>
@@ -24,9 +27,8 @@ constexpr int BUFFER_SIZE = 61440; // NOLINT
 
 SDL_Texture *texture = nullptr; // NOLINT
 
-void emulation();
-void signalHandler( int signal );
-void renderFrame( const u32 *frameBufferData );
+void signalHandler( int signal );               // NOLINT
+void renderFrame( const u32 *frameBufferData ); // NOLINT
 
 int main()
 {
@@ -89,7 +91,7 @@ int main()
     ||          Load ROM          ||
     ################################
     */
-    shared_ptr<Cartridge> const cartridge = make_shared<Cartridge>( "tests/roms/mario.nes" );
+    shared_ptr<Cartridge> const cartridge = make_shared<Cartridge>( "tests/roms/color_test.nes" );
     bus.LoadCartridge( cartridge );
     bus.cpu.Reset();
 
@@ -107,6 +109,7 @@ int main()
     */
     using Clock = chrono::high_resolution_clock;
     auto start = Clock::now();
+    auto lastExecuteTime = Clock::now();
     auto lastFpsTime = Clock::now();
     auto lastPollTime = Clock::now();
     auto lastRenderTime = Clock::now();
@@ -115,6 +118,10 @@ int main()
     auto pollElapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
     auto renderElapsed = chrono::duration_cast<chrono::milliseconds>( now - start ).count();
     u16  lastFrame = 0; // Stores the last known frame count
+
+    // constexpr auto targetFrameTime = 1000.0 / 60.0;
+    constexpr auto targetFrameTime = 1000.0;
+    auto           executeElapsed = std::chrono::duration<double, milli>( now - start ).count();
 
     /*
     ################################
@@ -125,8 +132,18 @@ int main()
     */
     bool running = true;
     while ( running ) {
-        bus.cpu.DecodeExecute();
         now = Clock::now();
+
+        /*
+        ################################
+        ||        Execute Frame       ||
+        ################################
+        */
+        executeElapsed = std::chrono::duration<double, milli>( now - lastExecuteTime ).count();
+        if ( executeElapsed >= targetFrameTime ) {
+            bus.cpu.ExecuteFrame();
+            lastExecuteTime = now;
+        }
 
         /*
         ################################
@@ -135,8 +152,8 @@ int main()
         */
         fpsElapsed = chrono::duration_cast<chrono::milliseconds>( now - lastFpsTime ).count();
         if ( fpsElapsed >= 1000 ) {
-            u16 currentFrame = bus.ppu.GetFrame();
-            u16 framesRendered = currentFrame - lastFrame; // Calculate FPS
+            u16 const currentFrame = bus.ppu.GetFrame();
+            u16 const framesRendered = currentFrame - lastFrame; // Calculate FPS
             cout << "FPS: " << framesRendered << '\n';
 
             lastFrame = currentFrame; // Store current frame count
