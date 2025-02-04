@@ -3,8 +3,11 @@
 #include "utils.h"
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
+#include <exception>
+#include <cstdlib>
 #include <iostream>
 #include <ostream>
+#include <stdexcept>
 
 PPU::PPU( Bus *bus ) : _bus( bus )
 {
@@ -566,7 +569,7 @@ void PPU::Tick() // NOLINT
         u8 const  bgPixel = GetBgPixel();
         u8 const  spritePixel = GetSpritePixel();
         u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-        u16       bufferIndex = ( _scanline * 256 ) + _cycle;
+        u16       const bufferIndex = ( _scanline * 256 ) + _cycle;
 
         try {
             _frameBuffer.at( bufferIndex ) = outputPixel;
@@ -968,12 +971,12 @@ u8 PPU::GetBgPixel() // NOLINT
 
     // Compute a bitmask to select the correct bit for the current pixel,
     // taking into account the fine x scrolling offset.
-    u16 mask = 0x8000 >> _fineX;
+    u16 const mask = 0x8000 >> _fineX;
     // Extract the background pixel bits:
     // - The high pattern shifter gives a value of 2 if its bit is set.
     // - The low pattern shifter gives a value of 1 if its bit is set.
     // Combining them yields a 2-bit pixel index (0-3).
-    u8 bgPixel = ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
+    u8 const bgPixel = ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
     return bgPixel;
 }
 
@@ -987,7 +990,7 @@ u8 PPU::GetBgPalette() // NOLINT
         return 0x00;
     }
     // Compute a bitmask to select the correct bit for the current pixel
-    u16 mask = 0x8000 >> _fineX;
+    u16 const mask = 0x8000 >> _fineX;
     // Combining them yields a 2-bit pixel index (0-3).
     return ( ( _bgShiftAttributeHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftAttributeLow & mask ) ? 0b01 : 0 );
 }
@@ -1023,7 +1026,7 @@ u32 PPU::GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePale
     //
     // u16 paletteAddr = 0x3F00 + ( palette << 2 ) + pixel;
     // u8  paletteIdx = Read( paletteAddr ) & 0x3F;
-    u8 paletteIdx = Read( 0x3F00 ) & 0x3F;
+    u8 const paletteIdx = Read( 0x3F00 ) & 0x3F;
     (void) bgPixel;
     (void) spritePixel;
     (void) bgPalette;

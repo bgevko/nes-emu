@@ -105,7 +105,7 @@ lint)
 # Handle building
 build)
   echo "Running build tasks..."
-  ./scripts/build.sh
+  ./scripts/build.sh tests
   ;;
 
 # Handle testing
