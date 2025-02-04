@@ -157,9 +157,9 @@ inline array<uint32_t, 64> readPalette( const string &filename )
 
     // Convert to 32-bit RGBA (SDL_PIXELFORMAT_RGBA32)
     for ( int i = 0; i < 64; ++i ) {
-        uint8_t const red = buffer[(i * 3) + 0];
-        uint8_t const green = buffer[(i * 3) + 1];
-        uint8_t const blue = buffer[(i * 3) + 2];
+        uint8_t const red = buffer[( i * 3 ) + 0];
+        uint8_t const green = buffer[( i * 3 ) + 1];
+        uint8_t const blue = buffer[( i * 3 ) + 2];
         uint8_t const alpha = 0xFF;
         nesPalette[i] = ( alpha << 24 ) | ( blue << 16 ) | ( green << 8 ) | red;
     }

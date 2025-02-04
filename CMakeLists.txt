@@ -55,13 +55,13 @@ include(FetchContent)
 ]]
 # All emulation functionality is built as a static library.
 add_library(emu_core STATIC
-  src/cpu.cpp
-  src/bus.cpp
-  src/cartridge.cpp
-  src/ppu.cpp
-  src/mappers/mapper0.cpp
-  src/mappers/mapper1.cpp
-  src/utils.cpp
+  core/cpu.cpp
+  core/bus.cpp
+  core/cartridge.cpp
+  core/ppu.cpp
+  core/mappers/mapper0.cpp
+  core/mappers/mapper1.cpp
+  core/utils.cpp
 )
 target_include_directories(emu_core PUBLIC ${EMU_CORE_INCLUDES})
 if(MSVC)
@@ -82,7 +82,7 @@ endif()
 # additional SDL-specific files you might add later) and links against emu_core.
 if(BUILD_FRONTEND)
   add_executable(emu
-          src/main.cpp
+          frontend/main.cpp
   )
   target_include_directories(emu PRIVATE ${EMU_CORE_INCLUDES})
   target_link_libraries(emu PRIVATE emu_core)

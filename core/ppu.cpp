@@ -569,7 +569,7 @@ void PPU::Tick() // NOLINT
         u8 const  bgPixel = GetBgPixel();
         u8 const  spritePixel = GetSpritePixel();
         u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-        u16       const bufferIndex = ( _scanline * 256 ) + _cycle;
+        u16 const bufferIndex = ( _scanline * 256 ) + _cycle;
 
         try {
             _frameBuffer.at( bufferIndex ) = outputPixel;
@@ -976,7 +976,8 @@ u8 PPU::GetBgPixel() // NOLINT
     // - The high pattern shifter gives a value of 2 if its bit is set.
     // - The low pattern shifter gives a value of 1 if its bit is set.
     // Combining them yields a 2-bit pixel index (0-3).
-    u8 const bgPixel = ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
+    u8 const bgPixel =
+        ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
     return bgPixel;
 }
 
