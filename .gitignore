@@ -109,7 +109,8 @@ CTestCostData.txt
 bin/
 obj/
 fceux/
-tests/output/
+tests/output/*
+!tests/output/.gitkeep
 
 # Ignore any other common or custom build directories
 /build/

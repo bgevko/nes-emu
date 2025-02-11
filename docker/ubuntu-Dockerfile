@@ -41,6 +41,7 @@ ENV CXX=/usr/bin/clang++-19
 ENV CMAKE_C_COMPILER=/usr/bin/clang-19
 ENV CMAKE_CXX_COMPILER=/usr/bin/clang++-19
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/ninja
+ENV CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=/usr/bin/clang-scan-deps-19
 ENV VCPKG_ROOT=/root/vcpkg
 ENV PATH="$VCPKG_ROOT:$PATH"
 
