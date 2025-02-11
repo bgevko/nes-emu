@@ -1,0 +1,111 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 5
+  },
+  "$comment": "CMakePresets.json for NES Emulator Project",
+  "configurePresets": [
+    {
+      "name": "default",
+      "description": "Builds everything (emulator core, front end, and tests)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/$env{BUILD_DIR}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/deps/vcpkg_installed",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg.json",
+        "VCPKG_MANIFEST_INSTALL": "OFF",
+        "BUILD_FRONTEND": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "BUILD_TESTS": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Release"
+        },
+        "CMAKE_THREAD_LIBS_INIT": {
+          "type": "STRING",
+          "value": "-pthread"
+        },
+        "CMAKE_HAVE_THREADS_LIBRARY": {
+          "type": "BOOL",
+          "value": "1"
+        },
+        "THREADS_PREFER_PTHREAD_FLAG": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      },
+      "environment": {
+        "CC": "$penv{CC}",
+        "CXX": "$penv{CXX}"
+      }
+    },
+    {
+      "name": "tests",
+      "description": "Builds core + tests, no frontend. Used in the CI pipeline",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_FRONTEND": {
+          "type": "BOOL",
+          "value": "OFF"
+        }
+      }
+    },
+    {
+      "name": "debug",
+      "description": "Debug build with extra debug information",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Debug"
+        }
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "description": "Windows build with MSVC, used in Visual Studio on windows machines",
+      "inherits": "default",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "/W4 /WX"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "tests",
+      "configurePreset": "tests"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "output": { "outputOnFailure": true },
+      "execution": { "stopOnFailure": true }
+    }
+  ]
+}
