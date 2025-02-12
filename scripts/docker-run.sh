@@ -15,7 +15,11 @@ DOCKER_COMMON=(
 
 case "${1:-}" in
 build | lint | test)
-  docker run "${DOCKER_COMMON[@]}" "$IMAGE" "${1}"
+  if [ -n "${2:-}" ]; then
+    docker run "${DOCKER_COMMON[@]}" "$IMAGE" "${1}" "${2}"
+  else
+    docker run "${DOCKER_COMMON[@]}" "$IMAGE" "${1}"
+  fi
   ;;
 bash)
   if [ "${2:-}" = "--no-mount" ]; then

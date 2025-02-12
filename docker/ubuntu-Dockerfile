@@ -2,8 +2,8 @@ FROM ubuntu:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Linux deps
-RUN apt-get update && apt-get install -y \
+# Deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     wget \
     libssl-dev \
@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     clang-19 \
     clang-tools-19 \
+    clang-format-19 \
+    clang-tidy-19 \
     lld-19 \
     git \
     ca-certificates \
@@ -20,7 +22,12 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     tar \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/clang-19 /usr/bin/clang \
+    && ln -s /usr/bin/clang++-19 /usr/bin/clang++ \
+    && ln -s /usr/bin/clang-tools-19 /usr/bin/clang-tools \
+    && ln -s /usr/bin/clang-format-19 /usr/bin/clang-format \
+    && ln -s /usr/bin/clang-tidy-19 /usr/bin/clang-tidy
 
 # Build and install CMake 3.31.5 from source.
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5.tar.gz && \
@@ -31,9 +38,6 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5
     make install && \
     cd .. && \
     rm -rf cmake-3.31.5 cmake-3.31.5.tar.gz
-
-# Verify CMake version (optional)
-RUN cmake --version
 
 # Set environment variables for compilers and tools
 ENV CC=/usr/bin/clang-19
@@ -54,14 +58,10 @@ VOLUME ["/workspace/build"]
 VOLUME ["/workspace/deps"]
 
 # Install vcpkg and dependencies
-RUN mkdir "$VCPKG_ROOT"
-RUN git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT" && \ 
-  "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
-RUN mkdir /workspace/deps
-COPY deps/vcpkg-ci.json /workspace/deps/vcpkg.json
-RUN cd /workspace/deps && vcpkg install
+RUN mkdir "$VCPKG_ROOT" && git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT" && \ 
+  "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics && mkdir /workspace/deps
+COPY deps/vcpkg-ci.json /workspace/deps/vcpkg.json && cd /workspace/deps && vcpkg install
 
 # Entrypoinst script
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

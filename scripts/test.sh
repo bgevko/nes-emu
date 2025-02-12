@@ -1,11 +1,15 @@
 #!/bin/bash
+set -euo pipefail
+
 # scripts/test.sh
-# Optional test script to run CTest in the build directory
-# Give file permission to execute: chmod +x scripts/test.sh
+# Optional test script to run CTest in the build directory.
+# To use, set proper permissions: chmod +x scripts/test.sh
 # Run script: ./scripts/test.sh
+
 BUILD_DIR="build"
 
-cd "$(dirname "$0")/.." || exit 1 # run from the project root directory
+# Navigate to the project root directory
+cd "$(dirname "$0")/.." || exit 1
 
 # Navigate to the build directory and run ctest
 cd "$BUILD_DIR" || {
@@ -13,16 +17,26 @@ cd "$BUILD_DIR" || {
   exit 1
 }
 
-# Run specific test if provided, otherwise run all tests
-if [ -n "$1" ]; then
+# Dynamically determine the number of cores
+if [ -n "${CI:-}" ]; then
+  CORES=2
+elif command -v nproc >/dev/null 2>&1; then
+  CORES=$(nproc)
+elif [ "$(uname)" = "Darwin" ]; then
+  CORES=$(sysctl -n hw.ncpu)
+else
+  CORES=2
+fi
+
+# Run specific test if provided, otherwise run all tests in parallel
+if [ -n "${1:-}" ]; then
   echo "Running specific test: $1"
   ctest -R "$1" -V # Matches test names against provided pattern
 else
-  echo "Running all tests"
-  ctest
+  echo "Running all tests in parallel on $CORES core(s)"
+  ctest -j "$CORES"
 fi
 
-# Isolating a specific test locally
-# ./scripts/test.sh "CPUTestFixture.IMM" # Immediate addressing test
-# ./scripts/test.sh "CPUTestFixture.xEA" # Test for opcode 0xEA (JMP)
-
+# Example usage:
+# ./scripts/test.sh "CPUTestFixture.IMM"   # Run a specific test
+# ./scripts/test.sh                      # Run all tests in parallel
