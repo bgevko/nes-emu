@@ -1,0 +1,42 @@
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 5f76a1faac4bd95499e472d6db1dbfec5683a53bf41f0018e1e017003b68d1fd
+Status: install ok installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 8cf353dbe092db26848cef609f838664a03ce3812e97226fe3a2265f8d455270
+Status: install ok installed
+
+Package: fmt
+Version: 11.0.2
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 179e9602c15b439756b8ea8f2fc64842a47bae72f090241491650dd8c9bc75e1
+Description: {fmt} is an open-source formatting library providing a fast and safe alternative to C stdio and C++ iostreams.
+Status: install ok installed
+
+Package: gtest
+Version: 1.15.2
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 61673ea55c3debc3df34e81a35174fb51754327b92001a56a3395f5166ae4498
+Description: Google Testing and Mocking Framework
+Status: install ok installed
+
+Package: sdl2
+Version: 2.30.12
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: arm64-osx
+Multi-Arch: same
+Abi: 5e2b4528b3923e89557f0e8e3f7663dd05fefb2912ed84ab5821f3e0ad997eed
+Description: Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D.
+Status: install ok installed
+
