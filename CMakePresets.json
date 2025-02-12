@@ -10,7 +10,7 @@
       "name": "default",
       "description": "Builds everything (emulator core, front end, and tests)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/$env{BUILD_DIR}",
+      "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/deps/vcpkg_installed",
