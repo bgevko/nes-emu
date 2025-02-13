@@ -49,6 +49,10 @@
         "BUILD_FRONTEND": {
           "type": "BOOL",
           "value": "OFF"
+        },
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-Werror"
         }
       }
     },
@@ -60,6 +64,10 @@
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
           "value": "Debug"
+        },
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-Werror"
         }
       }
     }

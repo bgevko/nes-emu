@@ -8,16 +8,6 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 # Project setup
 project( nes_emu VERSION 0.1 LANGUAGES CXX )
 
-# Set clang as the default compiler if available
-find_program( CLANGXX clang++ )
-
-if( CLANGXX )
-  set( CMAKE_CXX_COMPILER ${CLANGXX} )
-  message( STATUS "Clang compiler found: ${CLANGXX}" )
-else()
-  message( STATUS "Using default compiler" )
-endif()
-
 # Includes
 set(CORE_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
@@ -103,7 +93,7 @@ if(BUILD_TESTS)
     add_executable(${TARGET_NAME} ${SOURCE_FILE})
     target_include_directories(${TARGET_NAME} PRIVATE ${ALL_INCLUDES})
     target_link_libraries(${TARGET_NAME} PRIVATE emu_core GTest::gtest_main)
-    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror -O2)
+    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic -O2)
     gtest_discover_tests(${TARGET_NAME} PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endfunction()
 
