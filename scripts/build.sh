@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # scripts/build.sh
-# Usage: ./scripts/build.sh [full|tests]
+# Usage: ./scripts/build.sh [full|ci]
 #  - "full" (or no argument): build the full emulator (SDL frontend, core, and tests)
-#  - "tests": build only the test executables (core + tests)
+#  - "ci": build only the test executables (core + tests)
 #
 # This script automatically selects a build directory based on whether it's running inside Docker.
 export BUILD_DIR="build"
@@ -13,17 +13,20 @@ export BUILD_DIR="build"
 # When running in Docker, we default to the "tests" preset.
 if [ -z "${1:-}" ] || [ "$1" == "full" ]; then
   if [ -f /.dockerenv ]; then
-    echo "Configuring build for: TESTS only (core + tests, no frontend) due to Docker environment"
-    PRESET="tests"
+    echo "Configuring build for: CI mode (core + tests, no frontend) due to Docker environment"
+    PRESET="ci"
   else
     echo "Configuring build for: FULL (SDL, core files, and tests)"
     PRESET="default"
   fi
-elif [ "$1" == "tests" ]; then
-  echo "Configuring build for: TESTS only (core + tests, no frontend)"
-  PRESET="tests"
+elif [ "$1" == "ci" ]; then
+  echo "Configuring build for: CI mode (core + tests, no frontend)"
+  PRESET="ci"
+elif [ "$1" == "debug" ]; then
+  echo "Configuring build for: DEBUG mode (full debug symbols)"
+  PRESET="debug"
 else
-  echo "Usage: $0 [full|tests]"
+  echo "Usage: $0 [full|ci|debug]"
   exit 1
 fi
 

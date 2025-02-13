@@ -9,12 +9,13 @@
     {
       "name": "default",
       "description": "Builds everything (emulator core, front end, and tests)",
+      "inherits": "user-specific",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/deps/vcpkg_installed",
-        "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg.json",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/vcpkg.json",
         "VCPKG_MANIFEST_INSTALL": "OFF",
         "BUILD_FRONTEND": {
           "type": "BOOL",
@@ -36,14 +37,10 @@
           "type": "BOOL",
           "value": "ON"
         }
-      },
-      "environment": {
-        "CC": "$penv{CC}",
-        "CXX": "$penv{CXX}"
       }
     },
     {
-      "name": "tests",
+      "name": "ci",
       "description": "Builds core + tests, no frontend. Used in the CI pipeline",
       "inherits": "default",
       "cacheVariables": {
@@ -65,19 +62,13 @@
       }
     },
     {
-      "name": "windows-msvc",
+      "name": "windows",
       "description": "Windows build with MSVC, used in Visual Studio on windows machines",
       "inherits": "default",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
-      },
-      "cacheVariables": {
-        "CMAKE_CXX_FLAGS": {
-          "type": "STRING",
-          "value": "/W4 /WX"
-        }
       }
     }
   ],
