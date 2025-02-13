@@ -8,9 +8,8 @@
   "configurePresets": [
     {
       "name": "default",
-      "description": "Builds everything (emulator core, front end, and tests)",
-      "inherits": "user-specific",
       "generator": "Ninja",
+      "description": "Base settings common to all builds.",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -37,6 +36,9 @@
           "type": "BOOL",
           "value": "ON"
         }
+      },
+      "environment": {
+        "VCPKG_ROOT": "$penv{VCPKG_ROOT}"
       }
     },
     {
@@ -52,23 +54,13 @@
     },
     {
       "name": "debug",
-      "description": "Debug build with extra debug information",
+      "description": "Debug build",
       "inherits": "default",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
           "value": "Debug"
         }
-      }
-    },
-    {
-      "name": "windows",
-      "description": "Windows build with MSVC, used in Visual Studio on windows machines",
-      "inherits": "default",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
       }
     }
   ],
@@ -78,8 +70,8 @@
       "configurePreset": "default"
     },
     {
-      "name": "tests",
-      "configurePreset": "tests"
+      "name": "ci",
+      "configurePreset": "ci"
     },
     {
       "name": "debug",

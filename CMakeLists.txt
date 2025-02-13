@@ -8,6 +8,16 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 # Project setup
 project( nes_emu VERSION 0.1 LANGUAGES CXX )
 
+# Set clang as the default compiler if available
+find_program( CLANGXX clang++ )
+
+if( CLANGXX )
+  set( CMAKE_CXX_COMPILER ${CLANGXX} )
+  message( STATUS "Clang compiler found: ${CLANGXX}" )
+else()
+  message( STATUS "Using default compiler" )
+endif()
+
 # Includes
 set(CORE_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)

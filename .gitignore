@@ -124,4 +124,6 @@ list.md
 
 # vcpkg
 vcpkg_installed/
+
+# CMake
 CMakeUserPresets.json

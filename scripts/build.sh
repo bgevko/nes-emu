@@ -2,15 +2,16 @@
 set -euo pipefail
 
 # scripts/build.sh
-# Usage: ./scripts/build.sh [full|ci]
+# Usage: ./scripts/build.sh
 #  - "full" (or no argument): build the full emulator (SDL frontend, core, and tests)
 #  - "ci": build only the test executables (core + tests)
+#  - "my-preset": Whatever custom preset you define in CMakeUserPresets.json
 #
 # This script automatically selects a build directory based on whether it's running inside Docker.
 export BUILD_DIR="build"
 
 # Determine build configuration based on the command-line argument.
-# When running in Docker, we default to the "tests" preset.
+# When running in Docker, we default to the "ci" preset.
 if [ -z "${1:-}" ] || [ "$1" == "full" ]; then
   if [ -f /.dockerenv ]; then
     echo "Configuring build for: CI mode (core + tests, no frontend) due to Docker environment"
@@ -19,15 +20,6 @@ if [ -z "${1:-}" ] || [ "$1" == "full" ]; then
     echo "Configuring build for: FULL (SDL, core files, and tests)"
     PRESET="default"
   fi
-elif [ "$1" == "ci" ]; then
-  echo "Configuring build for: CI mode (core + tests, no frontend)"
-  PRESET="ci"
-elif [ "$1" == "debug" ]; then
-  echo "Configuring build for: DEBUG mode (full debug symbols)"
-  PRESET="debug"
-else
-  echo "Usage: $0 [full|ci|debug]"
-  exit 1
 fi
 
 # Navigate to the project root directory.
