@@ -1,10 +1,6 @@
 # Docker Tools
 
-Docker tools that are used in the CI/CD pipeline are also available locally.
-
 ## Setup
-
----
 
 If applicable, remove the old `project-linter` image:
 
@@ -19,12 +15,38 @@ docker build --no-cache -t project-linter2 -f docker/ubuntu-Dockerfile .
 ```
 
 Subsequent rebuilds can be done without the `--no-cache` flag.
-
-```bash
-docker build -t project-linter -f docker/ubuntu-Dockerfile .
-```
-
 You'll want to rebuild after:
 
 - Updating `scripts/entrypoint.sh`
 - Adding or removing dependencies in `docker-vcpkg/vcpkg.json`
+
+## Build Project
+```bash
+docker run --rm \                                                                                               ─╯
+    -v "$(pwd):/workspace" \
+    -v build:/workspace/build \
+    -v docker-vcpkg:/workspace/docker-vcpkg \
+    -w /workspace \
+    project-linter build
+```
+
+## Fix Linting and Formatting
+```
+docker run --rm \
+    -v "$(pwd):/workspace" \
+    -v build:/workspace/build \
+    -v docker-vcpkg:/workspace/docker-vcpkg \
+    -w /workspace \
+    project-linter lint
+```
+
+## Run Tests
+```
+docker run --rm \
+    -v "$(pwd):/workspace" \
+    -v build:/workspace/build \
+    -v docker-vcpkg:/workspace/docker-vcpkg \
+    -w /workspace \
+    project-linter test
+```
+You can isolate a test by adding `<test-name>` string after `test`. See the complete list of test names here.
