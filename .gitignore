@@ -121,3 +121,10 @@ lint.sh
 format.sh
 local.sh
 list.md
+
+# vcpkg
+vcpkg_installed/
+
+# CMake
+CMakeUserPresets.json
+.cmake/

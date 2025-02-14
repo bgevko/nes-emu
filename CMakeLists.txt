@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.29.6 )
+cmake_minimum_required( VERSION 3.28.3 )
 
 # Env setup
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
@@ -93,7 +93,7 @@ if(BUILD_TESTS)
     add_executable(${TARGET_NAME} ${SOURCE_FILE})
     target_include_directories(${TARGET_NAME} PRIVATE ${ALL_INCLUDES})
     target_link_libraries(${TARGET_NAME} PRIVATE emu_core GTest::gtest_main)
-    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror -O2)
+    target_compile_options(${TARGET_NAME} PRIVATE -Wall -Wextra -Wpedantic -O2)
     gtest_discover_tests(${TARGET_NAME} PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endfunction()
 

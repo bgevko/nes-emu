@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     libssl-dev \
     ninja-build \
+    cmake \
     pkg-config \
     clang-19 \
     clang-tools-19 \
@@ -29,16 +30,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s /usr/bin/clang-format-19 /usr/bin/clang-format \
     && ln -s /usr/bin/clang-tidy-19 /usr/bin/clang-tidy
 
-# Build and install CMake 3.31.5 from source.
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5.tar.gz && \
-    tar -xzf cmake-3.31.5.tar.gz && \
-    cd cmake-3.31.5 && \
-    ./bootstrap && \
-    make -j"$(nproc)" && \
-    make install && \
-    cd .. && \
-    rm -rf cmake-3.31.5 cmake-3.31.5.tar.gz
-
 # Set environment variables for compilers and tools
 ENV CC=/usr/bin/clang-19
 ENV CXX=/usr/bin/clang++-19
@@ -52,16 +43,18 @@ ENV PATH="$VCPKG_ROOT:$PATH"
 # Set the working directory
 WORKDIR /workspace
 
+# Copy
+COPY docker-vcpkg/vcpkg.json /workspace/docker-vcpkg/vcpkg.json
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+
 # Volumes
 VOLUME ["/workspace"]
 VOLUME ["/workspace/build"]
-VOLUME ["/workspace/deps"]
+VOLUME ["/workspace/docker-vcpkg"]
 
 # Install vcpkg and dependencies
 RUN mkdir "$VCPKG_ROOT" && git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT" && \ 
-  "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics && mkdir /workspace/deps
-COPY deps/vcpkg-ci.json /workspace/deps/vcpkg.json && cd /workspace/deps && vcpkg install
+  "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics && cd /workspace/docker-vcpkg && \
+  vcpkg install && chmod +x /usr/local/bin/entrypoint.sh
 
-# Entrypoinst script
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

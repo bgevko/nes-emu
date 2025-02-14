@@ -2,19 +2,19 @@
   "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 29,
-    "patch": 6
+    "minor": 28,
+    "patch": 3
   },
   "configurePresets": [
     {
       "name": "default",
-      "description": "Builds everything (emulator core, front end, and tests)",
       "generator": "Ninja",
+      "description": "Base settings common to all builds.",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/deps/vcpkg_installed",
-        "VCPKG_MANIFEST_DIR": "${sourceDir}/deps/vcpkg.json",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/vcpkg.json",
         "VCPKG_MANIFEST_INSTALL": "OFF",
         "BUILD_FRONTEND": {
           "type": "BOOL",
@@ -38,45 +38,53 @@
         }
       },
       "environment": {
-        "CC": "$penv{CC}",
-        "CXX": "$penv{CXX}"
+        "VCPKG_ROOT": "$penv{VCPKG_ROOT}"
       }
     },
     {
       "name": "tests",
-      "description": "Builds core + tests, no frontend. Used in the CI pipeline",
+      "description": "Builds core + tests, no frontend.",
       "inherits": "default",
       "cacheVariables": {
         "BUILD_FRONTEND": {
           "type": "BOOL",
           "value": "OFF"
+        },
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-Werror"
+        }
+      }
+    },
+    {
+      "name": "ci",
+      "description": "CI pipeline build, no frontend.",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/docker-vcpkg/vcpkg_installed",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/docker-vcpkg/vcpkg.json",
+        "BUILD_FRONTEND": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-Werror"
         }
       }
     },
     {
       "name": "debug",
-      "description": "Debug build with extra debug information",
+      "description": "Debug build",
       "inherits": "default",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "STRING",
           "value": "Debug"
-        }
-      }
-    },
-    {
-      "name": "windows-msvc",
-      "description": "Windows build with MSVC, used in Visual Studio on windows machines",
-      "inherits": "default",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "cacheVariables": {
+        },
         "CMAKE_CXX_FLAGS": {
           "type": "STRING",
-          "value": "/W4 /WX"
+          "value": "-Werror"
         }
       }
     }
@@ -87,8 +95,8 @@
       "configurePreset": "default"
     },
     {
-      "name": "tests",
-      "configurePreset": "tests"
+      "name": "ci",
+      "configurePreset": "ci"
     },
     {
       "name": "debug",

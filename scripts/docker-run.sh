@@ -1,15 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
+cd "$(dirname "$BASH_SOURCE[0]")/.." || exit 1
+
 # Docker image name
-IMAGE="project-linter2"
+IMAGE="project-linter"
 
 # Common Docker flags for commands that mount the current workspace.
 DOCKER_COMMON=(
   --rm
   -v "$(pwd):/workspace"
   -v build:/workspace/build
-  -v deps:/workspace/deps
+  -v docker-vcpkg:/workspace/docker-vcpkg
   -w /workspace
 )
 
