@@ -3,16 +3,17 @@ set -euo pipefail
 
 # scripts/build.sh
 # Usage: ./scripts/build.sh
-#  - "full" (or no argument): build the full emulator (SDL frontend, core, and tests)
-#  - "ci": build only the test executables (core + tests)
-#  - "my-preset": Whatever custom preset you define in CMakeUserPresets.json
+#  -  no arg: build the full emulator (SDL frontend, core, and tests)
+#  - "tests": build core + tests locally
+#  - "ci": build ci mode (core + tests, no frontend). CI mode sources different vcpkg config.
+#  - <preset>: Any preset defined in CMakeUserPresets.json. This file is not tracked by git, you have to create your own.
 #
 # This script automatically selects a build directory based on whether it's running inside Docker.
 export BUILD_DIR="build"
 
 # Determine build configuration based on the command-line argument.
 # When running in Docker, we default to the "ci" preset.
-if [ -z "${1:-}" ] || [ "$1" == "full" ]; then
+if [ -z "${1:-}" ]; then
   if [ -f /.dockerenv ]; then
     echo "Configuring build for: CI mode (core + tests, no frontend) due to Docker environment"
     PRESET="ci"
@@ -20,6 +21,8 @@ if [ -z "${1:-}" ] || [ "$1" == "full" ]; then
     echo "Configuring build for: FULL (SDL, core files, and tests)"
     PRESET="default"
   fi
+else
+  PRESET="$1"
 fi
 
 # Navigate to the project root directory.
@@ -33,14 +36,14 @@ mkdir -p "${BUILD_DIR}"
 
 # Run CMake configuration using the selected preset.
 echo "Configuring with CMake..."
-cmake --preset="$PRESET" || {
+cmake --preset="${PRESET:-}" || {
   echo "CMake configuration failed."
   exit 1
 }
 
 # Build the project.
 echo "Building the project..."
-cmake --build --preset="$PRESET" || {
+cmake --build --preset="${PRESET:-}" || {
   echo "Build failed."
   exit 1
 }

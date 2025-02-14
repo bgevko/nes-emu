@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.29.6 )
+cmake_minimum_required( VERSION 3.28.3 )
 
 # Env setup
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )

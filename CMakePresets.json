@@ -2,8 +2,8 @@
   "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 29,
-    "patch": 6
+    "minor": 28,
+    "patch": 3
   },
   "configurePresets": [
     {
@@ -42,10 +42,27 @@
       }
     },
     {
-      "name": "ci",
-      "description": "Builds core + tests, no frontend. Used in the CI pipeline",
+      "name": "tests",
+      "description": "Builds core + tests, no frontend.",
       "inherits": "default",
       "cacheVariables": {
+        "BUILD_FRONTEND": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "CMAKE_CXX_FLAGS": {
+          "type": "STRING",
+          "value": "-Werror"
+        }
+      }
+    },
+    {
+      "name": "ci",
+      "description": "CI pipeline build, no frontend.",
+      "inherits": "default",
+      "cacheVariables": {
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/docker-vcpkg/vcpkg_installed",
+        "VCPKG_MANIFEST_DIR": "${sourceDir}/docker-vcpkg/vcpkg.json",
         "BUILD_FRONTEND": {
           "type": "BOOL",
           "value": "OFF"

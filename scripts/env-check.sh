@@ -12,6 +12,11 @@ echo ""
 
 FAILED=0
 
+EXTRAS=0
+if [ "$1" = "--extras" ]; then
+  EXTRAS=1
+fi
+
 # Function to check if a command exists, and optionally verify its version.
 # Usage: check_dependency <command> <required_version_pattern> <install_message>
 # If <required_version_pattern> is empty, the version check is skipped.
@@ -49,6 +54,15 @@ check_dependency "cmake" "" "brew install cmake"
 check_dependency "ninja" "" "brew install ninja"
 check_dependency "pkg-config" "" "brew install pkg-config"
 check_dependency "vcpkg" "" "Please install vcpkg: https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-bash"
+
+# Extra dependencies
+if [ "$EXTRAS" -eq 1 ]; then
+  echo ""
+  echo "Checking extra dependencies..."
+  echo ""
+  check_dependency "clang-format" "19.*" "brew install llvm"
+  check_dependency "clang-tidy" "19.*" "brew install llvm"
+fi
 
 # If any dependency check failed, output platform-specific installation instructions.
 if [ "$FAILED" -ne 0 ]; then

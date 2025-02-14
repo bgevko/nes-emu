@@ -127,3 +127,4 @@ vcpkg_installed/
 
 # CMake
 CMakeUserPresets.json
+.cmake/
