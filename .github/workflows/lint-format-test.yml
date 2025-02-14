@@ -8,7 +8,7 @@
 # If the checks pass, the workflow will report success. If the checks fail,
 # the workflow will report failure.
 
-name: lint-format
+name: lint-format-test
 
 on: [pull_request]
 
@@ -46,4 +46,14 @@ jobs:
       - name: Run Linter
         if: env.files_modified == 'true'
         run: |
+          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest build
           docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest lint
+
+      - name: Run Nestest ROM
+        if: env.files_modified == 'true'
+        run: |
+          mkdir ./tests/output
+          touch ./tests/output/my_nestest-log.txt
+          chmod ugo+rw ./tests/output/my_nestest-log.txt
+          # Use the same build as the linter
+          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest test "RomTests.Nestest"
