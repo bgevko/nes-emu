@@ -27,6 +27,7 @@ You can run a specific preset:
 scripts/build.sh <preset>
 ```
 
+### Local Presets
 You can also define your own. To do so, create a `CMakeUserPresets.json` file in the project root:
 ```json
 {
