@@ -1,14 +1,14 @@
 # This workflow is used for deploying the Docker container based on the
 # docker/alpine-Dockerfile to the GitHub Container Registry.
-
+#
 # The workflow is only triggered manually, as this should be an infrequent
 # operation. The only time it should be triggered is when the Dockerfile
 # or entrypoint.sh script is updated.
-
+#
 # The workflow uses the docker Buildx tool to build the Docker
 # container for both the amd64 and arm64 architectures. The workflow then
-# logs in to the GitHub Container Registry, builds the Docker container, and
-# pushes it to the GitHub Container Registry.
+# logs in to the GitHub Container Registry, prunes any cached images,
+# builds the Docker container from scratch, and pushes it to the GitHub Container Registry.
 
 name: Deploy-Container
 
@@ -33,6 +33,12 @@ jobs:
         run: |
           docker buildx create --use
 
+      - name: Prune all old Docker images and cache
+        run: |
+          docker system prune -a -f
+
       - name: Build and deploy Docker image to GHCR
         run: |
-          docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t ghcr.io/bgevko/nes-emu/build-lint-container:latest --push -f docker/alpine-Dockerfile .
+          docker buildx build --no-cache --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/bgevko/nes-emu/build-lint-container:latest \
+            --push -f docker/alpine-Dockerfile .
