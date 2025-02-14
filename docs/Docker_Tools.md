@@ -49,4 +49,33 @@ docker run --rm \
     -w /workspace \
     project-linter test
 ```
-You can isolate a test by adding `<test-name>` string after `test`. See the complete list of test names here.
+You can isolate a test by adding `<test-name>` string after `test`. See the complete list of test names [here](https://github.com/bgevko/nes-emu/blob/docs/docs/Test_Names.md).
+
+## Bash Mode
+```bash
+docker run --rm -it --entrypoint /bin/bash \
+    -v "$(pwd):/workspace" \
+    -v build:/workspace/build \
+    -v docker-vcpkg:/workspace/docker-vcpkg \
+    -w /workspace \
+    project-linter
+```
+
+You can also explore the image without mounting any volumes:
+```bash
+docker run --rm -it --entrypoint /bin/bash \
+    -w /workspace \
+    project-linter
+```
+
+## Scripts
+You can do all of the above with `scripts/docker-run.sh`:
+
+- build
+- lint
+- test
+- bash
+- bash —no-mount
+```bash
+scripts/docker-run.sh <command>
+```
