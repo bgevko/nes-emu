@@ -9,4 +9,4 @@ Welcome to my NES Emulator. I'm working on building a cross-platform emulator in
 
 ## Tooling
 - [Building, Linting, Testing, and Formatting with Docker](https://github.com/bgevko/nes-emu/blob/docs/docs/Docker_Tools.md)
-- [Building, Linting, Teseting, and Formatting from the CLI](https://github.com/bgevko/nes-emu/blob/docs/docs/CLI_Tools.md)
+- [Building, Linting, Testing, and Formatting from the CLI](https://github.com/bgevko/nes-emu/blob/docs/docs/CLI_Tools.md)
