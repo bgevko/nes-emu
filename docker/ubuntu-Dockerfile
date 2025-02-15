@@ -31,8 +31,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -s /usr/bin/clang-tidy-19 /usr/bin/clang-tidy
 
 # Set environment variables for compilers and tools
-ENV CC=/usr/bin/clang-19
-ENV CXX=/usr/bin/clang++-19
 ENV CMAKE_C_COMPILER=/usr/bin/clang-19
 ENV CMAKE_CXX_COMPILER=/usr/bin/clang++-19
 ENV CMAKE_MAKE_PROGRAM=/usr/bin/ninja
