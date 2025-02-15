@@ -29,12 +29,12 @@ jobs:
 
       - name: Pull Docker image from GHCR
         run: |
-          docker pull ghcr.io/bgevko/nes-emu/build-lint-container:2.0
+          docker pull ghcr.io/bgevko/nes-emu/build-lint-container:latest
 
       - name: Run Linter
         run: |
           # Will build and lint
-          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:2.0 lint
+          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest lint
 
       - name: Run Nestest ROM
         run: |
