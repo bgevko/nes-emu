@@ -38,7 +38,6 @@ jobs:
 
       - name: Run Nestest ROM
         run: |
-          mkdir ./tests/output
           touch ./tests/output/my_nestest-log.txt
           chmod ugo+rw ./tests/output/my_nestest-log.txt
           # Use the same build as the linter
