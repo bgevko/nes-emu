@@ -41,9 +41,8 @@ ENV PATH="$VCPKG_ROOT:$PATH"
 # Set the working directory
 WORKDIR /workspace
 
-# Copy
+# Copy Vcpkg
 COPY docker-vcpkg/vcpkg.json /workspace/docker-vcpkg/vcpkg.json
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Volumes
 VOLUME ["/workspace"]
@@ -53,6 +52,10 @@ VOLUME ["/workspace/docker-vcpkg"]
 # Install vcpkg and dependencies
 RUN mkdir "$VCPKG_ROOT" && git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT" && \ 
   "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics && cd /workspace/docker-vcpkg && \
-  vcpkg install && chmod +x /usr/local/bin/entrypoint.sh
+  vcpkg install
+
+# Copy entrypoint
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

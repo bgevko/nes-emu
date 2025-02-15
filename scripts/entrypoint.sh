@@ -26,7 +26,7 @@ lint)
   # Check if compile_commands.json exists, if not, run cmake to generate it
   if [ ! -f "$BUILD_DIR/compile_commands.json" ]; then
     echo "compile_commands.json not found. Building project to generate it..."
-    ./build.sh || {
+    ./scripts/build.sh || {
       echo "CMake configuration failed."
       exit 1
     }

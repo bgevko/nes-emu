@@ -33,12 +33,8 @@ jobs:
         run: |
           docker buildx create --use
 
-      - name: Prune all old Docker images and cache
-        run: |
-          docker system prune -a -f
-
       - name: Build and deploy Docker image to GHCR
         run: |
-          docker buildx build --no-cache --platform linux/amd64,linux/arm64 \
+          docker buildx build --platform linux/amd64,linux/arm64 \
             -t ghcr.io/bgevko/nes-emu/build-lint-container:latest \
             --push -f docker/ubuntu-Dockerfile .
