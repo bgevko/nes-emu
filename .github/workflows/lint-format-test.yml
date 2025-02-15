@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Linter
         run: |
-          docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:2.0 build
+          # Will build and lint
           docker run -e CI=${CI} -v $(pwd):/workspace -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:2.0 lint
 
       - name: Run Nestest ROM

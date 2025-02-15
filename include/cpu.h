@@ -27,7 +27,7 @@ class CPU
     ################################
     */
     u8   GetAccumulator() const;
-    u8   get_accumulators() const;
+    u8   getaccumulator() const;
     u8   GetXRegister() const;
     u8   GetYRegister() const;
     u8   GetStatusRegister() const;
