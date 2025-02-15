@@ -39,6 +39,7 @@ jobs:
 
       - name: Run Nestest ROM
         run: |
+          touch ./tests/output/my_nestest-log.txt
           chmod ugo+rw ./tests/output/my_nestest-log.txt
           # Use the same build as the linter
           docker run --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest test "RomTests.Nestest"

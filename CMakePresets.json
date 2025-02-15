@@ -70,6 +70,10 @@
         "CMAKE_CXX_FLAGS": {
           "type": "STRING",
           "value": "-Werror"
+        },
+        "CMAKE_CXX_COMPILER": {
+          "type": "STRING",
+          "value": "/usr/bin/clang++"
         }
       }
     },
@@ -96,7 +100,8 @@
     },
     {
       "name": "ci",
-      "configurePreset": "ci"
+      "configurePreset": "ci",
+      "jobs": 2
     },
     {
       "name": "debug",
