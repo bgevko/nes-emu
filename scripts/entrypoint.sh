@@ -30,8 +30,6 @@ lint)
       echo "CMake configuration failed."
       exit 1
     }
-    ./scripts/entrypoint.sh lint
-    exit 0
     cd ..
   fi
 
