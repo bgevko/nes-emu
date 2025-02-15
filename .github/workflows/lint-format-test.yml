@@ -34,12 +34,12 @@ jobs:
       - name: Run Linter
         run: |
           # Build and lint
-          docker run --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest build
-          docker run --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest lint
+          docker run -e CI=${CI} --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest build
+          docker run -e CI=${CI} --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest lint
 
       - name: Run Nestest ROM
         run: |
           touch ./tests/output/my_nestest-log.txt
           chmod ugo+rw ./tests/output/my_nestest-log.txt
           # Use the same build as the linter
-          docker run --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest test "RomTests.Nestest"
+          docker run -e CI=${CI} --rm -v "$(pwd):/workspace" -v build:/workspace/build -v docker-vcpkg:/workspace/docker-vcpkg -w /workspace ghcr.io/bgevko/nes-emu/build-lint-container:latest test "RomTests.Nestest"
