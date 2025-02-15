@@ -22,7 +22,7 @@ You'll want to rebuild after:
 
 ## Build Project
 ```bash
-docker run --rm \                                                                                               ─╯
+docker run --rm \
     -v "$(pwd):/workspace" \
     -v build:/workspace/build \
     -v docker-vcpkg:/workspace/docker-vcpkg \
