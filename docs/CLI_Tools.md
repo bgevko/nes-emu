@@ -104,7 +104,7 @@ Run all tests in parallel
 scripts/test.sh
 ```
 
-Run a single test. See the list of test names [here](https://github.com/bgevko/nes-emu/blob/docs/docs/Test_Names.md).
+Run a single test. See the list of test names, run `ctest -N` from the build directory.
 ```bash
 scripts/test.sh <test-name>
 ```
