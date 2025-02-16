@@ -3,7 +3,7 @@
 Welcome to my NES Emulator. I'm working on building a cross-platform emulator in C++.
 
 ## Setup Guides
-- [Windows Setup (CLion)](https://github.com/bgevko/nes-emu/blob/docs/docs/CLion_Windows.md)
+- [Windows Setup (CLion)](https://github.com/bgevko/nes-emu/blob/main/docs/CLion_Windows.md)
 - [MacOS Setup (CLion)](https://github.com/bgevko/nes-emu/blob/docs/docs/CLion_MacOS.md)
 - [MacOS Setup (CLI)](https://github.com/bgevko/nes-emu/blob/docs/docs/CLI_MacOS.md)
 
