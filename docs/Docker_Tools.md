@@ -49,8 +49,7 @@ docker run --rm \
     -w /workspace \
     project-linter test
 ```
-You can isolate a test by adding `<test-name>` string after `test`. See the complete list of test names [here](https://github.com/bgevko/nes-emu/blob/docs/docs/Test_Names.md).
-
+You can isolate a test by adding `<test-name>` string after `test`. See the complete list of tests, run `ctest -N` from the build directory.
 ## Bash Mode
 ```bash
 docker run --rm -it --entrypoint /bin/bash \
