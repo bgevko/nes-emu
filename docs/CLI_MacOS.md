@@ -53,6 +53,6 @@ build/emu
 scripts/test.sh
 ```
 
-See the [CLI Tools](https://github.com/bgevko/nes-emu/blob/docs/docs/CLI_Tools.md) document for more CLI options
+See the [CLI Tools](https://github.com/bgevko/nes-emu/blob/main/docs/CLI_Tools.md) document for more CLI options
 
 ---
