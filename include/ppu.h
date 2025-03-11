@@ -1,15 +1,17 @@
 #pragma once
+#include "cpu.h"
 #include "mappers/mapper-base.h"
-#include <array>
+#include "utils.h"
 #include <cstdint>
+#include <array>
+#include <functional>
+#include <string>
 
 using u8 = std::uint8_t;
 using u16 = std::uint16_t;
 using s16 = std::int16_t;
 
 using namespace std;
-
-class Bus;
 
 class PPU
 {
@@ -21,26 +23,80 @@ class PPU
     ||           Getters          ||
     ################################
     */
-    [[nodiscard]] MirrorMode GetMirrorMode();
-    [[nodiscard]] s16        GetScanline() const { return _scanline; }
-    [[nodiscard]] u16        GetCycles() const { return _cycle; }
-    [[nodiscard]] u16        GetFrame() const { return _frame; }
+    MirrorMode GetMirrorMode() const;
+    s16        GetScanline() const { return scanline; }
+    u16        GetCycles() const { return cycle; }
+    u64        GetFrame() const { return frame; }
+    u32        GetMasterPaletteColor( u8 index ) const { return nesPaletteRgbValues.at( index ); }
+
+    u8 GetPpuCtrl() const { return ppuCtrl.value; }
+    u8 GetCtrlNametableX() const { return ppuCtrl.bit.nametableX; }
+    u8 GetCtrlNametableY() const { return ppuCtrl.bit.nametableY; }
+    u8 GetCtrlIncrementMode() const { return ppuCtrl.bit.vramIncrement; }
+    u8 GetCtrlPatternSprite() const { return ppuCtrl.bit.patternSprite; }
+    u8 GetCtrlPatternBackground() const { return ppuCtrl.bit.patternBackground; }
+    u8 GetCtrlSpriteSize() const { return ppuCtrl.bit.spriteSize; }
+    u8 GetCtrlNmiEnable() const { return ppuCtrl.bit.nmiEnable; }
+
+    u8 GetPpuMask() const { return ppuMask.value; }
+    u8 GetMaskGrayscale() const { return ppuMask.bit.grayscale; }
+    u8 GetMaskShowBgLeft() const { return ppuMask.bit.renderBackgroundLeft; }
+    u8 GetMaskShowSpritesLeft() const { return ppuMask.bit.renderSpritesLeft; }
+    u8 GetMaskShowBg() const { return ppuMask.bit.renderBackground; }
+    u8 GetMaskShowSprites() const { return ppuMask.bit.renderSprites; }
+    u8 GetMaskEnhanceRed() const { return ppuMask.bit.enhanceRed; }
+    u8 GetMaskEnhanceGreen() const { return ppuMask.bit.enhanceGreen; }
+    u8 GetMaskEnhanceBlue() const { return ppuMask.bit.enhanceBlue; }
+
+    u8 GetPpuStatus() const { return ppuStatus.value; }
+    u8 GetStatusSpriteOverflow() const { return ppuStatus.bit.spriteOverflow; }
+    u8 GetStatusSpriteZeroHit() const { return ppuStatus.bit.spriteZeroHit; }
+    u8 GetStatusVblank() const { return ppuStatus.bit.verticalBlank; }
+
+    u8 GetOamAddr() const { return oamAddr; }
+    u8 GetOamData() const { return oamData; }
+    u8 GetPpuScroll() const { return ppuScroll; }
+    u8 GetPpuAddr() const { return ppuAddr; }
+    u8 GetPpuData() const { return ppuData; }
+
+    u16 GetVramAddr() const { return vramAddr.value; }
+    u8  GetVramCoarseX() const { return vramAddr.bit.coarseX; }
+    u8  GetVramCoarseY() const { return vramAddr.bit.coarseY; }
+    u8  GetVramNametableX() const { return vramAddr.bit.nametableX; }
+    u8  GetVramNametableY() const { return vramAddr.bit.nametableY; }
+    u8  GetVramFineY() const { return vramAddr.bit.fineY; }
+    u8  GetVramUnused() const { return vramAddr.bit.unused; }
+
+    u16  GetTempAddr() const { return tempAddr.value; }
+    u8   GetTempCoarseX() const { return tempAddr.bit.coarseX; }
+    u8   GetTempCoarseY() const { return tempAddr.bit.coarseY; }
+    u8   GetTempNametableX() const { return tempAddr.bit.nametableX; }
+    u8   GetTempNametableY() const { return tempAddr.bit.nametableY; }
+    u8   GetTempFineY() const { return tempAddr.bit.fineY; }
+    u8   GetTempUnused() const { return tempAddr.bit.unused; }
+    u8   GetFineX() const { return fineX; }
+    bool GetAddrLatch() const { return addrLatch; }
+
+    u16 GetBgShiftPatternLow() const { return bgShiftPatternLow; }
+    u16 GetBgShiftPatternHigh() const { return bgShiftPatternHigh; }
+    u16 GetBgShiftAttributeLow() const { return bgShiftAttributeLow; }
+    u16 GetBgShiftAttributeHigh() const { return bgShiftAttributeHigh; }
 
     /*
     ################################
     ||           Setters          ||
     ################################
     */
-    void SetScanline( s16 scanline ) { _scanline = scanline; }
-    void SetCycles( u16 cycles ) { _cycle = cycles; }
+    void SetScanline( s16 val ) { scanline = val; }
+    void SetCycles( u16 cycles ) { cycle = cycles; }
 
     /*
     ################################
     ||      CPU Read / Write      ||
     ################################
     */
-    [[nodiscard]] u8 HandleCpuRead( u16 addr );
-    void             HandleCpuWrite( u16 addr, u8 data );
+    [[nodiscard]] u8 HandleCpuRead( u16 address, bool debugMode = false );
+    void             HandleCpuWrite( u16 address, u8 data );
 
     /*
     ################################
@@ -62,7 +118,7 @@ class PPU
     ################################
     */
     void DmaTransfer( u8 data );
-    u16  ResolveNameTableAddress( u16 addr );
+    u16  ResolveNameTableAddress( u16 addr, int testMirrorMode = -1 ) const;
     void Tick();
     void LoadNextBgShiftRegisters();
     void UpdateShiftRegisters();
@@ -77,76 +133,285 @@ class PPU
     u8   GetBgPixel();
     u8   GetSpritePixel();
     u32  GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette );
-    void TriggerNmi();
+    void TriggerNmi() const;
+    void Reset()
+    {
+        scanline = 0;
+        cycle = 4;
+        frame = 1;
+        isRenderingEnabled = false;
+        preventVBlank = false;
+        ppuCtrl.value = 0x00;
+        ppuMask.value = 0x00;
+        ppuStatus.value = 0x00;
+        oamAddr = 0x00;
+        oamData = 0x00;
+        ppuScroll = 0x00;
+        ppuAddr = 0x00;
+        ppuData = 0x00;
+        addrLatch = false;
+        ppuDataBuffer = 0x00;
+        vramAddr.value = 0x0000;
+        tempAddr.value = 0x0000;
+        fineX = 0x00;
+        nameTables.fill( 0x00 );
+        paletteMemory = defaultPalette;
+    }
+    void IncrementSystemPalette()
+    {
+        if ( failedPaletteRead ) {
+            return;
+        }
+        systemPaletteIdx = ( systemPaletteIdx + 1 ) % maxSystemPalettes;
+        LoadSystemPalette( systemPaletteIdx );
+    }
+    void DecrementSystemPalette()
+    {
+        if ( failedPaletteRead ) {
+            return;
+        }
+        int newIdx = systemPaletteIdx - 1;
+        if ( newIdx < 0 ) {
+            newIdx = maxSystemPalettes - 1;
+        }
+        systemPaletteIdx = newIdx;
+        LoadSystemPalette( systemPaletteIdx );
+    }
+
+    void LoadSystemPalette( int paletteIdx = 0 )
+    {
+        std::string const palettePath = systemPalettePaths.at( paletteIdx );
+        nesPaletteRgbValues = utils::readPalette( palettePath );
+    }
+    u8  GetPpuPaletteValue( u8 index ) { return paletteMemory.at( index ); }
+    u32 GetPpuPaletteColor( u8 index ) { return nesPaletteRgbValues.at( paletteMemory.at( index ) ); }
+
+    void LoadDefaultSystemPalette()
+    {
+        // clang-format off
+        nesPaletteRgbValues = {
+            0xFF606060, 0xFF7B2100, 0xFF9C0000, 0xFF8B0031, 0xFF6F0059, 0xFF31006F, 0xFF000064, 0xFF00114F,
+            0xFF00192F, 0xFF002927, 0xFF004400, 0xFF373900, 0xFF4F3900, 0xFF000000, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFAEAEAE, 0xFFCE5610, 0xFFFF2C1B, 0xFFEC2060, 0xFFBF00A9, 0xFF5416CA, 0xFF0800CA, 0xFF043A9E,
+            0xFF005167, 0xFF006143, 0xFF007C00, 0xFF537100, 0xFF877100, 0xFF0C0C0C, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFFFFFFF, 0xFFFE9E44, 0xFFFF6C5C, 0xFFFF6699, 0xFFFF60D7, 0xFF9562FF, 0xFF5364FF, 0xFF3094F4,
+            0xFF00ACC2, 0xFF14C490, 0xFF28D252, 0xFF92C620, 0xFFD2BA18, 0xFF4C4C4C, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFFFFFFF, 0xFFFFCCA3, 0xFFFFB4A4, 0xFFFFB6C1, 0xFFFFB7E0, 0xFFC5C0FF, 0xFFABBCFF, 0xFF9FD0FF,
+            0xFF90E0FC, 0xFF98EAE2, 0xFFA0F2CA, 0xFFE2EAA0, 0xFFFAE2A0, 0xFFB6B6B6, 0xFF0C0C0C, 0xFF0C0C0C
+        };
+        // clang-format on
+    }
 
     /*
     ################################
     ||        SDL Callback        ||
     ################################
     */
-    void ( *onFrameReady )( const u32 *frameBuffer ) = nullptr;
+    // void ( *onFrameReady )( const u32 *frameBuffer ) = nullptr;
+    std::function<void( const u32 * )> onFrameReady = nullptr;
 
     /*
     ################################
     ||        Debug Methods       ||
     ################################
     */
-    void EnableJsonTestMode() { _isDisabled = true; }
-    void DisableJsonTestMode() { _isDisabled = false; }
+    void EnableJsonTestMode() { isDisabled = true; }
+    void DisableJsonTestMode() { isDisabled = false; }
 
-  private:
+    // Get pattern table data, used in debugging (pattern-tables.h)
+    std::array<u32, 16384> GetPatternTable( int tableIdx )
+    {
+        std::array<u32, 16384> buffer{};
+        u16 const              baseAddr = tableIdx == 0 ? 0x0000 : 0x1000;
+
+        // 256 tiles in a pattern table
+        for ( int tile = 0; tile < 256; tile++ ) {
+            int const tileX = tile % 16;
+            int const tileY = tile / 16;
+
+            // 16 bytes per tile, split into two bit planes
+            u16 const tileAddr = baseAddr + ( tile * 16 );
+
+            // Each tile is 8x8 pixels
+            for ( int row = 0; row < 8; row++ ) {
+                u8 const plane0Byte = Read( tileAddr + row );
+                u8 const plane1Byte = Read( tileAddr + row + 8 );
+                for ( int bit = 7; bit >= 0; bit-- ) {
+                    u8 const plane0Bit = ( plane0Byte >> bit ) & 0x01;
+                    u8 const plane1Bit = ( plane1Byte >> bit ) & 0x01;
+                    u8 const colorIdx = ( plane1Bit << 1 ) | plane0Bit;
+
+                    // Calculate the buffer index (pixel position)
+                    int const localX = 7 - bit;
+                    int const globalX = ( tileX * 8 ) + localX;
+                    int const globalY = ( tileY * 8 ) + row;
+                    int const bufferIdx = ( globalY * 128 ) + globalX;
+                    buffer.at( bufferIdx ) = GetPpuPaletteColor( colorIdx );
+                }
+            }
+        }
+
+        return buffer;
+    }
+
+    // Nametable data, used in debugging (nametables.h)
+    std::array<u32, 61440> GetNametable( int nametableIdx )
+    {
+        std::array<u32, 61440> buffer{};
+
+        u16 vramStart = 0x2000;
+        switch ( nametableIdx ) {
+            case 0:
+                vramStart = 0x2000;
+                break;
+            case 1:
+                vramStart = 0x2400;
+                break;
+            case 2:
+                vramStart = 0x2800;
+                break;
+            case 3:
+                vramStart = 0x2C00;
+                break;
+            default:
+                break;
+        }
+
+        /* Vram Structure, for reference
+        yyy NN YYYYY XXXXX
+        ||| || ||||| +++++-- tile X (coarse X scroll)
+        ||| || +++++-------- tile Y (coarse Y scroll)
+        ||| ++-------------- nametable 0-3
+        +++----------------- fine Y scroll
+        */
+
+        u16 const vramEnd = vramStart + 960;
+        u16 const attrBase = vramStart + 960;
+
+        for ( int vramAddr = vramStart; vramAddr < vramEnd; vramAddr++ ) {
+
+            // Determines which 8x8 tile is being processed, which is info provided by the vram addr
+            const int tileX = vramAddr & 0x1F;
+            const int tileY = ( vramAddr >> 5 ) & 0x1F;
+
+            // Bit 4 from ctrl registers determines the pattern table
+            u16 const patternTableBaseAddr = ppuCtrl.bit.patternBackground ? 0x1000 : 0x0000;
+
+            // Vram address determines which tile index to use from the pattern table (0-255)
+            u8 const tileIndex = Read( vramAddr );
+
+            // Combining the two gives the pattern table address
+            u16 const tileAddr = patternTableBaseAddr + ( tileIndex * 16 );
+
+            // Grab the attribute byte, which covers a 32x32 area
+            u8 const  attrX = tileX / 4;
+            u8 const  attrY = tileY / 4;
+            u16 const attrAddr = attrBase + ( attrY * 8 ) + attrX;
+            u8 const  attributeByte = Read( attrAddr );
+
+            // Determine which 4x4 quadrant the tile is in
+            u8 const attrQuadX = ( tileX % 4 ) >> 1;
+            u8 const attrQuadY = ( tileY % 4 ) >> 1;
+            // (0,0) -> 0, (0,1) -> 1, (1,0) -> 2, (1,1) -> 3
+            u8 const quadrant = ( attrQuadY << 1 ) | attrQuadX;
+
+            // Extract the palette index from the attribute byte
+            /*
+                7654 3210
+                |||| ||++- Color bits 3-2 for top left quadrant
+                |||| ++--- Color bits 3-2 for top right quadrant
+                ||++------ Color bits 3-2 for bottom left quadrant
+                ++-------- Color bits 3-2 for bottom right quadrant
+            */
+            u8 const paletteIdx = ( attributeByte >> ( 2 * quadrant ) ) & 0x03;
+
+            // Now, combining all the tile data and adding it to the correct location in the buffer
+            for ( int pixelRow = 0; pixelRow < 8; pixelRow++ ) {
+                u8 const plane0Byte = Read( tileAddr + pixelRow );
+                u8 const plane1Byte = Read( tileAddr + pixelRow + 8 );
+                for ( int bit = 7; bit >= 0; bit-- ) {
+                    u8 const plane0Bit = ( plane0Byte >> bit ) & 0x01;
+                    u8 const plane1Bit = ( plane1Byte >> bit ) & 0x01;
+                    u8 const colorIdx = ( plane1Bit << 1 ) | plane0Bit;
+
+                    // Calculate the buffer index (final pixel position)
+                    int const tilePixelX = 7 - bit;
+                    int const screenPixelX = ( tileX * 8 ) + tilePixelX;
+                    int const screenPixelY = ( tileY * 8 ) + pixelRow;
+                    int const bufferIdx = ( screenPixelY * 256 ) + screenPixelX;
+                    u8 const  finalColorIdx = ( paletteIdx * 4 ) + colorIdx;
+                    buffer.at( bufferIdx ) = GetPpuPaletteColor( finalColorIdx );
+                }
+            }
+        }
+        return buffer;
+    }
+
     /*
     ################################
     ||      Global Variables      ||
     ################################
     */
-    s16  _scanline = 0;
-    u16  _cycle = 4;
-    u64  _frame = 1;
-    bool _isRenderingEnabled = false;
-    bool _preventVBlank = false;
+    bool failedPaletteRead = false;
+    int  systemPaletteIdx = 0;
+    int  maxSystemPalettes = 3;
+
+    std::array<std::string, 3> systemPalettePaths = { "palettes/palette1.pal", "palettes/palette2.pal",
+                                                      "palettes/palette3.pal" };
+
+    /*
+    ################################
+    ||      Global Variables      ||
+    ################################
+    */
+    s16            scanline = 0;
+    u16            cycle = 4;
+    u64            frame = 1;
+    bool           isRenderingEnabled = false;
+    bool           preventVBlank = false;
+    array<u32, 64> nesPaletteRgbValues{};
 
     /*
     ################################
     ||        SDL Variables       ||
     ################################
     */
-    array<u32, 64>    _nesPaletteRgbValues{};
-    array<u32, 61440> _frameBuffer{};
+    array<u32, 61440> frameBuffer{};
 
     /*
     ################################
     ||       Debug Variables      ||
     ################################
     */
-    bool _isDisabled = false;
+    bool isDisabled = false;
 
     /*
     ######################################
     ||  Background Rendering Variables  ||
     ######################################
     */
-    u8  _nametableByte = 0x00;
-    u8  _attributeByte = 0x00;
-    u8  _bgPlane0Byte = 0x00;
-    u8  _bgPlane1Byte = 0x00;
-    u16 _bgShiftPatternLow = 0x0000;
-    u16 _bgShiftPatternHigh = 0x0000;
-    u16 _bgShiftAttributeLow = 0x0000;
-    u16 _bgShiftAttributeHigh = 0x0000;
+    u8  nametableByte = 0x00;
+    u8  attributeByte = 0x00;
+    u8  bgPlane0Byte = 0x00;
+    u8  bgPlane1Byte = 0x00;
+    u16 bgShiftPatternLow = 0x0000;
+    u16 bgShiftPatternHigh = 0x0000;
+    u16 bgShiftAttributeLow = 0x0000;
+    u16 bgShiftAttributeHigh = 0x0000;
 
     /*
     ################################
     ||         Peripherals        ||
     ################################
     */
-    Bus *_bus;
+    Bus *bus;
 
     /*
     ################################
     ||    CPU-facing Registers    ||
     ################################
     */
+
     union PPUCTRL {
         struct {
             u8 nametableX : 1;
@@ -160,8 +425,6 @@ class PPU
         } bit;
         u8 value = 0x00;
     };
-    PPUCTRL _ppuCtrl; // $2000
-
     union PPUMASK {
         struct {
             u8 grayscale : 1;
@@ -175,8 +438,6 @@ class PPU
         } bit;
         u8 value = 0x00;
     };
-    PPUMASK _ppuMask; // $2001
-
     union PPUSTATUS {
         struct {
             u8 unused : 5;
@@ -186,24 +447,36 @@ class PPU
         } bit;
         u8 value = 0x00;
     };
-    PPUSTATUS _ppuStatus; // $2002
 
-    u8 _oamAddr = 0x00;   // $2003
-    u8 _oamData = 0x00;   // $2004
-    u8 _ppuScroll = 0x00; // $2005
-    u8 _ppuAddr = 0x00;   // $2006
-    u8 _ppuData = 0x00;   // $2007
+    PPUCTRL   ppuCtrl;          // $2000
+    PPUMASK   ppuMask;          // $2001
+    PPUSTATUS ppuStatus;        // $2002
+    u8        oamAddr = 0x00;   // $2003
+    u8        oamData = 0x00;   // $2004
+    u8        ppuScroll = 0x00; // $2005
+    u8        ppuAddr = 0x00;   // $2006
+    u8        ppuData = 0x00;   // $2007
     // $4014: OAM DMA, handled in bus read/write, see bus.cpp
 
     /*
-    ################################
-    ||     Internal Registers     ||
-    ################################
+    ################################################################
+    ||                     Internal Registers                     ||
+    ################################################################
     */
-
+    union LoopyRegister {
+        struct {
+            u16 coarseX : 5;
+            u16 coarseY : 5;
+            u16 nametableX : 1;
+            u16 nametableY : 1;
+            u16 fineY : 3;
+            u16 unused : 1;
+        } bit;
+        u16 value = 0x00;
+    };
     /* v: Current VRAM address (15 bits)
-
        t: Temporary VRAM address (15 bits)
+
       The v (and t) register has multiple purposes
       - It allows the CPU to write to the PPU memory through _ppuAddr and _ppuData registers
       - It points to the nametable data currently being drawn
@@ -220,59 +493,30 @@ class PPU
         Both of these registers are sometimes referred to as "Loopy Registers", named
         after the developer who discovered how they work.
      */
-
-    union LoopyRegister {
-        struct {
-            u16 coarseX : 5;
-            u16 coarseY : 5;
-            u16 nametableX : 1;
-            u16 nametableY : 1;
-            u16 fineY : 3;
-            u16 unused : 1;
-        } bit;
-        u16 value = 0x00;
-    };
-
-    LoopyRegister _vramAddr;
-    LoopyRegister _tempAddr;
+    LoopyRegister vramAddr;
+    LoopyRegister tempAddr;
 
     // Internal fine X scroll register
-    u8 _fineX = 0x00;
+    u8 fineX = 0x00;
 
-    // Address latch
-    // Used in writes that require two steps: _ppuAddr and _ppuData
-    bool _addrLatch = false;
+    // Used by _ppuScroll and _ppuAddr for two-write operations
+    bool addrLatch = false;
 
-    // PPU Data Buffer
-    // Holds data from the previous read or write
-    u8 _dataBuffer = 0x00;
+    // Stores last data written to _ppuData
+    u8 ppuDataBuffer = 0x00;
 
     /*
-    ################################
-    ||      Memory Variables      ||
-    ################################
+    ################################################################
+    ||                  Internal Memory Locations                 ||
+    ################################################################
     */
+    array<u8, 2048> nameTables{};
 
-    // Pattern Tables
-    // $0000-$0FFF: Pattern Table 1
-    // $1000-$1FFF: Pattern Table 2
-    // Defined and documented in cartridge.h
-
-    /* Name Table Memory
-        The $2000 address for the PPU control register in the CPU's memory map
-        is distinct from the $2000 address where the name tables begin in the PPU's address space.
-        Name tables are part of the PPU's internal memory while PPU registers ($2000–$2007)
-        are mapped into the CPU's memory space.
-
-        Ranges:
-        $2000-$23FF: Name Table 0 (physical VRAM)
-        $2400-$27FF: Name Table 1 (physical VRAM)
-        $2800-$2BFF: Name Table 2 (mapped via mirroring to physical VRAM)
-        $2C00-$2FFF: Name Table 3 (mapped via mirroring to physical VRAM)
-        Mirroring (horizontal, vertical, or custom) is controlled by the cartridge mapper.
-        The PPU provides 2 KiB of VRAM to store two physical nametables.
+    /* Pattern Tables
+        $0000-$0FFF: Pattern Table 1
+        $1000-$1FFF: Pattern Table 2
+        Defined and documented in cartridge.h
     */
-    array<u8, 2048> _nameTables{};
 
     /*
        Palette Memory
@@ -301,18 +545,21 @@ class PPU
       Sprite backgrounds, despite being mirrored, are ignored and treated
       as transparent.
     */
-
     // Default boot palette, will get changed by the cartridge
-    array<u8, 0x20> _paletteMemory = {
-        0x09, 0x01, 0x00, 0x01, // bg1
-        0x00, 0x02, 0x02, 0x0D, // bg2
-        0x08, 0x10, 0x08, 0x24, // bg3
-        0x00, 0x00, 0x04, 0x2C, // bg4
-        0x09, 0x01, 0x34, 0x03, // sprite1
-        0x00, 0x04, 0x00, 0x14, // sprite2
-        0x08, 0x3A, 0x00, 0x02, // sprite3
-        0x00, 0x20, 0x2C, 0x08  // sprite4
+    // clang-format off
+    array<u8, 32> defaultPalette = {
+        0x09, 0x01, 0x00, 0x01, 
+        0x00, 0x02, 0x02, 0x0D,
+        0x08, 0x10, 0x08, 0x24,
+        0x00, 0x00, 0x04, 0x2C,
+        0x09, 0x01, 0x34, 0x03,
+        0x00, 0x04, 0x00, 0x14,
+        0x08, 0x3A, 0x00, 0x02,
+        0x00, 0x20, 0x2C, 0x08 
     };
+
+    // clang-format on
+    array<u8, 32> paletteMemory = defaultPalette;
 
     /* Object Attribute Memory (OAM)
        This is a 256 byte region internal to the PPU
@@ -334,6 +581,5 @@ class PPU
         +-------- Flip sprite vertically
       Byte 3: X position of the sprite
     */
-
-    array<u8, 256> _oam{};
+    array<u8, 256> oam{};
 };

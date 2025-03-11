@@ -1,9 +1,9 @@
 #pragma once
 #include "cpu.h"
 #include "ppu.h"
+#include "cartridge.h"
 #include <array>
 #include <cstdint>
-#include <memory>
 
 using u8 = uint8_t;
 using u16 = uint16_t;
@@ -18,6 +18,7 @@ class APU;
 class Bus
 {
   public:
+    // Initialized with flat memory disabled by default. Enabled in json tests only
     Bus();
 
     /*
@@ -25,19 +26,17 @@ class Bus
     ||         Peripherals        ||
     ################################
     */
-    CPU                        cpu;
-    PPU                        ppu;
-    std::shared_ptr<Cartridge> cartridge;
+    CPU       cpu;
+    PPU       ppu;
+    Cartridge cartridge;
 
     /*
     ################################
     ||         Bus Methods        ||
     ################################
     */
-    [[nodiscard]] u8 Read( uint16_t address );
+    [[nodiscard]] u8 Read( uint16_t address, bool debugMode = false );
     void             Write( u16 address, u8 data );
-    void             LoadCartridge( std::shared_ptr<Cartridge> cartridge );
-    void             ResetFlatMemory() { _flatMemory.fill( 0 ); }
 
     /*
     ################################
@@ -45,8 +44,9 @@ class Bus
     ################################
     */
     [[nodiscard]] bool IsTestMode() const;
+    void               DebugReset();
     void               EnableJsonTestMode() { _useFlatMemory = true; }
-    void               DisableJsonTesetMode() { _useFlatMemory = false; }
+    void               DisableJsonTestMode() { _useFlatMemory = false; }
 
   private:
     /*
@@ -54,20 +54,20 @@ class Bus
     ||           CPU RAM          ||
     ################################
     */
-    std::array<u8, 0x0800> _ram{}; // 2KB internal cpu RAM
+    std::array<u8, 2048> _ram{}; // 2KB internal cpu RAM
 
     /*
     ################################
     ||       Debug Variables      ||
     ################################
     */
-    bool                  _useFlatMemory = false;
-    std::array<u8, 65536> _flatMemory{}; // 64KB memory, for early testing
+    bool                  _useFlatMemory{}; // For testing purposes
+    std::array<u8, 65536> _flatMemory{};    // 64KB memory, for early testing
 
     /*
     ################################
     ||       Temporary Stubs      ||
     ################################
     */
-    std::array<u8, 0x0020> _apuIoMemory{}; // 32 bytes APU and I/O registers
+    std::array<u8, 32> _apuIoMemory{}; // 32 bytes APU and I/O registers
 };

@@ -4,17 +4,19 @@
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
 #include <exception>
-#include <cstdlib>
+#include <array>
 #include <iostream>
-#include <ostream>
-#include <stdexcept>
 
-PPU::PPU( Bus *bus ) : _bus( bus )
+PPU::PPU( Bus *bus ) : bus( bus )
 {
     try {
-        _nesPaletteRgbValues = utils::readPalette( "palettes/palette1.pal" );
+        LoadSystemPalette();
     } catch ( std::exception &e ) {
-        exit( EXIT_FAILURE );
+        std::cerr << e.what() << '\n';
+        std::cout << "Failed to load system palette from file.\n";
+        std::cout << "Using default palette.\n";
+        failedPaletteRead = true;
+        LoadDefaultSystemPalette();
     }
 }
 
@@ -25,24 +27,23 @@ PPU::PPU( Bus *bus ) : _bus( bus )
 ||                            ||
 ################################
 */
-[[nodiscard]] u8 PPU::HandleCpuRead( u16 address )
+[[nodiscard]] u8 PPU::HandleCpuRead( u16 address, bool debugMode ) // NOLINT
 {
+
     /* @brief: CPU reads to the PPU
-     * @details: Unlike other places in memory, doing reads here
-     * has side effects.
+     * @details: Unlike other places in memory. Reads can cause PPU status updates.
      */
 
     // Non-readable registers: 2000 (PPUCTRL), 2001 (PPUMASK), 2003 (OAMADDR), 2005 (PPUSCROLL),
     // 2006 (PPUADDR)
-    if ( _isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 || address == 0x2005 ||
+    if ( isDisabled || address == 0x2000 || address == 0x2001 || address == 0x2003 || address == 0x2005 ||
          address == 0x2006 ) {
         return 0xFF;
     }
 
     // 2002: PPU Status Register
     if ( address == 0x2002 ) {
-        /* @brief PPUSTATUS ($2002) Read Behavior
-
+        /*
          * Side Effects of Reading:
          *   1. Clears the vertical blank flag (Bit 7).
          *   2. Resets the PPU address latch for $2005/$2006.
@@ -50,50 +51,61 @@ PPU::PPU( Bus *bus ) : _bus( bus )
          * The CPU expects the state of the PPU at the time of the read. The vertical
          * blank flag is cleared after constructing the return value, ensuring the
          * CPU sees the state before the read's side effects.
-      */
+         */
 
-        u8 const status = _ppuStatus.value & 0xE0;
-        u8 const noise = _dataBuffer & 0x1F;
+        // Debug mode doesn't have side effects
+        if ( debugMode ) {
+            return ppuStatus.value;
+        }
+
+        u8 const status = ppuStatus.value & 0xE0;
+        u8 const noise = ppuStatus.value & 0x1F;
         u8 const data = status | noise;
-        _ppuStatus.bit.verticalBlank = 0;
-        _addrLatch = false;
-        _bus->cpu.SetReading2002( false );
-        _preventVBlank = false;
+        ppuStatus.bit.verticalBlank = 0;
+        addrLatch = false;
+        bus->cpu.SetReading2002( false );
+        preventVBlank = false;
         return data;
     }
-
     // 2004: OAM Data
     if ( address == 0x2004 ) {
         /*
-          Return the contents of _oam[_oamaddr]
-          If called while _renderingEnabled and in visible scanline range (0-239),
-          Returns corrupted data (0xFF)
+           Return the contents of oam[oamaddr]
+           If called while renderingEnabled and in visible scanline range (0-239),
+           Returns corrupted data (0xFF)
         */
-        if ( _isRenderingEnabled && _scanline >= 0 && _scanline < 240 ) {
+        if ( isRenderingEnabled && scanline >= 0 && scanline <= 239 ) {
             return 0xFF;
         }
-
-        return _oam.at( _oamAddr & 0xFF );
+        return oam.at( oamAddr & 0xFF );
     }
 
     // 2007: PPU Data
     if ( address == 0x2007 ) {
-        u8 data = 0x00;
-
-        // If accessing palette memory ($3F00-$3FFF), use direct read
-        if ( _vramAddr.value >= 0x3F00 && _vramAddr.value <= 0x3FFF ) {
-            data = Read( _vramAddr.value );
-        } else {
-            // Buffered read for VRAM, delayed by one cycle
-            data = _dataBuffer;                             // Return buffered value
-            _dataBuffer = Read( _vramAddr.value & 0x3FFF ); // Fetch next value
+        /*
+          Reads the data at the current vramAddr
+          When reading from palette memory, (0x3F00-0x3FFF), direct data is returned
+          Otherwise, the data from the current ppuDataBuffer is returned, simulating
+          a delayed read by 1 cycle, and the vramAddr is then incremented by 1 or 32.
+          1 if ppuCtrl increment mode is 0, 32 if 1.
+          The ppuDataBuffer is then updated with the data at the new vramAddr, in preparation
+          for the next non-palette memory read.
+         */
+        if ( vramAddr.value >= 0x3F00 && vramAddr.value <= 0x3FFF ) {
+            return Read( vramAddr.value );
         }
 
-        // Increment VRAM address based on ppuctrl increment mode
-        _vramAddr.value += _ppuCtrl.bit.vramIncrement ? 32 : 0;
+        // Debug mode has no side effects
+        if ( debugMode ) {
+            return ppuDataBuffer;
+        }
+
+        u8 const data = ppuDataBuffer;
+        ppuDataBuffer = Read( vramAddr.value );
+
+        vramAddr.value += ppuCtrl.bit.vramIncrement ? 32 : 1;
         return data;
     }
-
     return 0xFF;
 }
 
@@ -104,114 +116,144 @@ PPU::PPU( Bus *bus ) : _bus( bus )
 ||                            ||
 ################################
 */
-void PPU::HandleCpuWrite( u16 address, u8 data )
+
+void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
 {
     /* @brief: CPU writes to the PPU
      */
-
-    if ( _isDisabled ) {
+    if ( isDisabled ) {
         return;
     }
 
+    (void) data; // NOTE: Remove after using data
+
     switch ( address ) {
-        case 0x2000: {
-            _ppuCtrl.value = data;
+        // 2000: PPUCTRL
+        case 0x2000: // NOLINT
+        {
+            /*
+              This write sets ppuCtrl to data.
+              If ppuCtrl nmi is enabled and if ppuStatus vertical blank is set,
+              initiates an non-maskable interrupt.
+              Additionally, tempAddr nametable x and y bits are update from the
+              cpuCtrl nametable x and y bits.
+             */
 
-            // Trigger NMI if NMI is enabled and VBlank is set
-            // This is to ensure NMI can be called any time during the vblank period, not just
-            // on the first cycle
-
-            if ( _ppuCtrl.bit.nmiEnable && _ppuStatus.bit.verticalBlank ) {
+            ppuCtrl.value = data;
+            if ( ppuCtrl.bit.nmiEnable && ppuStatus.bit.verticalBlank ) {
                 TriggerNmi();
             }
-
-            // Copy bits 0-1 of ppuctrl to the temp address register,
-            // which are the nametable x and y values
-            _tempAddr.bit.nametableX = _ppuCtrl.bit.nametableX;
-            _tempAddr.bit.nametableY = _ppuCtrl.bit.nametableY;
+            tempAddr.bit.nametableX = ppuCtrl.bit.nametableX;
+            tempAddr.bit.nametableY = ppuCtrl.bit.nametableY;
             break;
         }
-
+        // 2001: PPUMASK
         case 0x2001: {
-            // Bits 3 = BG enable, 4 = Sprite enable
-            _ppuMask.value = data;
-            _isRenderingEnabled = _ppuMask.bit.renderBackground || _ppuMask.bit.renderSprites;
+            /*
+              Sets ppuMask to data
+              isRenderingEnabled can be determined here based on whether
+              bgenabled and sprite enabled bits are set in the ppuMask
+            */
+            ppuMask.value = data;
+            isRenderingEnabled = ppuMask.bit.renderBackground || ppuMask.bit.renderSprites;
             break;
         }
-        case 0x2002: // Status, not writable
+        // 2002: PPUSTATUS, does nothing
+        case 0x2002:
             break;
-        case 0x2003:
-            _oamAddr = data;
+        // 2003: OAMADDR
+        case 0x2003: // NOLINT
+        {
+            oamAddr = data;
             break;
-        case 0x2004:
-            // OAM Data write
-            // The NES allows writes to the OAMDATA, NES dev says that most of the time,
-            // DMA transfer is used instead of writing here directly, as it's too slow. However,
-            // the functionality exists, so we'll emulate it.
-            // Writes during rendering do have an effect, but the docs recommend ignoring it for emulation
-            if ( _isRenderingEnabled && ( _scanline < 240 || _scanline == -1 ) ) {
+        }
+        // 2004: OAMDATA
+        case 0x2004: {
+            /*
+              Writes data to oam[oamAddr]
+              Increments oamAddr
+              If isRenderingEnabled and in visible scanline range (0-239),
+              Ignore the write
+             */
+            if ( isRenderingEnabled && scanline >= 0 && scanline <= 239 ) {
                 return;
             }
-            // Write to OAM
-            _oam.at( _oamAddr & 0xFF ) = data;
-
-            // Increment OAM address
-            _oamAddr = ( _oamAddr + 1 ) & 0xFF;
-            break;
-        case 0x2005:
-            /*
-               Scrolling
-               Fine scroll moves within a tile, values range from 0 to 7
-               Coarse scroll moves 8 pixels at a time
-            */
-            if ( !_addrLatch ) {
-                // First write contains X offset
-                // Bits 3-7 from data are the coarse x scroll, stored in the temp register
-                _tempAddr.bit.coarseX = ( data & 0b11111000 ) >> 3;
-
-                // Bits 0-2 of data are the fine x scroll, stored in the fine x register
-                _fineX = data & 0b00000111;
-
-                _addrLatch = true;
-            } else {
-                // Second write
-
-                // Fine y is the first 3 bits of the data
-                _tempAddr.bit.fineY = data & 0b00000111;
-
-                // Coarse y is the next 5 bits of the data
-                _tempAddr.bit.coarseY = ( data & 0b11111000 ) >> 3;
-
-                _addrLatch = false;
-            }
-            break;
-        case 0x2006:
-            // PPU Address
-            if ( !_addrLatch ) {
-                // First write
-                // First 6 bits of data are set to bits 8-14 of the temp address
-                // bit 14 of the temp address is set to 0
-                u16 const high = ( data &= 0b00111111 ) << 8;
-                _tempAddr.value = ( _tempAddr.value & 0x00FF ) | high;
-                _addrLatch = true;
-            } else {
-                // Second write
-                // All 8 bits of data are set to the lower 8 bits of the temp address
-                _tempAddr.value = ( _tempAddr.value & 0xFF00 ) | data;
-
-                // temp address is copied to vram address
-                _vramAddr.value = _tempAddr.value;
-                _addrLatch = false;
-            }
-            break;
-        case 0x2007: {
-            Write( _vramAddr.value, data );
-            _vramAddr.value += _ppuCtrl.bit.vramIncrement == 0 ? 1 : 32;
+            oam.at( oamAddr & 0xFF ) = data;
+            oamAddr = ( oamAddr + 1 ) & 0xFF;
             break;
         }
-
+        // 2005: PPUSCROLL
+        case 0x2005: // NOLINT
+        {
+            /*
+               Updates the coarse x, y and fine x, y in two writes
+               Coarse x, coarse y, and fine y are encoded into tempAddr
+               Fine x has its own register, fineX
+            */
+            if ( !addrLatch ) // NOLINT
+            {
+                /* First Write
+                  Sets tempAddr coarse x from bits 3-7 of data (data & 0b11111000)
+                  Sets fineX from bits 0-2 of data (data & 0b00000111)
+                  Toggles addrLatch
+                 */
+                tempAddr.bit.coarseX = ( data & 0xF8 ) >> 3; // bit to 7, using loopy register
+                fineX = data & 0x07;                         // bit 0-2
+                addrLatch = true;                            // toggle
+            } else {
+                /* Second Write
+                  Sets tempAddr fine y from bits 0-2 of data (data & 0b00000111)
+                  Sets tempAddr coarse y from bits 3-7 of data (data & 0b11111000)
+                  Toggles addrLatch
+                 */
+                tempAddr.bit.coarseY = ( data & 0xF8 ) >> 3; // bit to 7
+                tempAddr.bit.fineY = data & 0x07;            // bit 0-2, using loopy register
+                addrLatch = false;                           // toggle
+            }
+            break;
+        }
+        // 2006: PPUADDR
+        case 0x2006: {
+            /*
+              Updates the high and low byte of the tempAddr in two writes
+              High byte is written first
+              Low byte is written second
+             */
+            if ( !addrLatch ) // NOLINT
+            {
+                /* First Write
+                   tempAddr high byte is derived from the first bits of data (data & 0b00111111)
+                   and is set to bits 8-14 of tempAddr
+                   The addrLatch is toggled
+                 */
+                tempAddr.value = ( tempAddr.value & 0xFF ) | ( ( data & 0x7F ) << 8 );
+                addrLatch = true;
+            } else {
+                /* Second Write
+                   The entire data byte is the tempAddr low byte
+                   tempAddr low byte is updated with the data byte
+                  tempAddr is copied to vramAddr
+                  addrLatch is toggled
+                 */
+                tempAddr.value = ( tempAddr.value & 0x7F00 ) | data;
+                vramAddr.value = tempAddr.value;
+                addrLatch = false;
+            }
+            break;
+        }
+        // 2007: PPU Data
+        case 0x2007: {
+            /*
+               data is written to the current vramAddr
+              vramAddr is then incremented by 1 or 32.
+              1 if ppuCtrl increment mode is 0, 32 if 1
+            */
+            //
+            Write( vramAddr.value, data );
+            vramAddr.value += ppuCtrl.bit.vramIncrement == 0 ? 1 : 32;
+        }
         default:
-            return;
+            break;
     }
 }
 
@@ -222,6 +264,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data )
 ||                            ||
 ################################
 */
+
 void PPU::DmaTransfer( u8 data ) // NOLINT
 {
     /* @details CPU writes to address $4014 to initiate a DMA transfer
@@ -239,15 +282,13 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
      * This is not the only way to update the OAM, registers 2004 and 2003 can be used
      * but those are slower, and are used for partial updates mostly
      */
-    if ( _bus == nullptr ) {
-        return;
-    }
-
-    u16 const address = data << 8;
+    u16 const sourceAddress = data << 8;
+    // read 256 bytes
     for ( u16 i = 0; i < 256; i++ ) {
-        _oam[i] = _bus->Read( address + i );
+        oam[i] = bus->Read( sourceAddress + i );
     }
 }
+
 /*
 ################################
 ||                            ||
@@ -256,34 +297,38 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
 ################################
 */
 
-[[nodiscard]] u8 PPU::Read( u16 address )
+[[nodiscard]] u8 PPU::Read( u16 address ) // NOLINT
 {
     /*@brief: Internal PPU reads to the cartridge
      */
-
-    if ( _bus->cartridge == nullptr ) {
-        return 0xFF;
-    }
-
     // $0000-$1FFF: Pattern Tables
     if ( address >= 0x0000 && address <= 0x1FFF ) {
-        return _bus->cartridge->Read( address );
+        /* Pattern table data is read from the cartridge */
+        return bus->cartridge.Read( address );
     }
 
     // $2000-$3EFF: Name Tables
     if ( address >= 0x2000 && address <= 0x3EFF ) {
-        // Address 3000-3EFF is not not valid and can be mirrored to 2000-2EFF
+        /*
+           Name table data is read from nameTables
+          nameTables is a 2KiB array, with each name table taking up 1KiB
+          Appropriate mirroing logic is handled in ResolveNameTableAddress
+
+          If the mirroring mode is four screen, that means 4 name tables are
+          used, each 1KiB in size. Since nameTables is only 2KiB, any address
+          above 0x2800 must be directed to the cartridge, which provides the
+          additional name table space. It's not necessary to emulate it this
+          way, but it's a more accurate paradigm because that's how the hardware
+          handles it.
+        */
         address &= 0x2FFF;
 
-        // In four screen mode, there are 4 unique name tables
-        // The PPU only has 2KiB of vram, so the other 2KiB is stored in the cartridge
-        if ( _bus->cartridge->GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 ) {
-            return _bus->cartridge->ReadCartridgeVRAM( address );
+        if ( bus->cartridge.GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 ) {
+            return bus->cartridge.ReadCartridgeVRAM( address );
         }
 
         u16 const nametableAddr = ResolveNameTableAddress( address );
-
-        return _nameTables.at( nametableAddr & 0x07FF );
+        return nameTables.at( nametableAddr & 0x07FF );
     }
 
     // $3F00-$3FFF: Palettes
@@ -300,16 +345,18 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
         Palette 5: $3F14 (mirrors 3F04), $3F15, $3F16, $3F17.
         Palette 6: $3F18 (mirrors 3F08), $3F19, $3F1A, $3F1B.
         Palette 7: $3F1C (mirrors 3F0C), $3F1D, $3F1E, $3F1F.
-        */
-        address &= 0x001F; // Mask to 32 bytes
 
-        // Mirror backgrounds of palettes 4-7 to 0-3
-        if ( address >= 0x0010 && ( address & 0x0003 ) == 0 ) {
-            address -= 0x0010;
+        The address is masked to 32 bytes.
+        Addresses 3F10, 3F14, 3F18 and 3F1C mirror 3F00, 3F04, 3F08 and 3F0C respectively
+        */
+        address &= 0x1F;
+
+        // Handle mirroring of 3F10, 3F14, 3F18, 3F1C to 3F00, 3F04, 3F08, 3F0C
+        if ( address >= 0x10 && ( address & 0x03 ) == 0 ) {
+            address &= 0x0F;
         }
 
-        // Return as a 6 bit value (0-63)
-        return _paletteMemory.at( address ) & 0x3F;
+        return paletteMemory.at( address ) & 0x3F;
     }
 
     return 0xFF;
@@ -322,46 +369,56 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
 ||                            ||
 ################################
 */
-void PPU::Write( u16 address, u8 data )
+void PPU::Write( u16 address, u8 data ) // NOLINT
 {
     /*@brief: Internal PPU reads to the cartridge
      */
-    if ( _bus->cartridge == nullptr ) {
-        return;
-    }
 
+    (void) data;
     address &= 0x3FFF;
 
     if ( address >= 0x0000 && address <= 0x1FFF ) {
-        // Write to Pattern table memory
-        _bus->cartridge->Write( address, data );
+        /* Pattern table data is written to the cartridge */
+        bus->cartridge.Write( address, data );
         return;
     }
     if ( address >= 0x2000 && address <= 0x2FFF ) {
-        // Address 3000-3EFF is not not valid and can be mirrored to 2000-2EFF
-        address &= 0x2FFF;
 
-        // In four screen mode, there are 4 unique name tables
-        // The PPU only has 2KiB of vram, so the other 2KiB is stored in the cartridge
-        if ( _bus->cartridge->GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 ) {
-            _bus->cartridge->WriteCartridgeVRAM( address, data );
+        /*
+           Name table data is written to nameTables
+          nameTables is a 2KiB array, with each name table taking up 1KiB
+          Appropriate mirroing logic is handled in ResolveNameTableAddress
+
+          If the mirroring mode is four screen, that means 4 name tables are
+          used, each 1KiB in size. Since nameTables is only 2KiB, any address
+          above 0x2800 must be directed to the cartridge, which provides the
+          additional name table space.
+        */
+
+        address &= 0x2FFF;
+        if ( bus->cartridge.GetMirrorMode() == MirrorMode::FourScreen && address >= 0x2800 ) {
+            bus->cartridge.WriteCartridgeVRAM( address, data );
             return;
         }
         u16 const nametableAddr = ResolveNameTableAddress( address );
-        _nameTables.at( nametableAddr & 0x07FF ) = data;
+        nameTables.at( nametableAddr & 0x07FF ) = data;
         return;
     }
 
     // $3F00-$3FFF: Palettes
     if ( address >= 0x3F00 && address <= 0x3FFF ) {
-        address &= 0x001F; // Mask to 32 bytes
 
-        // Mirror backgrounds of palettes 4-7 to 0-3
-        if ( address >= 0x0010 && ( address & 0x0003 ) == 0 ) {
-            address -= 0x0010;
+        /* The address is masked to 32 bytes.
+        Addresses 3F10, 3F14, 3F18 and 3F1C mirror 3F00, 3F04, 3F08 and 3F0C respectively
+        */
+        address &= 0x1F;
+
+        // Handle mirroring of 3F10, 3F14, 3F18, 3F1C to 3F00, 3F04, 3F08, 3F0C
+        if ( address >= 0x10 && ( address & 0x03 ) == 0 ) {
+            address &= 0x0F;
         }
 
-        _paletteMemory.at( address & 0x1F ) = data;
+        paletteMemory.at( address ) = data;
     }
 }
 
@@ -374,7 +431,7 @@ void PPU::Write( u16 address, u8 data )
 */
 void PPU::Tick() // NOLINT
 {
-    if ( _isDisabled ) {
+    if ( isDisabled ) {
         return;
     }
 
@@ -386,17 +443,18 @@ void PPU::Tick() // NOLINT
     ################################
     */
 
-    if ( _scanline == -1 ) {
+    if ( scanline == -1 ) {
 
         /*
         ################################
         ||    Odd Frame Cycle Skip    ||
         ################################
         */
-        bool const isOddFrame = ( _frame & 1 ) == 1;
-        if ( _scanline == -1 && _cycle == 339 && isOddFrame && _isRenderingEnabled ) {
-            _cycle = 0;
-            _scanline = 0;
+        if ( cycle == 339 && ( frame % 2 == 1 ) && isRenderingEnabled ) {
+
+            // skip by resetting scanline and cycle early
+            cycle = 0;
+            scanline = 0;
             return;
         }
 
@@ -405,12 +463,11 @@ void PPU::Tick() // NOLINT
         ||         Vblank End         ||
         ################################
         */
-        if ( _scanline == -1 && _cycle == 1 ) {
-            _ppuStatus.bit.verticalBlank = 0;
-            _ppuStatus.bit.spriteOverflow = 0;
-            _ppuStatus.bit.spriteZeroHit = 0;
-
-            // TODO: Clear sprite shifters
+        // Reset top 3 bits of ppuStatus register,
+        // and set vramAddr to tempAddr
+        if ( cycle == 1 ) {
+            ppuStatus.value &= 0b00011111;
+            vramAddr.value = tempAddr.value;
         }
 
         /*
@@ -418,10 +475,10 @@ void PPU::Tick() // NOLINT
         ||    Transfer Y (280-340)    ||
         ################################
         */
-        if ( _scanline == -1 && _cycle >= 280 && _cycle <= 304 ) {
-            _vramAddr.bit.nametableY = _tempAddr.bit.nametableY;
-            _vramAddr.bit.coarseY = _tempAddr.bit.coarseY;
-            _vramAddr.bit.fineY = _tempAddr.bit.fineY;
+        if ( scanline == -1 && cycle >= 280 && cycle <= 304 ) {
+            vramAddr.bit.nametableY = tempAddr.bit.nametableY;
+            vramAddr.bit.coarseY = tempAddr.bit.coarseY;
+            vramAddr.bit.fineY = tempAddr.bit.fineY;
         }
     }
 
@@ -432,7 +489,8 @@ void PPU::Tick() // NOLINT
     ||                             ||
     #################################
     */
-    if ( _scanline >= 0 && _scanline <= 239 ) {
+
+    if ( scanline >= 0 && scanline <= 239 ) {
 
         // Cycle 0, Idle cycle
 
@@ -443,7 +501,7 @@ void PPU::Tick() // NOLINT
         */
         // Cycles 1-256: Tile and Pixel Rendering
         // Cycles 321-336 are beyond the visible scanline, but continue for the next scanline
-        if ( ( _cycle >= 1 && _cycle <= 256 ) || ( _cycle >= 321 && _cycle <= 336 ) ) {
+        if ( ( cycle >= 1 && cycle <= 256 ) || ( cycle >= 321 && cycle <= 336 ) ) {
 
             // Update the current pixel info
             UpdateShiftRegisters();
@@ -454,7 +512,7 @@ void PPU::Tick() // NOLINT
                See the wiki PPU diagram for more details
                https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
              */
-            u8 const event = ( _cycle - 1 ) & 0x07;
+            u8 const event = ( cycle - 1 ) & 0x07;
 
             switch ( event ) {
                 // 0-1 fetch the nametable byte
@@ -494,12 +552,14 @@ void PPU::Tick() // NOLINT
         ||  End of Tile Fetching (257)  ||
         ##################################
         */
-        if ( _cycle == 257 ) {
+        if ( cycle == 257 ) {
             LoadNextBgShiftRegisters();
 
             // Transfer nametable and coarse X from temp to vram address
-            _vramAddr.bit.nametableX = _tempAddr.bit.nametableX;
-            _vramAddr.bit.coarseX = _tempAddr.bit.coarseX;
+            if ( isRenderingEnabled ) {
+                vramAddr.bit.nametableX = tempAddr.bit.nametableX;
+                vramAddr.bit.coarseX = tempAddr.bit.coarseX;
+            }
         }
 
         /*
@@ -509,7 +569,7 @@ void PPU::Tick() // NOLINT
         ||                               ||
         ###################################
         */
-        if ( _cycle >= 257 && _cycle <= 320 ) {
+        if ( cycle >= 257 && cycle <= 320 ) {
             //  TODO: Sprite evaluation
         }
 
@@ -518,8 +578,8 @@ void PPU::Tick() // NOLINT
         ||   Unused Reads (338, 340)  ||
         ################################
         */
-        if ( _cycle == 338 || _cycle == 340 ) {
-            _nametableByte = Read( 0x2000 | ( _vramAddr.value & 0x0FFF ) );
+        if ( cycle == 338 || cycle == 340 ) {
+            nametableByte = Read( 0x2000 | ( vramAddr.value & 0x0FFF ) );
         }
     }
 
@@ -528,31 +588,31 @@ void PPU::Tick() // NOLINT
     ||        Vblank Start        ||
     ################################
     */
-    if ( _scanline == 241 ) {
+    if ( scanline == 241 ) {
         // If the CPU is reading register 2002 on cycle 0 of scanline 241
         // Vblank will not be set until the next frame due to a hardware race condition bug
-        if ( _cycle == 0 && _bus->cpu.IsReading2002() ) {
-            _preventVBlank = true;
+        if ( cycle == 0 && bus->cpu.IsReading2002() ) {
+            preventVBlank = true;
         }
 
         // Set the Vblank flag on cycle 1
-        if ( _cycle == 1 ) {
+        if ( cycle == 1 ) {
 
             // SDL Callback for rendering the framebuffer
             if ( onFrameReady != nullptr ) {
-                onFrameReady( _frameBuffer.data() );
+                onFrameReady( frameBuffer.data() );
             }
 
             // Vblank and NMI
-            if ( !_preventVBlank ) {
-                _ppuStatus.bit.verticalBlank = 1;
+            if ( !preventVBlank ) {
+                ppuStatus.bit.verticalBlank = 1;
 
                 // Trigger NMI if NMI is enabled
-                if ( _ppuCtrl.bit.nmiEnable ) {
+                if ( ppuCtrl.bit.nmiEnable ) {
                     TriggerNmi();
                 }
             }
-            _preventVBlank = false;
+            preventVBlank = false;
         }
     }
 
@@ -563,38 +623,30 @@ void PPU::Tick() // NOLINT
     ||                            ||
     ################################
     */
-    if ( _scanline >= 0 && _scanline < 240 && _cycle >= 0 && _cycle < 256 ) {
+    if ( scanline >= 0 && scanline < 240 && cycle >= 0 && cycle < 256 ) {
         u8 const  bgPalette = GetBgPalette();
         u8 const  spritePalette = GetSpritePalette();
         u8 const  bgPixel = GetBgPixel();
         u8 const  spritePixel = GetSpritePixel();
         u32 const outputPixel = GetOutputPixel( bgPixel, spritePixel, bgPalette, spritePalette );
-        u16 const bufferIndex = ( _scanline * 256 ) + _cycle;
-
-        try {
-            _frameBuffer.at( bufferIndex ) = outputPixel;
-        } catch ( std::out_of_range &e ) {
-            std::cerr << e.what() << '\n';
-            std::cerr << "Buffer Index: " << bufferIndex << '\n';
-            std::cerr << "Scanline: " << _scanline << '\n';
-            std::cerr << "Cycle: " << _cycle << '\n';
-        }
+        u16 const bufferIndex = ( scanline * 256 ) + cycle;
+        frameBuffer.at( bufferIndex ) = outputPixel;
     }
 
-    _cycle++;
+    cycle++;
 
     /*
     ################################
     ||       End Of Scanline      ||
     ################################
     */
-    if ( _cycle > 340 ) {
-        _cycle = 0;
-        _scanline++;
+    if ( cycle > 340 ) {
+        cycle = 0;
+        scanline++;
 
-        if ( _scanline > 260 ) {
-            _scanline = -1;
-            _frame++;
+        if ( scanline > 260 ) {
+            scanline = -1;
+            frame++;
         }
     }
 }
@@ -607,41 +659,36 @@ void PPU::Tick() // NOLINT
 ################################
 */
 
-void PPU::TriggerNmi()
+void PPU::TriggerNmi() const
 {
-    if ( _bus == nullptr ) {
+    if ( bus == nullptr ) {
         return;
     }
-    if ( !_bus->cpu.IsNmiInProgress() ) {
-        _bus->cpu.NMI();
+    if ( !bus->cpu.IsNmiInProgress() ) {
+        bus->cpu.NMI();
     }
 }
 
-u16 PPU::ResolveNameTableAddress( u16 addr )
+u16 PPU::ResolveNameTableAddress( u16 addr, int testMirrorMode ) const
 {
-    /* @brief: Resolve the name table address according to the mirror mode, defined in the cartridge.
-       @details:
-       The PPU can have up to 4 nametables, which are 1 KiB each. Most cartridges only use 2.
-       The mapper determines how the nametables are mirrored. Addresses to this helper will be
-       between 2000-2FFF, and most will be converted to a value between 0000-07FF, which is 2048 bytes,
-       the exact size of the _nameTables array. In cases 4 screen mode is used. This function can
-       return addresses between 0000 and 0FFF, but in reality, addresses bigger than 27FF are intercepted
-       by the cartridge before they make it here. 4 Screen mode will return an unmirrored part of the
-       address space that's lower than 27FF, and the cartridge will handle the higher part.
-     */
-    if ( _bus == nullptr ) {
+
+    if ( bus == nullptr ) {
         return 0x00;
     }
+    MirrorMode mirrorMode = bus->cartridge.GetMirrorMode();
 
-    MirrorMode const mirrorMode = _bus->cartridge->GetMirrorMode();
+    // override mirror mode for testing
+    if ( testMirrorMode != -1 ) {
+        mirrorMode = static_cast<MirrorMode>( testMirrorMode );
+    }
 
     switch ( mirrorMode ) {
-        case MirrorMode::SingleUpper:
+        case MirrorMode::SingleUpper: // NOLINT
             // All addresses fall within 2000-23FF, nametable 0
-            return addr & 0x03FF;
+            return 0x2000 | ( addr & 0x03FF );
         case MirrorMode::SingleLower:
             // All addresses fall within 2800-2BFF, nametable 2
-            return ( addr & 0x03FF ) + 0x800;
+            return 0x2800 | ( addr & 0x03FF );
         case MirrorMode::Vertical:
             /* Vertical Mirroring
               The two horizontal sections are unique, but the two vertical sections are mirrored
@@ -655,8 +702,7 @@ u16 PPU::ResolveNameTableAddress( u16 addr )
               Horizontal scrolling games will use this mode. When screen data exceeds 27FF, it's
               wrapped back to 2000.
              */
-
-            return addr & 0x07FF; // 0000-07FF local (2000-27FF actual)
+            return 0x2000 | ( addr & 0x07FF );
         case MirrorMode::Horizontal:
             /* Horizontal Mirroring
               The two vertical sections are unique, but the two horizontal sections are mirrored
@@ -667,11 +713,18 @@ u16 PPU::ResolveNameTableAddress( u16 addr )
               2800 < > 2C00
 
               Horizontal mode is used for vertical scrolling games, like Kid Icarus.
+
+             Map addresses from 2C00-2FFF to 2800-2BFF if the address is for nametable 1
+             Otherwise map addresses from 2400-27FF to 2000-23FF
              */
-            if ( addr >= 0x2800 ) {
-                return ( addr & 0x03FF ) + 0x800; // 0800-0BFF local (2800-2BFF actual)
+
+            if ( addr & 0x800 ) {
+                return 0x2800 | ( addr & 0x03FF );
+            } else {
+                return 0x2000 | ( addr & 0x03FF );
             }
-            return addr & 0x03FF; // 0000-03FF local (2000-23FF actual)
+
+            return 0x2000 | ( ( addr & 0x03FF ) | ( ( addr & 0x800 ) >> 1 ) );
         case MirrorMode::FourScreen:
             /* Four-Screen Mirroring
                All four nametables are unique and backed by cartridge VRAM. There's no mirroring.
@@ -679,7 +732,7 @@ u16 PPU::ResolveNameTableAddress( u16 addr )
             return addr & 0x0FFF;
         default:
             // Default to vertical mirroring
-            return addr & 0x07FF;
+            return 0x2000 | ( addr & 0x07FF );
     }
     return 0xFF;
 }
@@ -734,17 +787,17 @@ void PPU::UpdateShiftRegisters()
     Shift registers do not hold the final output ready for SDL. This output
     needs an additional step to convert palette indeces to RGB values
    */
-    _bgShiftPatternLow <<= 1;
-    _bgShiftPatternHigh <<= 1;
-    _bgShiftAttributeLow <<= 1;
-    _bgShiftAttributeHigh <<= 1;
+    bgShiftPatternLow <<= 1;
+    bgShiftPatternHigh <<= 1;
+    bgShiftAttributeLow <<= 1;
+    bgShiftAttributeHigh <<= 1;
 
     /*
     ################################
     ||       Sprite Shifters      ||
     ################################
     */
-    if ( _ppuMask.bit.renderSprites && _cycle >= 1 && _cycle <= 256 ) {
+    if ( ppuMask.bit.renderSprites && cycle >= 1 && cycle <= 256 ) {
         // TODO: Sprite shifters
     }
 }
@@ -759,8 +812,8 @@ void PPU::LoadNextBgShiftRegisters()
        and the next tile. It preloads the tile data necessary for pixel-based scrolling
        The tops 8 bits hold the current tile, the bottom 8 bits hold the next tile
      */
-    _bgShiftPatternLow = ( _bgShiftPatternLow & 0xFF00 ) | _bgPlane0Byte;
-    _bgShiftPatternHigh = ( _bgShiftPatternHigh & 0xFF00 ) | _bgPlane1Byte;
+    bgShiftPatternLow = ( bgShiftPatternLow & 0xFF00 ) | bgPlane0Byte;
+    bgShiftPatternHigh = ( bgShiftPatternHigh & 0xFF00 ) | bgPlane1Byte;
 
     /* Update the attribute shift registers
        These are two 16-bit registers that hold the attribute table data (palette)
@@ -769,18 +822,18 @@ void PPU::LoadNextBgShiftRegisters()
        Since the attribute table is split into 4 regions, we can determine which
        region to mask based on the attribute table byte
      */
-    u8 const lowMask = ( _attributeByte & 0b01 ) ? 0xFF : 0x00;
-    u8 const highMask = ( _attributeByte & 0b10 ) ? 0xFF : 0x00;
-    _bgShiftAttributeLow = ( _bgShiftAttributeLow & 0xFF00 ) | lowMask;
-    _bgShiftAttributeHigh = ( _bgShiftAttributeHigh & 0xFF00 ) | highMask;
+    u8 const lowMask = ( attributeByte & 0b01 ) ? 0xFF : 0x00;
+    u8 const highMask = ( attributeByte & 0b10 ) ? 0xFF : 0x00;
+    bgShiftAttributeLow = ( bgShiftAttributeLow & 0xFF00 ) | lowMask;
+    bgShiftAttributeHigh = ( bgShiftAttributeHigh & 0xFF00 ) | highMask;
 }
 
 void PPU::LoadNametableByte()
 {
-    /*  @brief: Loads the current nametable byte from VRAM into _nametableByte
+    /*  @brief: Loads the current nametable byte from VRAM into nametableByte
         @details: Nametable is a 1 KiB region that stores background tile indeces.
         in other words, it's the layout of the background tiles on the screen. This function
-        sets the _nametableByte to the tile that the vram address is pointing to. In essence,
+        sets the nametableByte to the tile that the vram address is pointing to. In essence,
         it's telling the PPU which tile will appear in the background, but not the pixel data.
         The pixel data is acquired from the pattern table, which contains indices 0-3. The actual
         palette is in the attribute table, which defines what 0-3 will look like.
@@ -789,7 +842,7 @@ void PPU::LoadNametableByte()
     // Grab the first 12 bits of the VRAM address
     // which provide nametable select, coarse Y scroll, and coarse x scroll information
     // Nametable address is 0x2000 plus the offset of the vram address.
-    _nametableByte = Read( 0x2000 | ( _vramAddr.value & 0x0FFF ) );
+    nametableByte = Read( 0x2000 | ( vramAddr.value & 0x0FFF ) );
 }
 
 void PPU::LoadAttributeByte()
@@ -841,12 +894,12 @@ void PPU::LoadAttributeByte()
     || ++++---------- attribute offset (from the 23C0 offset)
     ++--------------- nametable select
     */
-    u16 const nametableSelect = ( _vramAddr.value & 0x0C00 );
+    u16 const nametableSelect = ( vramAddr.value & 0x0C00 );
     u16 const attributeOffset = 0x23C0;
-    u16 const coarseY = ( _vramAddr.bit.coarseY >> 2 ) << 3;
-    u16 const coarseX = ( _vramAddr.bit.coarseX >> 2 );
+    u16 const coarseY = ( vramAddr.bit.coarseY >> 2 ) << 3;
+    u16 const coarseX = ( vramAddr.bit.coarseX >> 2 );
     u16 const attributeAddr = attributeOffset | nametableSelect | coarseY | coarseX;
-    _attributeByte = Read( attributeAddr );
+    attributeByte = Read( attributeAddr );
 }
 
 void PPU::LoadPatternPlane0Byte()
@@ -875,29 +928,16 @@ void PPU::LoadPatternPlane0Byte()
      */
 
     // PPUCTRL dictates pattern table start as either 0KiB or 0x1000
-    u16 const bgPatternOffset = _ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+    u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
 
     // Tile offset, each tile is 16 bytes, so multiply by 16
-    u16 const tileOffset = _nametableByte << 4;
+    u16 const tileOffset = nametableByte << 4;
 
     // Row offset, which determines the row of the tile
-    u16 const rowOffset = _vramAddr.bit.fineY;
+    u16 const rowOffset = vramAddr.bit.fineY;
 
     // Fetch the pattern table byte
-    _bgPlane0Byte = Read( bgPatternOffset + tileOffset + rowOffset );
-}
-
-void PPU::LoadPatternPlane1Byte()
-{
-    /* @brief: Load plane 1, the high byte of the pattern table (bg pixel data)
-     */
-
-    // Grab the pattern table byte for plane 1
-    // Same calculation as plane 0, but add 8 to the tile offset
-    u16 const bgPatternOffset = _ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
-    u16 const tileOffset = _nametableByte << 4;
-    u16 const rowOffset = _vramAddr.bit.fineY;
-    _bgPlane1Byte = Read( bgPatternOffset + tileOffset + rowOffset + 8 );
+    bgPlane0Byte = Read( bgPatternOffset + tileOffset + rowOffset );
 }
 
 void PPU::IncrementScrollX()
@@ -913,16 +953,16 @@ void PPU::IncrementScrollX()
      */
 
     // Increment coarse x, if rendering is enabled
-    if ( !_isRenderingEnabled ) {
+    if ( !isRenderingEnabled ) {
         return;
     }
 
     // If at end of screen, set to 0, and flip the name table x bit
-    if ( _vramAddr.bit.coarseX == 31 ) {
-        _vramAddr.bit.coarseX = 0;
-        _vramAddr.bit.nametableX = !_vramAddr.bit.nametableX;
+    if ( vramAddr.bit.coarseX == 31 ) {
+        vramAddr.bit.coarseX = 0;
+        vramAddr.bit.nametableX = !vramAddr.bit.nametableX;
     } else {
-        _vramAddr.bit.coarseX++;
+        vramAddr.bit.coarseX++;
     }
 }
 
@@ -934,72 +974,85 @@ void PPU::IncrementScrollY()
        once every 256 cycles (once per scanline).
      */
     // Increment scroll y if on cycle 256
-    if ( _cycle != 256 ) {
+    if ( cycle != 256 ) {
         return;
     }
 
     // If fine y is less than 7, increment fine y
-    if ( _vramAddr.bit.fineY < 7 ) {
-        _vramAddr.bit.fineY++;
+    if ( vramAddr.bit.fineY < 7 ) {
+        vramAddr.bit.fineY++;
         return;
     }
 
     // Swap nametable y if coarse y is 29
-    if ( _vramAddr.bit.coarseY == 29 ) {
-        _vramAddr.bit.coarseY = 0;
-        _vramAddr.bit.nametableY = !_vramAddr.bit.nametableY;
+    if ( vramAddr.bit.coarseY == 29 ) {
+        vramAddr.bit.coarseY = 0;
+        vramAddr.bit.nametableY = !vramAddr.bit.nametableY;
         return;
     }
     // Reset coarse y if land in attribute memory space
-    if ( _vramAddr.bit.coarseY > 29 ) {
-        _vramAddr.bit.coarseY = 0;
+    if ( vramAddr.bit.coarseY > 29 ) {
+        vramAddr.bit.coarseY = 0;
         return;
     }
 
-    _vramAddr.bit.coarseY++;
+    vramAddr.bit.coarseY++;
 }
 
-u8 PPU::GetBgPixel() // NOLINT
+void PPU::LoadPatternPlane1Byte()
 {
-    if ( _ppuMask.bit.renderBackground == 0 ) {
-        return 0x00;
-    }
+    /* @brief: Load plane 1, the high byte of the pattern table (bg pixel data)
+     */
 
-    if ( _ppuMask.bit.renderBackgroundLeft == 0 && _cycle < 9 ) {
-        return 0x00;
-    }
-
-    // Compute a bitmask to select the correct bit for the current pixel,
-    // taking into account the fine x scrolling offset.
-    u16 const mask = 0x8000 >> _fineX;
-    // Extract the background pixel bits:
-    // - The high pattern shifter gives a value of 2 if its bit is set.
-    // - The low pattern shifter gives a value of 1 if its bit is set.
-    // Combining them yields a 2-bit pixel index (0-3).
-    u8 const bgPixel =
-        ( ( _bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftPatternLow & mask ) ? 0b01 : 0 );
-    return bgPixel;
+    // Grab the pattern table byte for plane 1
+    // Same calculation as plane 0, but add 8 to the tile offset
+    u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+    u16 const tileOffset = nametableByte << 4;
+    u16 const rowOffset = vramAddr.bit.fineY;
+    bgPlane1Byte = Read( bgPatternOffset + tileOffset + rowOffset + 8 );
 }
 
 u8 PPU::GetBgPalette() // NOLINT
 {
-    if ( _ppuMask.bit.renderBackground == 0 ) {
+    if ( ppuMask.bit.renderBackground == 0 ) {
         return 0x00;
     }
 
-    if ( _ppuMask.bit.renderBackgroundLeft == 0 && _cycle < 9 ) {
+    if ( ppuMask.bit.renderBackgroundLeft == 0 && cycle < 9 ) {
         return 0x00;
     }
     // Compute a bitmask to select the correct bit for the current pixel
-    u16 const mask = 0x8000 >> _fineX;
+    u16 const mask = 0x8000 >> fineX;
     // Combining them yields a 2-bit pixel index (0-3).
-    return ( ( _bgShiftAttributeHigh & mask ) ? 0b10 : 0 ) | ( ( _bgShiftAttributeLow & mask ) ? 0b01 : 0 );
+    return ( ( bgShiftAttributeHigh & mask ) ? 0b10 : 0 ) | ( ( bgShiftAttributeLow & mask ) ? 0b01 : 0 );
 }
 
 u8 PPU::GetSpritePalette() // NOLINT
 {
     // TODO: Implement
     return 0x00;
+}
+
+u8 PPU::GetBgPixel() // NOLINT
+{
+    if ( ppuMask.bit.renderBackground == 0 ) {
+        return 0x00;
+    }
+
+    if ( ppuMask.bit.renderBackgroundLeft == 0 && cycle < 9 ) {
+        return 0x00;
+    }
+
+    // Compute a bitmask to select the correct bit for the current pixel,
+    // taking into account the fine x scrolling offset.
+    u16 const mask = 0x8000 >> fineX;
+    // Extract the background pixel bits:
+    // - The high pattern shifter gives a value of 2 if its bit is set.
+    // - The low pattern shifter gives a value of 1 if its bit is set.
+    // Combining them yields a 2-bit pixel index (0-3).
+    u8 const bgPixel =
+        ( ( bgShiftPatternHigh & mask ) ? 0b10 : 0 ) | ( ( bgShiftPatternLow & mask ) ? 0b01 : 0 );
+    return bgPixel;
 }
 
 u8 PPU::GetSpritePixel() // NOLINT
@@ -1011,27 +1064,29 @@ u8 PPU::GetSpritePixel() // NOLINT
 
 u32 PPU::GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette ) // NOLINT
 {
-    // u8 fgPriority = 0; // TODO: Fetch from sprite
-    // u8 pixel = 0x00;
-    // u8 palette = 0x00;
-    //
-    // // (fg_pixel != 0) yields 1 if fg_pixel is nonzero (visible).
+    // u8 const fgPriority = 0; // TODO: Fetch from sprite
+    // u8       pixel = 0x00;
+    // u8       palette = 0x00;
+    // //
+    // // (fgPixel != 0) yields 1 if fgPixel is nonzero (visible).
     // // (bg_pixel == 0) yields 1 if the background is transparent.
     // // Their bitwise combination with fg_priority tells us if we should use fg.
-    // int mask = -( ( ( bgPixel != 0 ) & ( ( spritePixel == 0 ) | fgPriority ) ) );
+    // int const mask = -( ( ( bgPixel != 0 ) & ( ( spritePixel == 0 ) | fgPriority ) ) );
     //
     // // If mask == -1 (all ones), the foreground values are chosen.
     // // If mask == 0, the background values are selected.
     // pixel = (uint8_t) ( ( mask & spritePixel ) | ( ( ~mask ) & bgPixel ) );
     // palette = (uint8_t) ( ( mask & spritePalette ) | ( ( ~mask ) & bgPalette ) );
     //
-    // u16 paletteAddr = 0x3F00 + ( palette << 2 ) + pixel;
-    // u8  paletteIdx = Read( paletteAddr ) & 0x3F;
-    u8 const paletteIdx = Read( 0x3F00 ) & 0x3F;
-    (void) bgPixel;
-    (void) spritePixel;
-    (void) bgPalette;
-    (void) spritePalette;
+    // u16 const paletteAddr = 0x3F00 + ( palette << 2 ) + pixel;
+    // u8 const  paletteIdx = Read( paletteAddr ) & 0x3F;
+    //
 
-    return _nesPaletteRgbValues[paletteIdx];
+    // Leave as a solid for now
+    return nesPaletteRgbValues.at( 0x22 );
+}
+
+MirrorMode PPU::GetMirrorMode() const
+{
+    return bus->cartridge.GetMirrorMode();
 }

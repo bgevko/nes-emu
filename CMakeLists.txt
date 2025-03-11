@@ -10,6 +10,8 @@ project( nes_emu VERSION 0.1 LANGUAGES CXX )
 
 # Includes
 set(CORE_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(FRONTEND_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/include)
+set(UI_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/ui)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
 
 #[[
@@ -20,15 +22,9 @@ set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
 ################################################
 ]]
 # All emulation functionality is built as a static library.
-add_library(emu_core STATIC
-  core/cpu.cpp
-  core/bus.cpp
-  core/cartridge.cpp
-  core/ppu.cpp
-  core/mappers/mapper0.cpp
-  core/mappers/mapper1.cpp
-  core/utils.cpp
-)
+file(GLOB CORE_SOURCES "core/*.cpp" "core/mappers/*.cpp")
+add_library(emu_core STATIC ${CORE_SOURCES})
+
 target_include_directories(emu_core PUBLIC ${CORE_INCLUDES})
 
 # Fmt library
@@ -43,8 +39,14 @@ target_link_libraries(emu_core PRIVATE fmt::fmt)
 ################################################
 ]]
 if(BUILD_FRONTEND)
-  add_executable(emu frontend/main.cpp)
+  message(STATUS "BUILD_FRONTEND is enabled. Configuring frontend...")
+
+  file(GLOB FRONTEND_SOURCES "frontend/*.cpp" "frontend/ui/*.cpp")
+  add_executable(emu ${FRONTEND_SOURCES})
+
   target_include_directories(emu PRIVATE ${CORE_INCLUDES})
+  target_include_directories(emu PRIVATE ${FRONTEND_INCLUDES})
+  target_include_directories(emu PRIVATE ${UI_INCLUDES})
   target_link_libraries(emu PRIVATE emu_core)
 
   # SDL
@@ -55,17 +57,57 @@ if(BUILD_FRONTEND)
         $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
     )
 
-  # Copy roms to build directory, for testing purposes
-  add_custom_command(TARGET emu POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_SOURCE_DIR}/tests/roms ${CMAKE_BINARY_DIR}/tests/roms
-  )
+  # Imgui
+  find_package(imgui CONFIG REQUIRED)
+  target_link_libraries(emu PRIVATE imgui::imgui)
 
-  # Copy palettes directory to build directory
-  add_custom_command(TARGET emu POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_SOURCE_DIR}/palettes ${CMAKE_BINARY_DIR}/palettes
-  )
+  # OpenGL
+  find_package(glad CONFIG REQUIRED)
+  target_link_libraries(emu PRIVATE glad::glad)
+  if(APPLE)
+    target_link_libraries(emu PRIVATE "-framework OpenGL")
+  elseif(WIN32)
+    target_link_libraries(emu PRIVATE ${OpenGL_GL_LIBRARY})
+  else()
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(emu PRIVATE OpenGL::GL)
+  endif()
+
+  # Debugging asset paths
+  message(STATUS "Checking asset paths:")
+  message(STATUS "Palettes: ${CMAKE_SOURCE_DIR}/palettes -> ${CMAKE_BINARY_DIR}/palettes")
+  message(STATUS "Fonts: ${CMAKE_SOURCE_DIR}/fonts -> ${CMAKE_BINARY_DIR}/fonts")
+  message(STATUS "Tests/Roms: ${CMAKE_SOURCE_DIR}/tests/roms -> ${CMAKE_BINARY_DIR}/tests/roms")
+
+  # Copy assets only if they exist
+  if(EXISTS "${CMAKE_SOURCE_DIR}/palettes")
+    add_custom_command(TARGET emu POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/palettes ${CMAKE_BINARY_DIR}/palettes
+    )
+  else()
+    message(WARNING "WARNING: Palettes directory NOT found!")
+  endif()
+
+  if(EXISTS "${CMAKE_SOURCE_DIR}/fonts")
+    add_custom_command(TARGET emu POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/fonts ${CMAKE_BINARY_DIR}/fonts
+    )
+  else()
+    message(WARNING "WARNING: Fonts directory NOT found!")
+  endif()
+
+  if(EXISTS "${CMAKE_SOURCE_DIR}/tests/roms")
+    add_custom_command(TARGET emu POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/tests/roms ${CMAKE_BINARY_DIR}/tests/roms
+    )
+  else()
+    message(WARNING "WARNING: Tests/Roms directory NOT found!")
+  endif()
+
+  # Force asset copy by adding a target
+  add_custom_target(copy_assets ALL DEPENDS emu)
+  add_dependencies(copy_assets emu)
+
 endif()
 
 #[[
@@ -100,5 +142,7 @@ if(BUILD_TESTS)
   # Add your test executables
   add_test_executable(cpu_test tests/cpu_test.cpp)
   add_test_executable(rom_test tests/rom_test.cpp)
+  add_test_executable(ppu_test tests/ppu_test.cpp)
+  add_test_executable(cart_test tests/cart_test.cpp)
 
 endif()
