@@ -12,6 +12,84 @@ using u32 = uint32_t;
 using u64 = uint64_t;
 using s8 = int8_t;
 
+// Static arrays for opcode information
+// formatted based on their corresponding index, starting at 0x00
+std::array<std::string, 256> g_instructionNames = {
+    "BRK",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "PHP",  "ORA",   "ASL",   "*ANC",  "*NOP",  "ORA",   "ASL",   "*SLO",
+    "BPL",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "CLC",  "ORA",   "*NOP",  "*SLO",  "*NOP",  "ORA",   "ASL",   "*SLO",
+    "JSR",   "AND",   "*JAM",  "*RLA",  "BIT",   "AND",   "ROL",   "*RLA",  "PLP",  "AND",   "ROL",   "*ANC",  "*NOP",  "AND",   "ROL",   "*RLA",
+    "BMI",   "AND",   "*JAM",  "*RLA",  "*NOP",  "AND",   "*ROL",  "*RLA",  "SEC",  "AND",   "*NOP",  "*RLA",  "*NOP",  "AND",   "ROL",   "*RLA",
+    "RTI",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "PHA",  "EOR",   "LSR",   "*ALR",  "*JMP",  "EOR",   "LSR",   "*SRE",
+    "BVC",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "CLI",  "EOR",   "*NOP",  "*SRE",  "*NOP",  "EOR",   "LSR",   "*SRE",
+    "RTS",   "ADC",   "*JAM",  "*RRA",  "*NOP",  "ADC",   "*ROR",  "*RRA",  "PLA",  "ADC",   "ROR",   "*ARR",  "JMP",   "ADC",   "ROR",   "*RRA",
+    "BVS",   "ADC",   "*JAM",  "*RRA",  "*NOP",  "ADC",   "*ROR",  "*RRA",  "SEI",  "ADC",   "*NOP",  "*RRA",  "*NOP",  "ADC",   "ROR",   "*RRA",
+    "*NOP",  "STA",   "*NOP",  "*SAX",  "STY",   "STA",   "STX",   "*SAX",  "DEY",  "*NOP",  "TXA",   "*ANE",  "STY",   "STA",   "STX",   "*SAX",
+    "BCC",   "STA",   "*JAM",  "*SHA",  "STY",   "STA",   "STX",   "*STX",  "TYA",  "STA",   "TXS",   "*TAS",  "*SHY",  "STA",   "*SHX",  "*SHA",
+    "LDY",   "LDA",   "LDX",   "*LAX",  "LDY",   "LDA",   "LDX",   "*LAX",  "TAY",  "LDA",   "TAX",   "*LXA",  "LDY",   "LDA",   "LDX",   "*LAX",
+    "BCS",   "LDA",   "*JAM",  "*LAX",  "LDY",   "LDA",   "LDX",   "*LAX",  "CLV",  "LDA",   "TSX",   "*LAS",  "LDY",   "LDA",   "LDX",   "*LAX",
+    "CPY",   "CMP",   "*NOP",  "*DCP",  "CPY",   "CMP",   "DEC",   "*DCP",  "INY",  "CMP",   "DEX",   "*SBX",  "CPY",   "CMP",   "DEC",   "*DCP",
+    "BNE",   "CMP",   "*JAM",  "*DCP",  "*NOP",  "CMP",   "*DEC",  "*DCP",  "CLD",  "CMP",   "*NOP",  "*DCP",  "*NOP",  "CMP",   "DEC",   "*DCP",
+    "CPX",   "SBC",   "*NOP",  "*ISC",  "CPX",   "SBC",   "INC",   "*ISC",  "INX",  "SBC",   "NOP",   "*SBC",  "CPX",   "SBC",   "INC",   "*ISC",
+    "BEQ",   "SBC",   "*JAM",  "*ISC",  "*NOP",  "SBC",   "*INC",  "*ISC",  "SED",  "SBC",   "*NOP",  "*ISC",  "*NOP",  "SBC",   "INC",   "*ISC"
+};
+
+std::array<std::string, 256> g_addressingModes = {
+    "IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
+    "ABS",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
+    "IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
+    "IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "IND",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
+    "IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGY",  "ZPGY",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSY",  "ABSY",
+    "IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGY",  "ZPGY",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSY",  "ABSY",
+    "IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
+    "IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
+    "REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX"
+};
+
+std::array<u8, 256> g_instructionCycles = {
+    7,      6,      2,      8,      3,      3,      5,      5,      3,      2,      2,      2,      4,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7,
+    6,      6,      2,      8,      3,      3,      5,      5,      4,      2,      2,      2,      4,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7,
+    6,      6,      2,      8,      3,      3,      5,      5,      3,      2,      2,      2,      3,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7,
+    6,      6,      2,      8,      3,      3,      5,      5,      4,      2,      2,      2,      5,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7,
+    2,      6,      2,      6,      3,      3,      3,      3,      2,      2,      2,      2,      4,      4,      4,      4,
+    2,      6,      2,      6,      4,      4,      4,      4,      2,      5,      2,      5,      5,      5,      5,      5,
+    2,      6,      2,      6,      3,      3,      3,      3,      2,      2,      2,      2,      4,      4,      4,      4,
+    2,      5,      2,      5,      4,      4,      4,      4,      2,      4,      2,      4,      4,      4,      4,      4,
+    2,      6,      2,      8,      3,      3,      5,      5,      2,      2,      2,      2,      4,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7,
+    2,      6,      2,      8,      3,      3,      5,      5,      2,      2,      2,      2,      4,      4,      6,      6,
+    2,      5,      2,      8,      4,      4,      6,      6,      2,      4,      2,      7,      4,      4,      7,      7
+};
+
+std::array<u8, 256> g_instructionBytes = {
+    1,      2,      1,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    3,      2,      1,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    1,      2,      1,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    1,      2,      1,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    2,      2,      2,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    2,      2,      2,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    2,      2,      2,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3,
+    2,      2,      2,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
+    2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3
+};
+
 // Forward declaration for reads and writes
 class Bus;
 
