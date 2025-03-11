@@ -1,12 +1,12 @@
 // cpu.cpp
 
-#include "cpu.h"
 #include "bus.h"
-#include "ppu.h"
+#include "cpu.h"
 #include "utils.h"
 #include <cstdint>
-#include <stdexcept>
 #include <string>
+#include <iostream>
+#include <stdexcept>
 
 CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 {
@@ -360,6 +360,12 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 
     // SBX
     _opcodeTable[0xCB] = InstructionData{ "*SBX", "IMM",  &CPU::SBX, &CPU::IMM,  2, 2 };
+
+    // LAS
+    _opcodeTable[0xBB] = InstructionData{ "*LAS", "ABSY", &CPU::LAS, &CPU::ABSY, 4, 3 };
+
+    // ANE
+    _opcodeTable[0x8B] = InstructionData{ "*ANE", "IMM",  &CPU::ANE, &CPU::IMM,  2, 2 };
     // clang-format on
     // NOLINTEND
 
@@ -396,78 +402,6 @@ CPU::CPU( Bus *bus ) : _bus( bus ), _opcodeTable{}
 /*
 ################################################
 ||                                            ||
-||                   Getters                  ||
-||                                            ||
-################################################
-*/
-[[nodiscard]] u8 CPU::GetAccumulator() const
-{
-    return _a;
-}
-[[nodiscard]] u8 CPU::GetXRegister() const
-{
-    return _x;
-}
-[[nodiscard]] u8 CPU::GetYRegister() const
-{
-    return _y;
-}
-[[nodiscard]] u8 CPU::GetStatusRegister() const
-{
-    return _p;
-}
-[[nodiscard]] u16 CPU::GetProgramCounter() const
-{
-    return _pc;
-}
-[[nodiscard]] u8 CPU::GetStackPointer() const
-{
-    return _s;
-}
-[[nodiscard]] u64 CPU::GetCycles() const
-{
-    return _cycles;
-}
-
-/*
-################################################
-||                                            ||
-||                   Setters                  ||
-||                                            ||
-################################################
-*/
-void CPU::SetAccumulator( u8 value )
-{
-    _a = value;
-}
-void CPU::SetXRegister( u8 value )
-{
-    _x = value;
-}
-void CPU::SetYRegister( u8 value )
-{
-    _y = value;
-}
-void CPU::SetStatusRegister( u8 value )
-{
-    _p = value;
-}
-void CPU::SetProgramCounter( u16 value )
-{
-    _pc = value;
-}
-void CPU::SetStackPointer( u8 value )
-{
-    _s = value;
-}
-void CPU::SetCycles( u64 value )
-{
-    _cycles = value;
-}
-
-/*
-################################################
-||                                            ||
 ||                Debug Methods               ||
 ||                                            ||
 ################################################
@@ -486,20 +420,23 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 
     // Program counter address
     // i.e. FFFF
-    output += utils::toHex( _pc, 4 ) + ":  ";
+    output += utils::toHex( _pc, 4 ) + " ";
 
-    // Hex instruction
-    // i.e. 4C F5 C5, this is the hex instruction
-    u8 const    bytes = _opcodeTable[Read( _pc )].bytes;
-    std::string hexInstruction;
-    for ( u8 i = 0; i < bytes; i++ ) {
-        hexInstruction += utils::toHex( Read( _pc + i ), 2 ) + ' ';
+    if ( verbose ) {
+        output += " k";
+        // Hex instruction
+        // i.e. 4C F5 C5, this is the hex instruction
+        u8 const    bytes = _opcodeTable[Read( _pc )].bytes;
+        std::string hexInstruction;
+        for ( u8 i = 0; i < bytes; i++ ) {
+            hexInstruction += utils::toHex( Read( _pc + i ), 2 ) + ' ';
+        }
+
+        // formatting, the instruction hex_instruction will be 9 characters long, with space padding to
+        // the right. This makes sure the hex line is the same length for all instructions
+        hexInstruction += std::string( 9 - ( bytes * 3 ), ' ' );
+        output += hexInstruction;
     }
-
-    // formatting, the instruction hex_instruction will be 9 characters long, with space padding to
-    // the right. This makes sure the hex line is the same length for all instructions
-    hexInstruction += std::string( 9 - ( bytes * 3 ), ' ' );
-    output += hexInstruction;
 
     // If name starts with a "*", it is an illegal opcode
     ( name[0] == '*' ) ? output += "*" + name.substr( 1 ) + " " : output += name + " ";
@@ -552,36 +489,38 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
     }
 
     // Pad the assembly string with spaces, for fixed length
-    output += assemblyStr + std::string( 15 - assemblyStr.size(), ' ' );
+    if ( verbose ) {
+        output += assemblyStr + std::string( 15 - assemblyStr.size(), ' ' );
+    }
 
     // Add more log info
+    std::string registersStr;
+    // Format
+    // a: 00 x: 00 y: 00 s: FD
+    registersStr += "a: " + utils::toHex( _a, 2 ) + " ";
+    registersStr += "x: " + utils::toHex( _x, 2 ) + " ";
+    registersStr += "y: " + utils::toHex( _y, 2 ) + " ";
+    registersStr += "s: " + utils::toHex( _s, 2 ) + " ";
+
+    // status register
+    // Will return a formatted status string
+    // p: hex value, status string (NV-BDIZC). Letter present is flag set, dash is flag unset
+    std::string statusStr;
+    statusStr += "p: " + utils::toHex( _p, 2 ) + " ";
+
+    std::string statusFlags = "NV-BDIZC";
+    std::string statusFlagsLower = "nv--dizc";
+    std::string statusFlagsStr;
+    for ( int i = 7; i >= 0; i-- ) {
+        statusFlagsStr += ( _p & ( 1 << i ) ) != 0 ? statusFlags[7 - i] : statusFlagsLower[7 - i];
+    }
+    statusStr += statusFlagsStr;
+
+    // Combine to the output string
+    output += registersStr + statusStr;
+
+    // Scanline num (V)
     if ( verbose ) {
-        std::string registersStr;
-        // Format
-        // a: 00 x: 00 y: 00 s: FD
-        registersStr += "a: " + utils::toHex( _a, 2 ) + " ";
-        registersStr += "x: " + utils::toHex( _x, 2 ) + " ";
-        registersStr += "y: " + utils::toHex( _y, 2 ) + " ";
-        registersStr += "s: " + utils::toHex( _s, 2 ) + " ";
-
-        // status register
-        // Will return a formatted status string
-        // p: hex value, status string (NV-BDIZC). Letter present is flag set, dash is flag unset
-        std::string statusStr;
-        statusStr += "p: " + utils::toHex( _p, 2 ) + "  ";
-
-        std::string statusFlags = "NV-BDIZC";
-        std::string statusFlagsLower = "nv--dizc";
-        std::string statusFlagsStr;
-        for ( int i = 7; i >= 0; i-- ) {
-            statusFlagsStr += ( _p & ( 1 << i ) ) != 0 ? statusFlags[7 - i] : statusFlagsLower[7 - i];
-        }
-        statusStr += statusFlagsStr;
-
-        // Combine to the output string
-        output += registersStr + statusStr;
-
-        // Scanline num (V)
         std::string const scanlineStr = std::to_string( _bus->ppu.GetScanline() );
         // std::string scanline_str_adjusted = std::string( 4 - scanline_str.size(), ' ' );
         output += "  V: " + scanlineStr;
@@ -600,16 +539,17 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 }
 
 /*
-################################################
-||                                            ||
-||                 CPU Methods                ||
-||                                            ||
-################################################
+################################################################
+||                                                            ||
+||                        CPU Methods                         ||
+||                                                            ||
+################################################################
 */
+
 // Pass off reads and writes to the bus
-auto CPU::Read( u16 address ) const -> u8
+auto CPU::Read( u16 address, bool debugMode ) const -> u8
 {
-    return _bus->Read( address );
+    return _bus->Read( address, debugMode );
 }
 void CPU::Write( u16 address, u8 data ) const
 {
@@ -633,7 +573,7 @@ auto CPU::WriteAndTick( u16 address, u8 data ) -> void
     Tick();
 
     // Writing to PPUCTRL, PPUMASK, PPUSCROLL, and PPUADDR is ignored until after cycle ~29658
-    if ( !_isTestMode &&
+    if ( !_bus->IsTestMode() &&
          ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 ) ) {
         if ( _cycles < 29658 ) {
             return;
@@ -644,6 +584,7 @@ auto CPU::WriteAndTick( u16 address, u8 data ) -> void
 
 u8 CPU::Fetch()
 {
+
     // Read the current PC location and increment it
 
     u8 const opcode = ReadAndTick( _pc++ );
@@ -657,13 +598,12 @@ void CPU::Tick()
     _bus->ppu.Tick();
     _bus->ppu.Tick();
 
-    // Do a trace once per instruction at this point, to match how Mesen traces
-    // Useful for debugging
-    if ( !_didTrace && _traceEnabled ) {
+    // Match mesen trace log, place logger here.
+    if ( _mesenFormatTraceEnabled && !_didMesenTrace ) {
         _pc--;
-        _trace = LogLineAtPC( true );
+        AddMesenTracelog( LogLineAtPC( true ) );
         _pc++;
-        _didTrace = true;
+        _didMesenTrace = true;
     }
 
     _bus->ppu.Tick();
@@ -682,7 +622,7 @@ void CPU::Reset()
     _pc = Read( 0xFFFD ) << 8 | Read( 0xFFFC );
 
     // Add 7 cycles
-    if ( !_isTestMode ) {
+    if ( !_bus->IsTestMode() ) {
 
         for ( u8 i = 0; i < 7; i++ ) {
             Tick();
@@ -692,16 +632,23 @@ void CPU::Reset()
     }
 }
 
+/**
+ * @brief Executes a single CPU cycle.
+ *
+ * This function fetches the next opcode from memory, decodes it using the opcode table,
+ * and executes that instruction. It also adds the number of cycles the instruction
+ * takes to the total cycle count.
+ *
+ * If the opcode is invalid, an error message is printed to stderr.
+ */
+
 void CPU::NMI()
 {
     /* @details: Non-maskable Interrupt, called by the PPU during the VBlank period.
      * It interrupts whatever the CPU is doing at its current cycle to go update the PPU.
      * Uses 7 cycles, cannot be disabled.
      */
-
-    // To prevent infinite recursive calls to Tick, we'll use a global flag
     SetNmiInProgress( true );
-
     // 1) Two dummy cycles (hardware reads the same PC twice, discarding the data)
     Tick();
     Tick();
@@ -761,7 +708,11 @@ void CPU::DecodeExecute()
      * If the opcode is invalid, an error message is printed to stderr.
      */
 
-    _didTrace = false;
+    if ( _traceEnabled ) {
+        AddTraceLog( LogLineAtPC( true ) );
+    }
+
+    _didMesenTrace = false;
 
     // Fetch the next opcode and increment the program counter
     u8 const opcode = Fetch();
@@ -794,18 +745,10 @@ void CPU::DecodeExecute()
 
         // Reset flags
         _isWriteModify = false;
-        _didTrace = false;
+        _didMesenTrace = false;
     } else {
         // Houston, we have a problem. No opcode was found.
-        throw std::runtime_error( "Invalid opcode: " + std::to_string( opcode ) );
-    }
-}
-
-void CPU::ExecuteFrame()
-{
-    u16 const currentFrame = _bus->ppu.GetFrame();
-    while ( currentFrame == _bus->ppu.GetFrame() ) {
-        DecodeExecute();
+        std::cerr << "Bad opcode: " << std::hex << static_cast<int>( opcode ) << '\n';
     }
 }
 
@@ -951,18 +894,18 @@ auto CPU::IND() -> u16
     u16 const ptr = ( ptrHigh << 8 ) | ptrLow;
 
     u8 const addressLow = ReadAndTick( ptr );
-    u8       addressHigh = 0;
+    u8       address_high; // NOLINT
 
     // 6502 Bug: If the pointer address wraps around a page boundary (e.g. 0x01FF),
     // the CPU reads the low byte from 0x01FF and the high byte from the start of
     // the same page (0x0100) instead of the start of the next page (0x0200).
     if ( ptrLow == 0xFF ) {
-        addressHigh = ReadAndTick( ptr & 0xFF00 );
+        address_high = ReadAndTick( ptr & 0xFF00 );
     } else {
-        addressHigh = ReadAndTick( ptr + 1 );
+        address_high = ReadAndTick( ptr + 1 );
     }
 
-    return ( addressHigh << 8 ) | addressLow;
+    return ( address_high << 8 ) | addressLow;
 }
 
 auto CPU::INDX() -> u16
@@ -1219,17 +1162,6 @@ void CPU::NOP( u16 address ) // NOLINT
      * NOP Implied: 7A(2)
      * NOP Implied: DA(2)
      * NOP Implied: FA(2)
-     */
-    (void) address;
-}
-
-void CPU::NOP2( u16 address ) // NOLINT
-{
-    /*
-     * @brief No operation, has an additional cycle
-     * N Z C I D V
-     * - - - - - -
-     * --  Illegal  --
      * NOP Immediate: 80(2)
      * NOP Immediate: 82(2)
      * NOP Immediate: 89(2)
@@ -1252,7 +1184,6 @@ void CPU::NOP2( u16 address ) // NOLINT
      * NOP Absolute: DC(4)
      * NOP Absolute: FC(4)
      */
-    Tick();
     (void) address;
 }
 
@@ -2303,16 +2234,46 @@ void CPU::TYA( const u16 address )
 ||                                                            ||
 ################################################################
 */
+
+void CPU::NOP2( u16 address ) // NOLINT
+{
+    /*
+     * @brief No operation, has an additional cycle
+     * N Z C I D V
+     * - - - - - -
+     * --  Illegal  --
+     * NOP Immediate: 80(2)
+     * NOP Immediate: 82(2)
+     * NOP Immediate: 89(2)
+     * NOP Immediate: C2(2)
+     * NOP Immediate: E2(2)
+     * NOP Zero Page: 04(3)
+     * NOP Zero Page: 44(3)
+     * NOP Zero Page: 64(3)
+     * NOP Zero Page X: 14(4)
+     * NOP Zero Page X: 34(4)
+     * NOP Zero Page X: 54(4)
+     * NOP Zero Page X: 74(4)
+     * NOP Zero Page X: D4(4)
+     * NOP Zero Page X: F4(4)
+     * NOP Absolute: 0C(4)
+     * NOP Absolute: 1C(4)
+     * NOP Absolute: 3C(4)
+     * NOP Absolute: 5C(4)
+     * NOP Absolute: 7C(4)
+     * NOP Absolute: DC(4)
+     * NOP Absolute: FC(4)
+     */
+    Tick();
+    (void) address;
+}
 void CPU::JAM( const u16 address ) // NOLINT
 {
     /* @brief Illegal Opcode
      * Freezes the hardware, usually never called
-     * Tom Harte tests include these, though, so for completeness, I'll add them
+     * Tom Harte tests include these, though, so for completeness, we'll add them
      */
     (void) address;
-
-    // We're not going to freeze the cpu, we'll just waste 9 cycles, as per the
-    // Tom Harte tests
     for ( int i = 0; i < 9; i++ ) {
         Tick();
     }
@@ -2340,26 +2301,120 @@ void CPU::SLO( const u16 address )
     SetZeroAndNegativeFlags( _a );
 }
 
-void CPU::RLA( const u16 address )
+void CPU::SAX( const u16 address ) // NOLINT
 {
-    /* @brief Illegal opcode: combines ROL and AND
+    /* @brief Illegal opcode: combines STX and AND
+     * N Z C I D V
+     * - - - - - -
+     *   Usage and cycles:
+     *   SAX Zero Page: 87(3)
+     *   SAX Zero Page Y: 97(4)
+     *   SAX Indirect X: 83(6)
+     *   SAX Absolute: 8F(4)
+     */
+    WriteAndTick( address, _a & _x );
+}
+
+void CPU::LXA( const u16 address )
+{
+    /* @brief Illegal opcode: combines LDA and LDX
+     * N Z C I D V
+     * + + - - - -
+     *   Usage and cycles:
+     *   LXA Immediate: AB(2)
+     */
+
+    u8 const magicConstant = 0xEE;
+    u8 const value = ReadAndTick( address );
+
+    u8 const result = ( ( _a | magicConstant ) & value );
+    _a = result;
+    _x = result;
+    SetZeroAndNegativeFlags( _a );
+}
+
+void CPU::LAX( const u16 address )
+{
+    /* @brief Illegal opcode: combines LDA and LDX
+     * N Z C I D V
+     * + + - - - -
+     *   Usage and cycles:
+     *   LAX Zero Page: A7(3)
+     *   LAX Zero Page Y: B7(4)
+     *   LAX Absolute: AF(4)
+     *   LAX Absolute Y: BF(4+)
+     *   LAX Indirect X: A3(6)
+     *   LAX Indirect Y: B3(5+)
+     */
+    u8 const value = ReadAndTick( address );
+    SetAccumulator( value );
+    SetXRegister( value );
+    SetZeroAndNegativeFlags( value );
+}
+
+void CPU::ARR( const u16 address )
+{
+    /* @brief Illegal opcode: combines AND and ROR
+     * N Z C I D V
+     * + + + - - +
+     *   Usage and cycles:
+     *   ARR Immediate: 6B(2)
+     */
+
+    // A & operand
+    u8 value = _a & ReadAndTick( address );
+
+    // ROR
+    u8 const carryIn = IsFlagSet( Status::Carry ) ? 0x80 : 0x00;
+    value = ( value >> 1 ) | carryIn;
+
+    _a = value;
+
+    // Set flags
+    SetZeroAndNegativeFlags( _a );
+
+    // Adjust C and V flags according to the ARR rules
+    // C = bit 6 of A
+    ( _a & 0x40 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+
+    // V = bit 5 XOR bit 6
+    bool const isOverflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
+    ( isOverflow ) ? SetFlags( Status::Overflow ) : ClearFlags( Status::Overflow );
+}
+
+void CPU::ALR( const u16 address )
+{
+    /* @brief Illegal opcode: combines AND and LSR
      * N Z C I D V
      * + + + - - -
      *   Usage and cycles:
-     *   RLA Zero Page: 27(5)
-     *   RLA Zero Page X: 37(6)
-     *   RLA Absolute: 2F(6)
-     *   RLA Absolute X: 3F(7)
-     *   RLA Absolute Y: 3B(7)
-     *   RLA Indirect X: 23(8)
-     *   RLA Indirect Y: 33(8)
+     *   ALR Immediate: 4B(2)
      */
-    CPU::ROL( address );
+    CPU::AND( address );
 
-    // Free side effect
-    u8 const value = Read( address ); // 0 cycle
-    _a &= value;
-    SetZeroAndNegativeFlags( _a );
+    u8 const value = GetAccumulator();
+    ( value & 0b00000001 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
+    u8 const result = value >> 1;
+    SetZeroAndNegativeFlags( result );
+    _a = result;
+}
+
+void CPU::RRA( const u16 address )
+{
+    /* @brief Illegal opcode: combines ROR and ADC
+     * N Z C I D V
+     * + + + - - -
+     *   Usage and cycles:
+     *   RRA Zero Page: 67(5)
+     *   RRA Zero Page X: 77(6)
+     *   RRA Absolute: 6F(6)
+     *   RRA Absolute X: 7F(7)
+     *   RRA Absolute Y: 7B(7)
+     *   RRA Indirect X: 63(8)
+     *   RRA Indirect Y: 73(8)
+     */
+    CPU::ROR( address );
+    CPU::ADC( address );
 }
 
 void CPU::SRE( const u16 address )
@@ -2384,55 +2439,26 @@ void CPU::SRE( const u16 address )
     SetZeroAndNegativeFlags( _a );
 }
 
-void CPU::RRA( const u16 address )
+void CPU::RLA( const u16 address )
 {
-    /* @brief Illegal opcode: combines ROR and ADC
+    /* @brief Illegal opcode: combines ROL and AND
      * N Z C I D V
      * + + + - - -
      *   Usage and cycles:
-     *   RRA Zero Page: 67(5)
-     *   RRA Zero Page X: 77(6)
-     *   RRA Absolute: 6F(6)
-     *   RRA Absolute X: 7F(7)
-     *   RRA Absolute Y: 7B(7)
-     *   RRA Indirect X: 63(8)
-     *   RRA Indirect Y: 73(8)
+     *   RLA Zero Page: 27(5)
+     *   RLA Zero Page X: 37(6)
+     *   RLA Absolute: 2F(6)
+     *   RLA Absolute X: 3F(7)
+     *   RLA Absolute Y: 3B(7)
+     *   RLA Indirect X: 23(8)
+     *   RLA Indirect Y: 33(8)
      */
-    CPU::ROR( address );
-    CPU::ADC( address );
-}
+    CPU::ROL( address );
 
-void CPU::SAX( const u16 address )
-{
-    /* @brief Illegal opcode: combines STX and AND
-     * N Z C I D V
-     * - - - - - -
-     *   Usage and cycles:
-     *   SAX Zero Page: 87(3)
-     *   SAX Zero Page Y: 97(4)
-     *   SAX Indirect X: 83(6)
-     *   SAX Absolute: 8F(4)
-     */
-    WriteAndTick( address, GetXRegister() & GetAccumulator() );
-}
-
-void CPU::LAX( const u16 address )
-{
-    /* @brief Illegal opcode: combines LDA and LDX
-     * N Z C I D V
-     * + + - - - -
-     *   Usage and cycles:
-     *   LAX Zero Page: A7(3)
-     *   LAX Zero Page Y: B7(4)
-     *   LAX Absolute: AF(4)
-     *   LAX Absolute Y: BF(4+)
-     *   LAX Indirect X: A3(6)
-     *   LAX Indirect Y: B3(5+)
-     */
-    u8 const value = ReadAndTick( address );
-    SetAccumulator( value );
-    SetXRegister( value );
-    SetZeroAndNegativeFlags( value );
+    // Free side effect
+    u8 const value = Read( address ); // 0 cycle
+    _a &= value;
+    SetZeroAndNegativeFlags( _a );
 }
 
 void CPU::DCP( const u16 address )
@@ -2471,53 +2497,6 @@ void CPU::ISC( const u16 address )
     CPU::SBC( address );
 }
 
-void CPU::ALR( const u16 address )
-{
-    /* @brief Illegal opcode: combines AND and LSR
-     * N Z C I D V
-     * + + + - - -
-     *   Usage and cycles:
-     *   ALR Immediate: 4B(2)
-     */
-    CPU::AND( address );
-
-    u8 const value = GetAccumulator();
-    ( value & 0b00000001 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
-    u8 const result = value >> 1;
-    SetZeroAndNegativeFlags( result );
-    _a = result;
-}
-
-void CPU::ARR( const u16 address )
-{
-    /* @brief Illegal opcode: combines AND and ROR
-     * N Z C I D V
-     * + + + - - +
-     *   Usage and cycles:
-     *   ARR Immediate: 6B(2)
-     */
-
-    // A & operand
-    u8 value = _a & ReadAndTick( address );
-
-    // ROR
-    u8 const carryIn = IsFlagSet( Status::Carry ) ? 0x80 : 0x00;
-    value = ( value >> 1 ) | carryIn;
-
-    _a = value;
-
-    // Set flags
-    SetZeroAndNegativeFlags( _a );
-
-    // Adjust C and V flags according to the ARR rules
-    // C = bit 6 of A
-    ( _a & 0x40 ) != 0 ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
-
-    // V = bit 5 XOR bit 6
-    bool const isOverflow = ( ( _a & 0x40 ) != 0 ) ^ ( ( _a & 0x20 ) != 0 );
-    ( isOverflow ) ? SetFlags( Status::Overflow ) : ClearFlags( Status::Overflow );
-}
-
 void CPU::ANC( const u16 address )
 {
     /* @brief Illegal opcode: combines AND and Carry
@@ -2529,22 +2508,6 @@ void CPU::ANC( const u16 address )
      */
     CPU::AND( address );
     ( IsFlagSet( Status::Negative ) ) ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
-}
-
-void CPU::LXA( const u16 address )
-{
-    /* @brief Illegal opcode: combines LDA and LDX
-     * N Z C I D V
-     * + + - - - -
-     *   Usage and cycles:
-     *   LXA Immediate: AB(2)
-     */
-    u8 const magicConstant = 0xEE;
-    u8 const value = ReadAndTick( address );
-    u8 const result = ( ( _a | magicConstant ) & value );
-    _a = result;
-    _x = result;
-    SetZeroAndNegativeFlags( result );
 }
 
 void CPU::SBX( const u16 address )
@@ -2564,4 +2527,54 @@ void CPU::SBX( const u16 address )
     _x = static_cast<u8>( diff & 0xFF );
     ( ( diff & 0x100 ) == 0 ) ? SetFlags( Status::Carry ) : ClearFlags( Status::Carry );
     SetZeroAndNegativeFlags( _x );
+}
+
+void CPU::LAS( const u16 address )
+{
+    /* @brief Illegal opcode: LAS(LAR), combines LDA/TSX
+     * M AND SP -> A, X, SP
+     *
+     * N Z C I D V
+     * + + - - - -
+     *   Usage and cycles:
+     *   LAS Absolute Y: BB(4+)
+     */
+    u8 const memVal = ReadAndTick( address );
+    u8 const sp = GetStackPointer();
+    u8 const result = memVal & sp;
+
+    _a = result;
+    _x = result;
+    _s = result;
+
+    SetZeroAndNegativeFlags( result );
+}
+
+void CPU::ANE( const u16 address )
+{
+    /* @details Illegal opcode: ANE, combines AND and EOR
+      * OR X + AND oper
+
+      A base value in A is determined based on the contets of A and a constant, which may be typically $00,
+      $ff, $ee, etc. The value of this constant depends on temerature, the chip series, and maybe other
+      factors, as well. In order to eliminate these uncertaincies from the equation, use either 0 as the
+      operand or a value of $FF in the accumulator.
+
+      (A OR CONST) AND X AND oper -> A
+      N	Z	C	I	D	V
+      +	+	-	-	-	-
+      addressing	assembler	opc	bytes	cycles
+      immediate	ANE #oper	8B	2	2  	††
+
+      Usage and cycles:
+      * ANE Immediate: 8B(2)
+    */
+    u8 const operand = ReadAndTick( address );
+    u8 const constant = 0xEE;
+
+    // Compute: (A OR constant) AND X AND operand.
+    u8 const result = ( _a | constant ) & _x & operand;
+    _a = result;
+
+    SetZeroAndNegativeFlags( _a );
 }

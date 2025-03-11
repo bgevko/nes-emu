@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <iostream>
 #include <stdexcept>
@@ -11,6 +10,10 @@
 #include <regex>
 #include <vector>
 #include <fstream>
+#include <array>
+
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
 
 using namespace std;
 
@@ -30,7 +33,7 @@ MatchResults parseLog( const std::string &filename, const std::regex &pattern, s
 ################################
 * Various string related utilities
 */
-inline std::string toHex( uint16_t num, uint8_t width = 4 )
+inline std::string toHex( u16 num, u8 width = 4 )
 {
     /*
      * @brief Convert a 16-bit unsigned integer to a hexadecimal string
@@ -96,7 +99,7 @@ inline const std::unordered_set<std::string> &getOpcodeNameSet()
         "RTS", "SBC", "SEC", "SED", "SEI", "STA", "STX", "STY", "TAX", "TAY", "TSX", "TXA", "TXS", "TYA",
         // Illegal
         "*ALR", "*ANC", "*ARR", "*DCP", "*ISC", "*JAM", "*LAX", "*LXA", "*NOP", "*RLA", "*RRA", "*SAX",
-        "*SBC", "*SBX", "*SLO", "*SRE" };
+        "*SBC", "*SBX", "*SLO", "*SRE", "*LAS", "*ANE" };
     return nameSet;
 }
 

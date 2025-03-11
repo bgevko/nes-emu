@@ -1,17 +1,16 @@
 #pragma once
 
 #include <array>
+#include <deque>
 #include <cstdint>
 #include <string>
 
 // Aliases for integer types
 using u8 = uint8_t;
-using s8 = int8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
 using u64 = uint64_t;
-
-using namespace std;
+using s8 = int8_t;
 
 // Forward declaration for reads and writes
 class Bus;
@@ -26,103 +25,171 @@ class CPU
     ||           Getters          ||
     ################################
     */
-    u8   GetAccumulator() const;
-    u8   GetXRegister() const;
-    u8   GetYRegister() const;
-    u8   GetStatusRegister() const;
-    u8   GetStackPointer() const;
-    u16  GetProgramCounter() const;
-    u64  GetCycles() const;
+    u8   GetAccumulator() const { return _a; }
+    u8   GetXRegister() const { return _x; }
+    u8   GetYRegister() const { return _y; }
+    u8   GetStatusRegister() const { return _p; }
+    u16  GetProgramCounter() const { return _pc; }
+    u8   GetStackPointer() const { return _s; }
+    u64  GetCycles() const { return _cycles; }
     bool IsReading2002() const { return _reading2002; }
     bool IsNmiInProgress() const { return _nmiInProgress; }
+
+    // status getters
+    u8 GetCarryFlag() const { return ( _p & Carry ) >> 0; }
+    u8 GetZeroFlag() const { return ( _p & Zero ) >> 1; }
+    u8 GetInterruptDisableFlag() const { return ( _p & InterruptDisable ) >> 2; }
+    u8 GetDecimalFlag() const { return ( _p & Decimal ) >> 3; }
+    u8 GetBreakFlag() const { return ( _p & Break ) >> 4; }
+    u8 GetOverflowFlag() const { return ( _p & Overflow ) >> 6; }
+    u8 GetNegativeFlag() const { return ( _p & Negative ) >> 7; }
 
     /*
     ################################
     ||           Setters          ||
     ################################
     */
-    void SetAccumulator( u8 value );
-    void SetXRegister( u8 value );
-    void SetYRegister( u8 value );
-    void SetStatusRegister( u8 value );
-    void SetStackPointer( u8 value );
-    void SetProgramCounter( u16 value );
-    void SetCycles( u64 value );
+    void SetAccumulator( u8 value ) { _a = value; }
+    void SetXRegister( u8 value ) { _x = value; }
+    void SetYRegister( u8 value ) { _y = value; }
+    void SetStatusRegister( u8 value ) { _p = value; }
+    void SetProgramCounter( u16 value ) { _pc = value; }
+    void SetStackPointer( u8 value ) { _s = value; }
+    void SetCycles( u64 value ) { _cycles = value; }
     void SetReading2002( bool value ) { _reading2002 = value; };
     void SetNmiInProgress( bool value ) { _nmiInProgress = value; }
+
+    // status setters
+    void SetCarryFlag( bool value ) { value ? SetFlags( Carry ) : ClearFlags( Carry ); }
+    void SetZeroFlag( bool value ) { value ? SetFlags( Zero ) : ClearFlags( Zero ); }
+    void SetInterruptDisableFlag( bool value )
+    {
+        value ? SetFlags( InterruptDisable ) : ClearFlags( InterruptDisable );
+    }
+    void SetDecimalFlag( bool value ) { value ? SetFlags( Decimal ) : ClearFlags( Decimal ); }
+    void SetBreakFlag( bool value ) { value ? SetFlags( Break ) : ClearFlags( Break ); }
+    void SetOverflowFlag( bool value ) { value ? SetFlags( Overflow ) : ClearFlags( Overflow ); }
+    void SetNegativeFlag( bool value ) { value ? SetFlags( Negative ) : ClearFlags( Negative ); }
 
     /*
     ################################
     ||         CPU Methods        ||
     ################################
     */
-    u8  Fetch();
-    u8  Read( u16 address ) const;
-    u8  ReadAndTick( u16 address );
-    u8  DummyRead() { return ReadAndTick( _pc ); }                                                 // 1 cycle
-    u8  ReadBytePC() { return ReadAndTick( _pc++ ); }                                              // 1 cycle
-    u8  ReadByte( u16 address ) { return ReadAndTick( address ); }                                 // 1 cycle
-    u16 ReadWordPC() { return ReadBytePC() | ( ReadBytePC() << 8 ); }                              // 2 cycles
-    u16 ReadWord( u16 address ) { return ReadByte( address ) | ( ReadByte( address + 1 ) << 8 ); } // 2 cycles
     void Reset();
+    u8   Fetch();
     void DecodeExecute();
     void Tick();
+    auto Read( u16 address, bool debugMode = false ) const -> u8;
+    auto ReadAndTick( u16 address ) -> u8;
     void Write( u16 address, u8 data ) const;
     void WriteAndTick( u16 address, u8 data );
     void NMI();
     void IRQ();
-    void ExecuteFrame();
 
     /*
     ################################
     ||        Debug Methods       ||
     ################################
     */
-    string LogLineAtPC( bool verbose = true );
-    string GetTrace() const { return _trace; }
-    void   EnableTracelog() { _traceEnabled = true; }
-    void   DisableTracelog() { _traceEnabled = false; }
-    void   EnableJsonTestMode() { _isTestMode = true; }
-    void   DisableJsonTestMode() { _isTestMode = false; }
+    std::string             LogLineAtPC( bool verbose = true );
+    std::deque<std::string> GetTracelog() const { return _traceLog; }
+    std::deque<std::string> GetMesenFormatTracelog() const { return _mesenFormatTraceLog; }
+    void                    EnableTracelog()
+    {
+        _traceEnabled = true;
+        _mesenFormatTraceEnabled = false;
+    }
+    void EnableMesenFormatTraceLog()
+    {
+        _mesenFormatTraceEnabled = true;
+        _traceEnabled = false;
+    }
+    void DisableTracelog() { _traceEnabled = false; }
+    void DisableMesenFormatTraceLog() { _mesenFormatTraceEnabled = false; }
+    void EnableJsonTestMode() { _isTestMode = true; }
+    void DisableJsonTestMode() { _isTestMode = false; }
 
-  private:
-    friend class CPUTestFixture; // Used for testing private methods
-
-    /*
-    ################################
-    ||          Registers         ||
-    ################################
-    */
-    u16 _pc = 0x0000;
-    u8  _a = 0x00;
-    u8  _x = 0x00;
-    u8  _y = 0x00;
-    u8  _s = 0xFD;
-    u8  _p = 0x00 | Unused | InterruptDisable;
-    u64 _cycles = 0;
+    u16  traceSize = 100;
+    u16  mesenTraceSize = 100;
+    void AddTraceLog( const std::string &log )
+    {
+        if ( _traceEnabled ) {
+            _traceLog.push_back( log + "\n" );
+            if ( _traceLog.size() > traceSize ) {
+                _traceLog.pop_front();
+            }
+        }
+    }
+    void ClearTraceLog() { _traceLog.clear(); }
+    void AddMesenTracelog( const std::string &log )
+    {
+        if ( _mesenFormatTraceEnabled ) {
+            _mesenFormatTraceLog.push_back( log + "\n" );
+            if ( _mesenFormatTraceLog.size() > mesenTraceSize ) {
+                _mesenFormatTraceLog.pop_front();
+            }
+        }
+    }
+    void ClearMesenTraceLog() { _mesenFormatTraceLog.clear(); }
 
     /*
     ################################
     ||      Global Variables      ||
     ################################
     */
-    bool   _didVblank = false;
-    bool   _isWriteModify = false;
-    bool   _currentPageCrossPenalty = true;
-    bool   _reading2002 = false;
-    bool   _nmiInProgress = false;
-    string _instructionName;
-    string _addrMode;
+    enum Status : u8 {
+        Carry = 1 << 0,            // 0b00000001
+        Zero = 1 << 1,             // 0b00000010
+        InterruptDisable = 1 << 2, // 0b00000100
+        Decimal = 1 << 3,          // 0b00001000
+        Break = 1 << 4,            // 0b00010000
+        Unused = 1 << 5,           // 0b00100000
+        Overflow = 1 << 6,         // 0b01000000
+        Negative = 1 << 7,         // 0b10000000
+    };
+
+  private:
+    friend class CPUTestFixture; // Sometimes used for testing private methods
+
+    /*
+    ################################
+    ||          Registers         ||
+    ################################
+    */
+    u16 _pc = 0x0000;       // Program counter (PC)
+    u8  _a = 0x00;          // Accumulator register (A)
+    u8  _x = 0x00;          // X register
+    u8  _y = 0x00;          // Y register
+    u8  _s = 0xFD;          // Stack pointer (SP)
+    u8  _p = 0x00 | Unused; // Status register (P), per the specs, the unused flag should always be set
+    u64 _cycles = 0;        // Number of cycles
+
+    /*
+    ################################
+    ||  Private Global Variables  ||
+    ################################
+    */
+    bool        _didVblank = false;
+    bool        _currentPageCrossPenalty = true;
+    bool        _isWriteModify = false;
+    bool        _reading2002 = false;
+    bool        _nmiInProgress = false;
+    std::string _instructionName;
+    std::string _addrMode;
 
     /*
     ################################
     ||       Debug Variables      ||
     ################################
     */
-    bool   _isTestMode = false;
-    bool   _traceEnabled = false;
-    bool   _didTrace = false;
-    string _trace;
+    bool _isTestMode = false;
+    bool _traceEnabled = false;
+    bool _mesenFormatTraceEnabled = false;
+    bool _didMesenTrace = false;
+
+    std::deque<std::string> _traceLog;
+    std::deque<std::string> _mesenFormatTraceLog;
 
     /*
     ################################
@@ -137,8 +204,8 @@ class CPU
     ################################
     */
     struct InstructionData {
-        string name;                             // Instruction mnemonic (e.g. LDA, STA)
-        string addrMode;                         // Addressing mode mnemonic (e.g. ABS, ZPG)
+        std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
+        std::string addrMode;                    // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
         u8 cycles;                               // Number of cycles the instruction takes
@@ -150,33 +217,25 @@ class CPU
         bool isWriteModify = false; // Write/modify instructions use a dummy read before writing,
                                     // spending an extra cycle
     };
+
     // Opcode table
-    array<InstructionData, 256> _opcodeTable;
+    std::array<InstructionData, 256> _opcodeTable;
 
     /*
-    ################################
-    ||     Instruction Helpers    ||
-    ################################
+    ################################################################
+    ||                                                            ||
+    ||                    Instruction Helpers                     ||
+    ||                                                            ||
+    ################################################################
     */
-    // Enum for Status Register
-    enum Status : u8 {
-        Carry = 1 << 0,            // 0b00000001
-        Zero = 1 << 1,             // 0b00000010
-        InterruptDisable = 1 << 2, // 0b00000100
-        Decimal = 1 << 3,          // 0b00001000
-        Break = 1 << 4,            // 0b00010000
-        Unused = 1 << 5,           // 0b00100000
-        Overflow = 1 << 6,         // 0b01000000
-        Negative = 1 << 7,         // 0b10000000
-    };
 
     // Flag methods
     void SetFlags( u8 flag );
     void ClearFlags( u8 flag );
-    bool IsFlagSet( u8 flag ) const;
+    auto IsFlagSet( u8 flag ) const -> bool;
     void SetZeroAndNegativeFlags( u8 value );
 
-    // Load and store helpers
+    // LDA, LDX, and LDY helper
     void LoadRegister( u16 address, u8 &reg );
     void StoreRegister( u16 address, u8 reg );
 
@@ -188,31 +247,36 @@ class CPU
 
     // Push/Pop helper
     void StackPush( u8 value );
-    u8   StackPop();
+    auto StackPop() -> u8;
 
     /*
-    ################################
-    ||      Addressing Modes      ||
-    ################################
+    ################################################################
+    ||                                                            ||
+    ||                      Addressing Modes                      ||
+    ||                                                            ||
+    ################################################################
     */
-    u16 IMP();  // Implicit
-    u16 IMM();  // Immediate
-    u16 ZPG();  // Zero Page
-    u16 ZPGX(); // Zero Page X
-    u16 ZPGY(); // Zero Page Y
-    u16 ABS();  // Absolute
-    u16 ABSX(); // Absolute X
-    u16 ABSY(); // Absolute Y
-    u16 IND();  // Indirect
-    u16 INDX(); // Indirect X
-    u16 INDY(); // Indirect Y
-    u16 REL();  // Relative
-
+    auto IMP() -> u16;  // Implicit
+    auto IMM() -> u16;  // Immediate
+    auto ZPG() -> u16;  // Zero Page
+    auto ZPGX() -> u16; // Zero Page X
+    auto ZPGY() -> u16; // Zero Page Y
+    auto ABS() -> u16;  // Absolute
+    auto ABSX() -> u16; // Absolute X
+    auto ABSY() -> u16; // Absolute Y
+    auto IND() -> u16;  // Indirect
+    auto INDX() -> u16; // Indirect X
+    auto INDY() -> u16; // Indirect Y
+    auto REL() -> u16;  // Relative
     /*
-    ################################
-    ||     Instruction Methods    ||
-    ################################
-    */
+    ################################################################
+    ||                                                            ||
+    ||                        Instructions                        ||
+    ||                                                            ||
+    ################################################################
+      */
+
+    // NOP
     void NOP( u16 address );
 
     // Load/Store
@@ -291,28 +355,27 @@ class CPU
     void TYA( u16 address );
 
     /*
-    ################################
-    ||   Unofficial Instructions  ||
-    ################################
+    ################################################
+    ||                                            ||
+    ||               Illegal Opcodes              ||
+    ||                                            ||
+    ################################################
     */
     void NOP2( u16 address );
     void JAM( u16 address );
     void SLO( u16 address );
-    void RLA( u16 address );
-    void SRE( u16 address );
-    void RRA( u16 address );
     void SAX( u16 address );
+    void LXA( u16 address );
     void LAX( u16 address );
+    void ARR( u16 address );
+    void ALR( u16 address );
+    void RRA( u16 address );
+    void SRE( u16 address );
+    void RLA( u16 address );
     void DCP( u16 address );
     void ISC( u16 address );
-    void ALR( u16 address );
-    void ARR( u16 address );
-    void SHA( u16 address );
-    void TAS( u16 address );
-    void LXA( u16 address );
-    void LAS( u16 address );
-    void SBX( u16 address );
-    void SHY( u16 address );
-    void SHX( u16 address );
     void ANC( u16 address );
+    void SBX( u16 address );
+    void LAS( u16 address );
+    void ANE( u16 address );
 };
