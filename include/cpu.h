@@ -220,6 +220,7 @@ class CPU
 
     // Opcode table
     std::array<InstructionData, 256> _opcodeTable;
+    InstructionData                  GetInstruction( u8 opcode ) { return _opcodeTable[opcode]; }
 
     /*
     ################################################################
