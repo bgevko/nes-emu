@@ -22,7 +22,7 @@ u8 Bus::Read( const u16 address )
 
     // System RAM: 0x0000 - 0x1FFF (mirrored every 2KB)
     if ( address >= 0x0000 && address <= 0x1FFF ) {
-        return _ram[address & 0x07FF];
+        return _ram.at( address & 0x07FF );
     }
 
     // PPU Registers: 0x2000 - 0x3FFF (mirrored every 8 bytes)

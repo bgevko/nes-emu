@@ -301,7 +301,7 @@ void PPU::DmaTransfer( u8 data ) // NOLINT
         Palette 6: $3F18 (mirrors 3F08), $3F19, $3F1A, $3F1B.
         Palette 7: $3F1C (mirrors 3F0C), $3F1D, $3F1E, $3F1F.
         */
-        address &= 0x001F; // Mask to 32 bytes
+        address &= 0x1F; // Mask to 32 bytes
 
         // Mirror backgrounds of palettes 4-7 to 0-3
         if ( address >= 0x0010 && ( address & 0x0003 ) == 0 ) {
@@ -354,14 +354,14 @@ void PPU::Write( u16 address, u8 data )
 
     // $3F00-$3FFF: Palettes
     if ( address >= 0x3F00 && address <= 0x3FFF ) {
-        address &= 0x001F; // Mask to 32 bytes
+        address &= 0x1F; // Mask to 32 bytes
 
         // Mirror backgrounds of palettes 4-7 to 0-3
         if ( address >= 0x0010 && ( address & 0x0003 ) == 0 ) {
             address -= 0x0010;
         }
 
-        _paletteMemory.at( address & 0x1F ) = data;
+        _paletteMemory.at( address ) = data;
     }
 }
 
