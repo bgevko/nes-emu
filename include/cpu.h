@@ -14,6 +14,8 @@ using s8 = int8_t;
 
 // Static arrays for opcode information
 // formatted based on their corresponding index, starting at 0x00
+// NOLINTBEGIN
+// clang-format off
 std::array<std::string, 256> g_instructionNames = {
     "BRK",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "PHP",  "ORA",   "ASL",   "*ANC",  "*NOP",  "ORA",   "ASL",   "*SLO",
     "BPL",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "CLC",  "ORA",   "*NOP",  "*SLO",  "*NOP",  "ORA",   "ASL",   "*SLO",
@@ -89,6 +91,8 @@ std::array<u8, 256> g_instructionBytes = {
     2,      2,      2,      2,      2,      2,      2,      2,      1,      2,      1,      2,      3,      3,      3,      3,
     2,      2,      1,      2,      2,      2,      2,      2,      1,      3,      1,      3,      3,      3,      3,      3
 };
+// clang-format on
+// NOLINTEND
 
 // Forward declaration for reads and writes
 class Bus;
@@ -282,18 +286,11 @@ class CPU
     ################################
     */
     struct InstructionData {
-        std::string name;                        // Instruction mnemonic (e.g. LDA, STA)
-        std::string addrMode;                    // Addressing mode mnemonic (e.g. ABS, ZPG)
         void ( CPU::*instructionMethod )( u16 ); // Pointer to the instruction helper method
         u16 ( CPU::*addressingModeMethod )();    // Pointer to the address mode helper method
-        u8 cycles;                               // Number of cycles the instruction takes
-        u8 bytes;                                // Number of bytes the instruction takes
-        // Some instructions take an extra cycle if a page boundary is crossed. However, in some
-        // cases the extra cycle is not taken if the operation is a read. This will be set
-        // selectively for a handful of opcodes, but otherwise will be set to true by default
-        bool pageCrossPenalty = true;
-        bool isWriteModify = false; // Write/modify instructions use a dummy read before writing,
-                                    // spending an extra cycle
+        bool pageCrossPenalty =
+            true; // Whether the instruction takes an extra cycle if a page boundary is crossed
+        bool isWriteModify = false; // Write/modify instructions use a dummy read before writing
     };
 
     // Opcode table
