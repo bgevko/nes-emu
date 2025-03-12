@@ -20,6 +20,10 @@
           "type": "BOOL",
           "value": "ON"
         },
+        "BUILD_CLI": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
         "BUILD_TESTS": {
           "type": "BOOL",
           "value": "ON"
@@ -53,6 +57,21 @@
         "CMAKE_CXX_FLAGS": {
           "type": "STRING",
           "value": "-Werror"
+        }
+      }
+    },
+    {
+      "name": "cli",
+      "description": "Core + CLI tool, no frontend.",
+      "inherits": "default",
+      "cacheVariables": {
+        "BUILD_FRONTEND": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "BUILD_CLI": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     },
@@ -101,6 +120,11 @@
     {
       "name": "ci",
       "configurePreset": "ci",
+      "jobs": 2
+    },
+    {
+      "name": "cli",
+      "configurePreset": "cli",
       "jobs": 2
     },
     {

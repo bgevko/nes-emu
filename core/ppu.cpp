@@ -13,8 +13,8 @@ PPU::PPU( Bus *bus ) : bus( bus )
         LoadSystemPalette();
     } catch ( std::exception &e ) {
         std::cerr << e.what() << '\n';
-        std::cout << "Failed to load system palette from file.\n";
-        std::cout << "Using default palette.\n";
+        std::cerr << "Failed to load system palette from file.\n";
+        std::cerr << "Using default palette.\n";
         failedPaletteRead = true;
         LoadDefaultSystemPalette();
     }

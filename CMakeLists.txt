@@ -32,6 +32,17 @@ find_package(fmt CONFIG REQUIRED)
 target_link_libraries(emu_core PRIVATE fmt::fmt)
 
 #[[
+#######################################
+||                                   ||
+||  Interactive CLI Tool (optional)  ||
+||                                   ||
+#######################################
+]]
+if(BUILD_CLI)
+  add_subdirectory(tools/cli)
+endif()
+
+#[[
 ################################################
 ||                                            ||
 ||             Emulator Executable            ||
@@ -109,6 +120,7 @@ if(BUILD_FRONTEND)
   add_dependencies(copy_assets emu)
 
 endif()
+
 
 #[[
 ################################################
