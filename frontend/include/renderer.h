@@ -98,8 +98,9 @@ class Renderer
     std::array<u32, 61440> nametable3Buffer{};
 
     std::array<std::string, 5> testRoms = {
-        "tests/roms/palette.nes", "tests/roms/color_test.nes", "tests/roms/nestest.nes",
-        "tests/roms/mario.nes",   "tests/tools/custom.nes",
+        "tests/roms/palette.nes", "tests/roms/color_test.nes",
+        "tests/roms/nestest.nes", "tests/roms/mario.nes",
+        "asm/custom.nes",
     };
     enum RomSelected : u8 {
         PALETTE,
@@ -108,7 +109,7 @@ class Renderer
         MARIO,
         CUSTOM,
     };
-    u8 romSelected = RomSelected::PALETTE;
+    u8 romSelected = RomSelected::CUSTOM;
 
     /*
     ################################

@@ -17,7 +17,7 @@ using s8 = int8_t;
 const std::array<std::string, 256> gInstructionNames = {
     "BRK",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "PHP",  "ORA",   "ASL",   "*ANC",  "*NOP",  "ORA",   "ASL",   "*SLO",
     "BPL",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "CLC",  "ORA",   "*NOP",  "*SLO",  "*NOP",  "ORA",   "ASL",   "*SLO",
-    "JSR",   "AND",   "*JAM",  "*RLA",  "BIT",   "AND",   "ROL",   "*RLA",  "PLP",  "AND",   "ROL",   "*ANC",  "*NOP",  "AND",   "ROL",   "*RLA",
+    "JSR",   "AND",   "*JAM",  "*RLA",  "BIT",   "AND",   "ROL",   "*RLA",  "PLP",  "AND",   "ROL",   "*ANC",  "BIT",   "AND",   "ROL",   "*RLA",
     "BMI",   "AND",   "*JAM",  "*RLA",  "*NOP",  "AND",   "*ROL",  "*RLA",  "SEC",  "AND",   "*NOP",  "*RLA",  "*NOP",  "AND",   "ROL",   "*RLA",
     "RTI",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "PHA",  "EOR",   "LSR",   "*ALR",  "*JMP",  "EOR",   "LSR",   "*SRE",
     "BVC",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "CLI",  "EOR",   "*NOP",  "*SRE",  "*NOP",  "EOR",   "LSR",   "*SRE",

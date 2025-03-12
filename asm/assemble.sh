@@ -7,4 +7,4 @@
 # Input: demo.s
 # Params: --verbose --target nes -o demo.nes
 
-cl65 --verbose --target nes -o demo.nes demo.s
+cl65 --verbose --target nes -o custom.nes custom.s
