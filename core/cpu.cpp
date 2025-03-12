@@ -35,7 +35,7 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
     output += utils::toHex( _pc, 4 ) + " ";
 
     if ( verbose ) {
-        output += " k";
+        output += "  ";
         // Hex instruction
         // i.e. 4C F5 C5, this is the hex instruction
         u8 const    bytes = gInstructionBytes[opcode];

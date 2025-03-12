@@ -34,7 +34,7 @@ class PpuViewerWindow : public UIComponent
 
         if ( ImGui::Begin( "PPU Viewer", &visible, windowFlags ) ) {
             RenderMenuBar();
-            DebugControls();
+            DebugControls( "PPU Viewer Debugger" );
             ImGui::Spacing();
             ImGui::PushFont( renderer->fontMono );
 

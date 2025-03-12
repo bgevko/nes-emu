@@ -28,7 +28,7 @@ class OverlayWindow : public UIComponent
         windowFlags |= ImGuiWindowFlags_NoMove;
         ImGui::SetNextWindowBgAlpha( 0.35f );
 
-        if ( ImGui::Begin( "Overlay", &visible, windowFlags ) ) {
+        if ( ImGui::Begin( "Emulator Overlay", &visible, windowFlags ) ) {
             ImGui::PushFont( renderer->fontMono );
             ImGui::Text( "CPU Cycle: " U64_FORMAT_SPECIFIER, renderer->bus.cpu.GetCycles() );
             ImGui::Text( "FPS(%.1f FPS)", renderer->io->Framerate );

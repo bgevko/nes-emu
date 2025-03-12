@@ -45,7 +45,7 @@ class MemoryDisplayWindow : public UIComponent
         if ( ImGui::Begin( "Memory Viewer", &visible, windowFlags ) ) {
 
             RenderMenuBar();
-            DebugControls();
+            DebugControls( "Memory Viewer Debugger" );
             ImGui::Dummy( ImVec2( 0, 5 ) );
 
             // PC Location

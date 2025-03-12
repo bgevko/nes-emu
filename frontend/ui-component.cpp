@@ -2,10 +2,10 @@
 #include "renderer.h"
 #include <imgui.h>
 
-void UIComponent::DebugControls()
+void UIComponent::DebugControls( const std::string &parentLabel )
 {
     ImVec2 size = ImVec2( 410, 120 );
-    ImGui::BeginChild( "debug-control", size, ImGuiChildFlags_Border );
+    ImGui::BeginChild( parentLabel.c_str(), size, ImGuiChildFlags_Border );
     bool const isPaused = renderer->paused;
 
     ImGui::BeginDisabled( !isPaused );
@@ -81,7 +81,7 @@ void UIComponent::DebugControls()
     ImGui::Text( "Step" );
     ImGui::SameLine();
     ImGui::PushItemWidth( 120 );
-    ImGui::InputInt( "", &i0 );
+    ImGui::InputInt( "##nolabel", &i0 );
     ImGui::SameLine();
     ImGui::Combo( " ", &item, items, IM_ARRAYSIZE( items ) );
     ImGui::SameLine();
@@ -190,7 +190,8 @@ void UIComponent::DebugControls()
             auto const line = renderer->bus.cpu.LogLineAtPC( false );
             ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 1.0f, 1.0f, 1.0f, 1.0f ) );
             ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 4.0f, 1.0f ) );
-            ImGui::BeginChild( "", ImVec2( 0, 0 ), ImGuiChildFlags_Border );
+            std::string label = parentLabel + "##log";
+            ImGui::BeginChild( label.c_str(), ImVec2( 0, 0 ), ImGuiChildFlags_Border );
 
             ImGui::PushFont( renderer->fontMono );
             ImGui::Text( "%s", line.c_str() );
