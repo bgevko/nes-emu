@@ -99,7 +99,7 @@ class Renderer
 
     std::array<std::string, 5> testRoms = {
         "tests/roms/palette.nes", "tests/roms/color_test.nes", "tests/roms/nestest.nes",
-        "tests/roms/mario.nes",   "tools/asm/custom.nes",
+        "tests/roms/mario.nes",   "tests/roms/custom.nes",
     };
     enum RomSelected : u8 {
         PALETTE,

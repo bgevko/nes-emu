@@ -19,6 +19,7 @@ def print_interactive(msg):
 
 e = emu.Emulator()
 e.preset()
+e.enable_mesen_trace(100000)
 
 # Only show interactive messages if running in a tty.
 if sys.stdout.isatty():
@@ -44,7 +45,7 @@ method_names = [
     "cpu_cycles", 
     "a", "x", "y", "p", "sp", "pc",
     "carry_flag", "zero_flag", "interrupt_flag", "decimal_flag", "break_flag", "overflow_flag", "negative_flag",
-    "log", "step", "test"
+    "log", "step", "test", "get_nmi", "get_vblank", "enable_mesen_trace", "disable_mesen_trace", "print_mesen_trace"
 ]
 for name in method_names:
     globals()[name] = bind_method(name)
@@ -59,10 +60,13 @@ def commands():
     print(f"{YELLOW}step_until(callback_condition){RESET}")
     print(f"{YELLOW}out(filename){RESET} # Redirect stdout to a file")
 
-def main():
-    # Debug scripts can be ran here.
-    # Good for logging and debugging, i.e. python3 cli.py > log.txt
-    e.step(100)
+def step_and_trace(n = 100):
+    e.step(n)
+    e.print_mesen_trace()
 
+def main():
+    # step_and_trace(100000)
+    step(25714)
+    pass
 if __name__ == "__main__":
     main()

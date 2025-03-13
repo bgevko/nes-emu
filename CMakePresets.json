@@ -65,6 +65,10 @@
       "description": "Core + CLI tool, no frontend.",
       "inherits": "default",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Debug"
+        },
         "BUILD_FRONTEND": {
           "type": "BOOL",
           "value": "OFF"

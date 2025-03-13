@@ -15,7 +15,7 @@ class Emulator
 
     Emulator() = default;
 
-    // Getters
+    // CPU Getters
     u64 GetCycles() const { return bus.cpu.GetCycles(); }
     u8  A() const { return cpu.GetAccumulator(); }
     u8  X() const { return cpu.GetXRegister(); }
@@ -32,6 +32,10 @@ class Emulator
     u8 OverflowFlag() const { return cpu.GetOverflowFlag(); }
     u8 NegativeFlag() const { return cpu.GetNegativeFlag(); }
 
+    // PPU Getters
+    u8 GetNmi() const { return ppu.GetCtrlNmiEnable(); }
+    u8 GetVblank() const { return ppu.GetStatusVblank(); }
+
     // Methods
     void Load( const std::string &path )
     {
@@ -42,7 +46,7 @@ class Emulator
     void Preset()
     {
         // Loads a common rom used for debugging to get going quickly.
-        std::string romFile = "../asm/custom.nes";
+        std::string romFile = "../../tests/roms/custom.nes";
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }
@@ -58,7 +62,19 @@ class Emulator
     {
         for ( int i = 0; i < n; i++ ) {
             cpu.DecodeExecute();
-            Log();
+        }
+    }
+
+    void EnableMesenTrace( int n = 100 )
+    {
+        cpu.EnableMesenFormatTraceLog();
+        cpu.SetMesenTraceSize( n );
+    }
+    void DisableMesenTrace() { cpu.DisableMesenFormatTraceLog(); }
+    void PrintMesenTrace() const
+    {
+        for ( const auto &line : cpu.GetMesenFormatTracelog() ) {
+            fmt::print( "{}", line );
         }
     }
 };
@@ -81,9 +97,15 @@ PYBIND11_MODULE( emu, m )
         .def_property_readonly( "break_flag", &Emulator::BreakFlag, "Get the break flag" )
         .def_property_readonly( "overflow_flag", &Emulator::OverflowFlag, "Get the overflow flag" )
         .def_property_readonly( "negative_flag", &Emulator::NegativeFlag, "Get the negative flag" )
+        .def_property_readonly( "get_nmi", &Emulator::GetNmi, "Get the PPU NMI flag" )
+        .def_property_readonly( "get_vblank", &Emulator::GetVblank, "Get the PPU VBLANK flag" )
         .def( "load", &Emulator::Load, "Load a rom file" )
         .def( "preset", &Emulator::Preset, "Load custom.nes rom for debugging" )
         .def( "log", &Emulator::Log, "Log CPU state" )
         .def( "step", &Emulator::Step, "Step the CPU by one or more cycles", py::arg( "n" ) = 1 )
+        .def( "enable_mesen_trace", &Emulator::EnableMesenTrace, "Enable Mesen trace log",
+              py::arg( "n" ) = 100 )
+        .def( "disable_mesen_trace", &Emulator::DisableMesenTrace, "Disable Mesen trace log" )
+        .def( "print_mesen_trace", &Emulator::PrintMesenTrace, "Print Mesen trace log" )
         .def_static( "test", &Emulator::Test, "Test function" );
 }

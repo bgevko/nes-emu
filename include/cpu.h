@@ -3,6 +3,7 @@
 #include <array>
 #include <deque>
 #include <cstdint>
+#include <fmt/base.h>
 #include <string>
 
 // Aliases for integer types
@@ -724,9 +725,10 @@ class CPU
     void EnableJsonTestMode() { _isTestMode = true; }
     void DisableJsonTestMode() { _isTestMode = false; }
 
-    u16  traceSize = 100;
-    u16  mesenTraceSize = 100;
-    void AddTraceLog( const std::string &log )
+    size_t traceSize = 100;
+    size_t mesenTraceSize = 100;
+    void   SetMesenTraceSize( int size ) { mesenTraceSize = size; }
+    void   AddTraceLog( const std::string &log )
     {
         if ( _traceEnabled ) {
             _traceLog.push_back( log + "\n" );
