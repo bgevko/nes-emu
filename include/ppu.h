@@ -134,7 +134,6 @@ class PPU
     u8   GetBgPixel();
     u8   GetSpritePixel();
     u32  GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette );
-    void TriggerNmi() const;
     void Reset()
     {
         scanline = 0;

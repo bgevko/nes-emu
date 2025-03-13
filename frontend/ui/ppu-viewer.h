@@ -8,7 +8,7 @@
 class PpuViewerWindow : public UIComponent
 {
   public:
-    PpuViewerWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = false; }
+    PpuViewerWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = true; }
 
     /*
     ################################

@@ -131,6 +131,25 @@ TEST_F( CPUTestFixture, RamCheck )
     }
 }
 
+TEST_F( CPUTestFixture, BugFix )
+{
+    bus.cartridge.LoadRom( std::string( ROM_DIR ) + "/custom.nes" );
+    bus.DisableJsonTestMode();
+    bus.DebugReset();
+    for ( int i = 0; i < 25716; ++i ) {
+        cpu.DecodeExecute();
+    }
+    EXPECT_EQ( cpu.GetProgramCounter(), 0x805E );
+    cpu.DecodeExecute();
+    cpu.DecodeExecute();
+    auto const expected = 0x8061;
+    auto const actual = cpu.GetProgramCounter();
+    if ( expected != actual ) {
+        fmt::print( "Expected: {:X}, Actual: {:X}\n", expected, actual );
+        FAIL();
+    }
+}
+
 TEST_F( CPUTestFixture, ResetVector )
 {
     bus.EnableJsonTestMode(); // enables flat memory

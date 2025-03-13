@@ -600,7 +600,6 @@ class CPU
     u8   GetStackPointer() const { return _s; }
     u64  GetCycles() const { return _cycles; }
     bool IsReading2002() const { return _reading2002; }
-    bool IsNmiInProgress() const { return _nmiInProgress; }
 
     // status getters
     u8 GetCarryFlag() const { return ( _p & Carry ) >> 0; }
@@ -624,7 +623,7 @@ class CPU
     void SetStackPointer( u8 value ) { _s = value; }
     void SetCycles( u64 value ) { _cycles = value; }
     void SetReading2002( bool value ) { _reading2002 = value; };
-    void SetNmiInProgress( bool value ) { _nmiInProgress = value; }
+    void SetPendingNmi( bool value ) { _pendingNmi = value; }
 
     // status setters
     void SetCarryFlag( bool value ) { value ? SetFlags( Carry ) : ClearFlags( Carry ); }
@@ -658,7 +657,6 @@ class CPU
          * It interrupts whatever the CPU is doing at its current cycle to go update the PPU.
          * Uses 7 cycles, cannot be disabled.
          */
-        SetNmiInProgress( true );
         // 1) Two dummy cycles (hardware reads the same PC twice, discarding the data)
         Tick();
         Tick();
@@ -682,8 +680,6 @@ class CPU
 
         // 7) Update PC
         _pc = static_cast<u16>( high ) << 8 | low;
-
-        SetNmiInProgress( false );
     }
 
     void IRQ()
@@ -794,7 +790,7 @@ class CPU
     bool        _currentPageCrossPenalty = true;
     bool        _isWriteModify = false;
     bool        _reading2002 = false;
-    bool        _nmiInProgress = false;
+    bool        _pendingNmi = false;
     std::string _instructionName;
     std::string _addrMode;
 

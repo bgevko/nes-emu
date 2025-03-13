@@ -15,6 +15,7 @@ set(UI_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/ui)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
 
 # Define directories for configuration
+SET(ROOT_DIR "${CMAKE_SOURCE_DIR}")
 set(ROM_DIR "${CMAKE_SOURCE_DIR}/roms")
 set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
 set(PALETTES_DIR "${CMAKE_SOURCE_DIR}/palettes")

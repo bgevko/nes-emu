@@ -5,6 +5,7 @@
 #define CONFIG_H
 
 // Set the path variables in CMakelists.txt
+#define ROOT_DIR "@ROOT_DIR@"
 #define ROM_DIR "@ROM_DIR@"
 #define FONTS_DIR "@FONTS_DIR@"
 #define PALETTES_DIR "@PALETTES_DIR@"

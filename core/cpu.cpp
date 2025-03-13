@@ -185,12 +185,12 @@ auto CPU::WriteAndTick( u16 address, u8 data ) -> void
     Tick();
 
     // Writing to PPUCTRL, PPUMASK, PPUSCROLL, and PPUADDR is ignored until after cycle ~29658
-    // if ( !_bus->IsTestMode() &&
-    //      ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 ) ) {
-    //     if ( _cycles < 29658 ) {
-    //         return;
-    //     }
-    // }
+    if ( !_bus->IsTestMode() &&
+         ( address == 0x2000 || address == 0x2001 || address == 0x2005 || address == 0x2006 ) ) {
+        if ( _cycles < 29658 ) {
+            return;
+        }
+    }
     Write( address, data );
 }
 
@@ -253,8 +253,14 @@ void CPU::DecodeExecute()
      * This function fetches the next opcode from memory, decodes it using the opcode table,
      * and executes that instruction.
      *
-     * If the opcode is invalid, an error message is printed to stderr.
      */
+
+    // Handle NMI
+    if ( _pendingNmi ) {
+        NMI();
+        _pendingNmi = false;
+        return;
+    }
 
     if ( _traceEnabled ) {
         AddTraceLog( LogLineAtPC( true ) );

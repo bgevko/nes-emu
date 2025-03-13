@@ -39,17 +39,10 @@ class Emulator
 
     /*
     #######################################
-    ||            PPU Getters            ||
-    #######################################
-    */
-    u8 GetNmi() const { return ppu.GetCtrlNmiEnable(); }
-    u8 GetVblank() const { return ppu.GetStatusVblank(); }
-
-    /*
-    #######################################
     ||            CPU Setters            ||
     #######################################
     */
+    void SetCycles( u64 value ) { cpu.SetCycles( value ); }
     void SetA( u8 value ) { cpu.SetAccumulator( value ); }
     void SetX( u8 value ) { cpu.SetXRegister( value ); }
     void SetY( u8 value ) { cpu.SetYRegister( value ); }
@@ -59,14 +52,43 @@ class Emulator
 
     /*
     #######################################
+    ||            PPU Getters            ||
+    #######################################
+    */
+    u8  GetNmi() const { return ppu.GetCtrlNmiEnable(); }
+    u8  GetVblank() const { return ppu.GetStatusVblank(); }
+    s16 GetScanline() const { return ppu.GetScanline(); }
+    u16 GetPpuCycles() const { return ppu.GetCycles(); }
+    u64 GetFrame() const { return ppu.GetFrame(); }
+
+    /*
+    ################################
+    ||         PPU Setters        ||
+    ################################
+    */
+    void SetScanline( s16 value ) { ppu.SetScanline( value ); }
+    void SetPpuCycles( s16 value ) { ppu.SetCycles( value ); }
+
+    /*
+    #######################################
+    ||         Cartridge Getters         ||
+    #######################################
+    */
+    bool DidMapperLoad() const { return cart.DidMapperLoad(); }
+    bool DoesMapperExist() const { return cart.DoesMapperExist(); }
+
+    /*
+    ################################
+    ||     Cartrdidge Setters     ||
+    ################################
+    */
+
+    /*
+    #######################################
     ||              Methods              ||
     #######################################
     */
-    void Load( const std::string &path )
-    {
-        bus.cartridge.LoadRom( path );
-        bus.cpu.Reset();
-    }
+    void Load( const std::string &path ) { bus.cartridge.LoadRom( path ); }
 
     void Preset()
     {
@@ -75,6 +97,8 @@ class Emulator
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }
+
+    void DebugReset() { bus.DebugReset(); }
 
     static void Test() { fmt::print( "Test\n" ); }
     void        Log()
@@ -89,6 +113,8 @@ class Emulator
             cpu.DecodeExecute();
         }
     }
+
+    u8 Read( u16 addr ) const { return bus.cpu.Read( addr ); }
 
     void EnableMesenTrace( int n = 100 )
     {
@@ -123,24 +149,37 @@ PYBIND11_MODULE( emu, m ) // <-- Python module name. Must match the name in the 
         .def_property_readonly( "break_flag", &Emulator::BreakFlag, "Get the break flag" )
         .def_property_readonly( "overflow_flag", &Emulator::OverflowFlag, "Get the overflow flag" )
         .def_property_readonly( "negative_flag", &Emulator::NegativeFlag, "Get the negative flag" )
-        // PPU Getters
-        .def_property_readonly( "get_nmi", &Emulator::GetNmi, "Get the PPU NMI flag" )
-        .def_property_readonly( "get_vblank", &Emulator::GetVblank, "Get the PPU VBLANK flag" )
         // CPU Setters
+        .def( "set_cycles", &Emulator::SetCycles, "Set the number of cycles" )
         .def( "set_a", &Emulator::SetA, "Set the accumulator" )
         .def( "set_x", &Emulator::SetX, "Set the X register" )
         .def( "set_y", &Emulator::SetY, "Set the Y register" )
         .def( "set_sp", &Emulator::SetSP, "Set the stack pointer" )
         .def( "set_pc", &Emulator::SetPC, "Set the program counter" )
         .def( "set_p", &Emulator::SetP, "Set the status register" )
+        // PPU Getters
+        .def_property_readonly( "nmi", &Emulator::GetNmi, "Get the PPU NMI flag" )
+        .def_property_readonly( "vblank", &Emulator::GetVblank, "Get the PPU VBLANK flag" )
+        .def_property_readonly( "scanline", &Emulator::GetScanline, "Get the scanline" )
+        .def_property_readonly( "ppu_cycles", &Emulator::GetPpuCycles, "Get the PPU cycles" )
+        .def_property_readonly( "frame", &Emulator::GetFrame, "Get the frame" )
+        // PPU Setters
+        .def( "set_scanline", &Emulator::SetScanline, "Set the scanline" )
+        .def( "set_ppu_cycles", &Emulator::SetPpuCycles, "Set the PPU cycles" )
+        // Cartridge Getters
+        .def_property_readonly( "did_mapper_load", &Emulator::DidMapperLoad, "Get if the mapper loaded" )
+        .def_property_readonly( "does_mapper_exist", &Emulator::DoesMapperExist, "Get if the mapper exists" )
+        // Cartridge Setters
         // Methods
         .def( "load", &Emulator::Load, "Load a rom file" )
         .def( "preset", &Emulator::Preset, "Load custom.nes rom for debugging" )
+        .def( "debug_reset", &Emulator::DebugReset, "Reset the CPU and PPU" )
         .def( "log", &Emulator::Log, "Log CPU state" )
         .def( "step", &Emulator::Step, "Step the CPU by one or more cycles", py::arg( "n" ) = 1 )
         .def( "enable_mesen_trace", &Emulator::EnableMesenTrace, "Enable Mesen trace log",
               py::arg( "n" ) = 100 )
         .def( "disable_mesen_trace", &Emulator::DisableMesenTrace, "Disable Mesen trace log" )
         .def( "print_mesen_trace", &Emulator::PrintMesenTrace, "Print Mesen trace log" )
+        .def( "read", &Emulator::Read, "Read from CPU memory", py::arg( "addr" ) )
         .def_static( "test", &Emulator::Test, "Test function" );
 }

@@ -62,6 +62,21 @@ class Cartridge
     MirrorMode GetMirrorMode();
     void       LoadRom( const string &filePath );
 
+    /*
+    ################################
+    ||        Debug Methods       ||
+    ################################
+    */
+    bool DidMapperLoad() const { return didMapperLoad; }
+    bool DoesMapperExist() const { return _mapper != nullptr; }
+
+    /*
+    ################################
+    ||       Debug Variables      ||
+    ################################
+    */
+    bool didMapperLoad = false;
+
   private:
     /*
     ################################

@@ -43,14 +43,25 @@ def bind_method(method_name):
 
 # Names of methods exposed globally to this file
 method_names = [
-    "cpu_cycles", 
-    "a", "x", "y", "p", "sp", "pc",
-    "set_a", "set_x", "set_y", "set_p", "set_sp", "set_pc",
+    # CPU Getters
+    "cpu_cycles", "a", "x", "y", "p", "sp", "pc",
     "carry_flag", "zero_flag", "interrupt_flag", 
     "decimal_flag", "break_flag", "overflow_flag", 
-    "negative_flag", "log", "step", "test", "get_nmi", 
-    "get_vblank", "enable_mesen_trace", "disable_mesen_trace", 
-    "print_mesen_trace"
+    "negative_flag",
+    # CPU Setters
+    "set_a", "set_x", "set_y", "set_p", "set_sp", "set_pc",
+    "set_cycles"
+    # PPU Getters
+    "nmi", "vblank", "scanline", "ppu_cycles", "frame"
+    # PPU Setters
+    "set_scanline", "set_ppu_cycles",
+    # Cartridge Getters
+    "did_mapper_load", "does_mapper_exist",
+    # Cartridge Setters
+    # Methods
+    "log", "step", "test",
+    "enable_mesen_trace", "disable_mesen_trace", 
+    "print_mesen_trace", "debug_reset", "read"
 ]
 for name in method_names:
     globals()[name] = bind_method(name)
@@ -70,8 +81,6 @@ def step_and_trace(n = 100):
     e.print_mesen_trace()
 
 def main():
-    # step_and_trace(100000)
-    # step(25714)
-    pass
+    step_and_trace(100000)
 if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@
 class DebuggerWindow : public UIComponent
 {
   public:
-    DebuggerWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = true; }
+    DebuggerWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = false; }
 
     void OnVisible() override {}
     void OnHidden() override {}

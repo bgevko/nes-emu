@@ -3,15 +3,31 @@ import emu
 
 class TestExample(unittest.TestCase):
     
-    def setUp(self):
-        e = emu.Emulator() # ignore the lint warning, this does exist
-        e.preset() # loads testing/roms/custom.nes
 
-    def bug_1(self):
+    def test_bug_1(self):
         # there's a bug where the emulator jumps to a different address, even though
         # it's supposed to continue to jump to the same address indefinitely.
-        self.assertEqual(1 + 1, 2)
-        pass
+
+        e = emu.Emulator()
+        e.load("test_roms/rom1.nes")
+        e.debug_reset()
+
+        # Jump to start of infinite loop
+        steps = 15960
+        e.step(steps)
+        self.assertEqual(e.pc, 0x8059)
+        e.step()
+        e.step()
+
+        # Continue until 100k steps. pc step one, and remain at 0x805E
+        while steps <= 100000:
+            e.step()
+            if e.pc != 0x805E:
+                e.log()
+                print(" Failure at step ", steps)
+                self.fail()
+            steps += 1
+
         
     def test_another_example(self):
         """Another example test case."""
