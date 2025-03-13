@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "config.h"
 
 using json = nlohmann::json;
 
@@ -58,7 +59,7 @@ class CPUTestFixture : public ::testing::Test
 
     void LoadTestCartridge()
     {
-        std::string romFile = "tests/roms/palette.nes";
+        std::string romFile = std::string( ROM_DIR ) + "/palette.nes";
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }

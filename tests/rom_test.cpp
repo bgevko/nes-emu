@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "bus.h"
+#include "config.h"
 #include "cpu.h"
 #include "ppu.h"
 #include "utils.h"
@@ -24,7 +25,8 @@ TEST( RomTests, Nestest )
     CPU cpu = bus.cpu;
     PPU ppu = bus.ppu;
 
-    bus.cartridge.LoadRom( "tests/roms/nestest.nes" );
+    std::string romFile = std::string( ROM_DIR ) + "/nestest.nes";
+    bus.cartridge.LoadRom( romFile );
 
     cpu.Reset();
 

@@ -23,9 +23,9 @@
 #include <iostream>
 #include <csignal>
 #include <string>
-#include <memory>
 #include "theme.h"
 #include "chrono"
+#include "config.h"
 
 using u32 = uint32_t;
 using u64 = uint64_t;
@@ -98,8 +98,9 @@ class Renderer
     std::array<u32, 61440> nametable3Buffer{};
 
     std::array<std::string, 5> testRoms = {
-        "tests/roms/palette.nes", "tests/roms/color_test.nes", "tests/roms/nestest.nes",
-        "tests/roms/mario.nes",   "tests/roms/custom.nes",
+        std::string( ROM_DIR ) + "/palette.nes", std::string( ROM_DIR ) + "/color_test.nes",
+        std::string( ROM_DIR ) + "/nestest.nes", std::string( ROM_DIR ) + "/mario.nes",
+        std::string( ROM_DIR ) + "/custom.nes",
     };
     enum RomSelected : u8 {
         PALETTE,
@@ -309,9 +310,13 @@ class Renderer
         ImFontConfig fontConfig;
         fontConfig.RasterizerDensity = 4.0F;
         float const fontSize = 16.0F;
-        fontMenu = io->Fonts->AddFontFromFileTTF( "fonts/font-menu.otf", fontSize, &fontConfig );
-        fontMono = io->Fonts->AddFontFromFileTTF( "fonts/font-mono.ttf", fontSize, &fontConfig );
-        fontMonoBold = io->Fonts->AddFontFromFileTTF( "fonts/font-mono-bold.ttf", fontSize, &fontConfig );
+        std::string fontsDir = std::string( FONTS_DIR );
+        fontMenu =
+            io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-menu.otf" ).c_str(), fontSize, &fontConfig );
+        fontMono =
+            io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-mono.ttf" ).c_str(), fontSize, &fontConfig );
+        fontMonoBold = io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-mono-bold.ttf" ).c_str(), fontSize,
+                                                      &fontConfig );
 
         // Setup Dear ImGui style
         ImGui::StyleColorsLight();

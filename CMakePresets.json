@@ -20,7 +20,7 @@
           "type": "BOOL",
           "value": "ON"
         },
-        "BUILD_CLI": {
+        "PYTHON_BINDINGS": {
           "type": "BOOL",
           "value": "OFF"
         },
@@ -61,8 +61,8 @@
       }
     },
     {
-      "name": "cli",
-      "description": "Core + CLI tool, no frontend.",
+      "name": "python",
+      "description": "Core + python bindings, no frontend.",
       "inherits": "default",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
@@ -73,7 +73,7 @@
           "type": "BOOL",
           "value": "OFF"
         },
-        "BUILD_CLI": {
+        "PYTHON_BINDINGS": {
           "type": "BOOL",
           "value": "ON"
         }
@@ -127,8 +127,8 @@
       "jobs": 2
     },
     {
-      "name": "cli",
-      "configurePreset": "cli",
+      "name": "python",
+      "configurePreset": "python",
       "jobs": 2
     },
     {

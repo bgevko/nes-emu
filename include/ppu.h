@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "cpu.h"
 #include "mappers/mapper-base.h"
 #include "utils.h"
@@ -356,8 +357,9 @@ class PPU
     int  systemPaletteIdx = 0;
     int  maxSystemPalettes = 3;
 
-    std::array<std::string, 3> systemPalettePaths = { "palettes/palette1.pal", "palettes/palette2.pal",
-                                                      "palettes/palette3.pal" };
+    std::array<std::string, 3> systemPalettePaths = { std::string( PALETTES_DIR ) + "/palette1.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette2.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette3.pal" };
 
     /*
     ################################

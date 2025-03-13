@@ -24,6 +24,7 @@
 #include "cartridge.h"
 #include <fmt/base.h>
 #include <gtest/gtest.h>
+#include "config.h"
 
 class PpuTest : public ::testing::Test
 // This class is a test fixture that provides shared setup and teardown for all tests
@@ -36,7 +37,7 @@ class PpuTest : public ::testing::Test
 
     PpuTest()
     {
-        std::string romFile = "tests/roms/palette.nes";
+        std::string romFile = std::string( ROM_DIR ) + "/palette.nes";
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }
