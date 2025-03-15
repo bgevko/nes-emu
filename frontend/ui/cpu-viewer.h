@@ -3,7 +3,6 @@
 #include "ui-component.h"
 #include "renderer.h"
 #include <imgui.h>
-#include <cinttypes>
 
 class CpuViewerWindow : public UIComponent
 {
@@ -11,7 +10,7 @@ class CpuViewerWindow : public UIComponent
     CPU &cpu; // NOLINT
     CpuViewerWindow( Renderer *renderer ) : UIComponent( renderer ), cpu( renderer->bus.cpu )
     {
-        visible = false;
+        visible = true;
     }
 
     /*

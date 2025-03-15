@@ -89,6 +89,7 @@ class Renderer
     u16  fps = 0;
     u64  frameCount = 0;
 
+    u64                    currentFrame = 0;
     std::array<u32, 16384> patternTable0Buffer{};
     std::array<u32, 16384> patternTable1Buffer{};
     std::array<u32, 61440> nametable0Buffer{};
@@ -96,19 +97,21 @@ class Renderer
     std::array<u32, 61440> nametable2Buffer{};
     std::array<u32, 61440> nametable3Buffer{};
 
-    std::array<std::string, 5> testRoms = {
-        std::string( ROM_DIR ) + "/palette.nes", std::string( ROM_DIR ) + "/color_test.nes",
-        std::string( ROM_DIR ) + "/nestest.nes", std::string( ROM_DIR ) + "/mario.nes",
+    std::array<std::string, 10> testRoms = {
+        std::string( ROM_DIR ) + "/palette.nes",
+        std::string( ROM_DIR ) + "/color_test.nes",
+        std::string( ROM_DIR ) + "/nestest.nes",
+        std::string( ROM_DIR ) + "/mario.nes",
         std::string( ROM_DIR ) + "/custom.nes",
+        std::string( ROM_DIR ) + "/scanline.nes",
+        std::string( ROM_DIR ) + "/blargg_palette_ram.nes",
+        std::string( ROM_DIR ) + "/dk.nes",
+        std::string( ROM_DIR ) + "/ice_climber.nes",
+        std::string( ROM_DIR ) + "/ducktales.nes",
+
     };
-    enum RomSelected : u8 {
-        PALETTE,
-        COLOR_TEST,
-        NESTEST,
-        MARIO,
-        CUSTOM,
-    };
-    u8 romSelected = RomSelected::PALETTE;
+    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, PALETTE_RAM, DK };
+    u8 romSelected = RomSelected::DK;
 
     /*
     ################################
@@ -136,12 +139,14 @@ class Renderer
         bus.ppu.onFrameReady = [this]( const u32 *frameBuffer ) {
             this->ProcessPpuFrameBuffer( frameBuffer );
         };
+        currentFrame = bus.ppu.GetFrame();
     }
 
     void LoadNewCartridge( const std::string &newRomFile )
     {
         bus.cartridge.LoadRom( newRomFile );
         bus.DebugReset();
+        currentFrame = bus.ppu.GetFrame();
         frameCount = 0;
     }
 
@@ -537,16 +542,15 @@ class Renderer
     #                              #
     ################################
     */
-    u64  debug = 0;
     void ExecuteFrame()
     {
-        while ( !bus.Clock() ) {
+        while ( currentFrame == bus.ppu.GetFrame() ) {
             if ( paused ) {
                 break;
             }
+            bus.Clock();
         }
-        debug++;
-        fmt::print( "Debug: {}\n", debug );
+        currentFrame = bus.ppu.GetFrame();
     }
 
     void UpdateUiWindows() {}

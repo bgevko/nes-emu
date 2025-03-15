@@ -132,11 +132,6 @@ bool Bus::Clock()
         cpu.NMI();
     }
 
-    if ( ppu.frameComplete ) {
-        ppu.frameComplete = false;
-        return true;
-    }
-
     return false;
 }
 

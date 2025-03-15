@@ -623,7 +623,6 @@ class CPU
     void SetStackPointer( u8 value ) { _s = value; }
     void SetCycles( u64 value ) { _cycles = value; }
     void SetReading2002( bool value ) { _reading2002 = value; };
-    void SetPendingNmi( bool value ) { _pendingNmi = value; }
 
     // status setters
     void SetCarryFlag( bool value ) { value ? SetFlags( Carry ) : ClearFlags( Carry ); }
@@ -790,7 +789,6 @@ class CPU
     bool        _currentPageCrossPenalty = true;
     bool        _isWriteModify = false;
     bool        _reading2002 = false;
-    bool        _pendingNmi = false;
     std::string _instructionName;
     std::string _addrMode;
 

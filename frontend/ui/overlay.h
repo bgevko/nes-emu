@@ -26,7 +26,7 @@ class OverlayWindow : public UIComponent
         ImGui::SetNextWindowPos( windowPos, ImGuiCond_Always, windowPosPivot );
         ImGui::SetNextWindowViewport( viewport->ID );
         windowFlags |= ImGuiWindowFlags_NoMove;
-        ImGui::SetNextWindowBgAlpha( 0.35f );
+        ImGui::SetNextWindowBgAlpha( 0.75f );
 
         if ( ImGui::Begin( "Emulator Overlay", &visible, windowFlags ) ) {
             ImGui::PushFont( renderer->fontMono );

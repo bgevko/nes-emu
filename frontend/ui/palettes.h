@@ -11,7 +11,7 @@
 class PaletteWindow : public UIComponent
 {
   public:
-    PaletteWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = true; }
+    PaletteWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = false; }
 
     /*
     ################################

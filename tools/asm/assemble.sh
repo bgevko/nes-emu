@@ -7,4 +7,6 @@
 # Input: demo.s
 # Params: --verbose --target nes -o demo.nes
 
-cl65 --verbose --target nes -o ../../tests/roms/custom.nes custom.s
+# cl65 --verbose --target nes -o ../../tests/roms/custom.nes custom.s
+
+cl65 --verbose --target nes --asm-define NTSC -o ../../tests/roms/custom.nes palette.s
