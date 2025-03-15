@@ -162,8 +162,11 @@ class PPU
     }
     void LoadAttributeByte()
     {
-        attributeByte = Read( 0x23C0 | ( vramAddr.bit.nametableY << 11 ) | ( vramAddr.bit.nametableX << 10 ) |
-                              ( ( vramAddr.bit.coarseY >> 2 ) << 3 ) | ( vramAddr.bit.coarseX >> 2 ) );
+        u16 const nametableSelect = vramAddr.value & 0x0C00;
+        u8 const  attrX = vramAddr.bit.coarseX >> 2;
+        u8 const  attrY = ( vramAddr.bit.coarseY >> 2 ) << 3;
+        u16 const attrAddr = 0x23C0 | nametableSelect | attrY | attrX;
+        attributeByte = Read( attrAddr );
         if ( vramAddr.bit.coarseY & 0x02 )
             attributeByte >>= 4;
         if ( vramAddr.bit.coarseX & 0x02 )

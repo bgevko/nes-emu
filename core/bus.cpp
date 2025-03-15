@@ -31,11 +31,16 @@ u8 Bus::Read( const u16 address, bool debugMode )
         return ppu.HandleCpuRead( ppuRegister, debugMode );
     }
 
-    // APU and I/O Registers: 0x4000 - 0x401F
-    if ( address >= 0x4000 && address <= 0x401F ) {
-        // Handle reads from controller ports and other I/O
-        // apu read will go here. For now, return from temp private member of bus
+    // APU
+    if ( address == 0x4015 ) {
         return _apuIoMemory.at( address & 0x001F );
+    }
+
+    // Controller read
+    if ( address >= 0x4016 && address <= 0x4017 ) {
+        auto data = ( controllerState[address & 0x0001] & 0x80 ) > 0;
+        controllerState[address & 0x0001] <<= 1;
+        return data;
     }
 
     // 4020 and up is cartridge territory
@@ -82,9 +87,15 @@ void Bus::Write( const u16 address, const u8 data )
         return;
     }
 
-    // APU and I/O Registers: 0x4000 - 0x401F
-    if ( address >= 0x4000 && address <= 0x401F ) {
-        _apuIoMemory.at( address & 0x001F ) = data; // temp
+    // APU
+    if ( address >= 0x4000 && address <= 0x4015 ) {
+        _apuIoMemory.at( address & 0x001F ) = data;
+        return;
+    }
+
+    // Controller input
+    if ( address >= 0x4016 && address <= 0x4017 ) {
+        controllerState[address & 0x0001] = controller[address & 0x0001];
         return;
     }
 

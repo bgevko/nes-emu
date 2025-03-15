@@ -49,6 +49,8 @@ class Bus
     u16  dmaAddr = 0x00;
     u16  dmaOffset = 0x00;
     u64  systemClock = 0;
+    u8   controllerState[2];
+    u8   controller[2];
 
     /*
     ################################

@@ -111,7 +111,7 @@ class Renderer
 
     };
     enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, PALETTE_RAM, DK };
-    u8 romSelected = RomSelected::DK;
+    u8 romSelected = RomSelected::NESTEST;
 
     /*
     ################################
@@ -455,6 +455,18 @@ class Renderer
                 running = false;
             }
         }
+        bus.controller[0] = 0x00;
+        const Uint8 *keystate = SDL_GetKeyboardState( nullptr );
+
+        // Map keys to controller bits
+        bus.controller[0] |= keystate[SDL_SCANCODE_X] ? 0x80 : 0x00;     // A Button
+        bus.controller[0] |= keystate[SDL_SCANCODE_Z] ? 0x40 : 0x00;     // B Button
+        bus.controller[0] |= keystate[SDL_SCANCODE_A] ? 0x20 : 0x00;     // Select
+        bus.controller[0] |= keystate[SDL_SCANCODE_S] ? 0x10 : 0x00;     // Start
+        bus.controller[0] |= keystate[SDL_SCANCODE_UP] ? 0x08 : 0x00;    // Up
+        bus.controller[0] |= keystate[SDL_SCANCODE_DOWN] ? 0x04 : 0x00;  // Down
+        bus.controller[0] |= keystate[SDL_SCANCODE_LEFT] ? 0x02 : 0x00;  // Left
+        bus.controller[0] |= keystate[SDL_SCANCODE_RIGHT] ? 0x01 : 0x00; // Right
     }
 
     /*

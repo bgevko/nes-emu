@@ -6,7 +6,7 @@
 class OverlayWindow : public UIComponent
 {
   public:
-    OverlayWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = true; }
+    OverlayWindow( Renderer *renderer ) : UIComponent( renderer ) { visible = false; }
 
     void OnVisible() override {}
     void OnHidden() override {}
