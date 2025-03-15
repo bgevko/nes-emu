@@ -76,7 +76,9 @@ void Bus::Write( const u16 address, const u8 data )
 
     // PPU DMA: 0x4014
     if ( address == 0x4014 ) {
-        ppu.DmaTransfer( data );
+        // DEBUG: Disable
+        //  dmaInProgress = true;
+        //  dmaAddr = data << 8;
         return;
     }
 
@@ -94,6 +96,48 @@ void Bus::Write( const u16 address, const u8 data )
     // Unhandled address ranges
     // Optionally log a warning or ignore
     std::cout << "Unhandled write to address: " << std::hex << address << "\n";
+}
+
+void Bus::ProcessDma()
+{
+    const u64 cycle = cpu.GetCycles();
+
+    // Wait first read is on an odd cycle, wait it out.
+    if ( dmaOffset == 0 && cycle % 2 == 1 ) {
+        cpu.Tick();
+        return;
+    }
+
+    // Read into OAM on even, load next byte on odd
+    if ( cycle % 2 == 0 ) {
+        auto data = Read( dmaAddr | dmaOffset );
+        cpu.Tick();
+        ppu.oam.at( dmaOffset++ ) = data;
+    } else {
+        dmaInProgress = dmaOffset < 256;
+        cpu.Tick();
+    }
+}
+
+bool Bus::Clock()
+{
+    if ( dmaInProgress ) {
+        ProcessDma();
+    } else {
+        cpu.DecodeExecute();
+    }
+
+    if ( ppu.nmiReady ) {
+        ppu.nmiReady = false;
+        cpu.NMI();
+    }
+
+    if ( ppu.frameComplete ) {
+        ppu.frameComplete = false;
+        return true;
+    }
+
+    return false;
 }
 
 /*

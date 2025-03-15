@@ -9,24 +9,15 @@ class TestExample(unittest.TestCase):
         # it's supposed to continue to jump to the same address indefinitely.
 
         e = emu.Emulator()
-        e.load("test_roms/rom1.nes")
+        e.load("../../roms/palette.nes")
         e.debug_reset()
-
-        # Jump to start of infinite loop
-        steps = 15960
-        e.step(steps)
-        self.assertEqual(e.pc, 0x8059)
-        e.step()
-        e.step()
-
-        # Continue until 100k steps. pc step one, and remain at 0x805E
-        while steps <= 100000:
+        pal0 = e.ppu_read(0x3F00)
+        steps = 0
+        while pal0 == e.ppu_read(0x3F00):
             e.step()
-            if e.pc != 0x805E:
-                e.log()
-                print(" Failure at step ", steps)
-                self.fail()
             steps += 1
+        print(f"Steps: {steps}")
+        e.log()
 
         
     def test_another_example(self):

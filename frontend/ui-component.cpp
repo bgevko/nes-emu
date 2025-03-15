@@ -101,59 +101,60 @@ void UIComponent::DebugControls( const std::string &parentLabel )
             return debuggerStatus == TIMEOUT;
         };
 
+        auto execute = [&]() { renderer->bus.Clock(); };
         switch ( item ) {
+
             case 0: { // Cycles
                 auto const target = renderer->bus.cpu.GetCycles() + i0;
                 while ( renderer->bus.cpu.GetCycles() < target && !didTimeout() ) {
-                    renderer->bus.cpu.DecodeExecute();
+                    execute();
                 }
                 break;
             }
             case 1: // Instructions
                 for ( int i = 0; i < i0; i++ ) {
-                    renderer->bus.cpu.DecodeExecute();
+                    execute();
                 }
                 break;
             case 2: // VBlank
                 if ( !renderer->bus.ppu.GetStatusVblank() ) {
                     while ( !renderer->bus.ppu.GetStatusVblank() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 } else {
                     while ( renderer->bus.ppu.GetStatusVblank() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                     while ( !renderer->bus.ppu.GetStatusVblank() && !didTimeout() ) {
-
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 }
                 break;
             case 3: { // Scanlines
                 auto const target = renderer->bus.ppu.GetScanline() + i0;
                 while ( renderer->bus.ppu.GetScanline() < target && !didTimeout() ) {
-                    renderer->bus.cpu.DecodeExecute();
+                    execute();
                 }
                 break;
             }
             case 4: { // Frame
                 auto const target = renderer->bus.ppu.GetFrame() + i0;
                 while ( renderer->bus.ppu.GetFrame() < target && !didTimeout() ) {
-                    renderer->bus.cpu.DecodeExecute();
+                    execute();
                 }
                 break;
             }
             case 5: { // NMI
                 if ( !renderer->bus.ppu.GetCtrlNmiEnable() ) {
                     while ( !renderer->bus.ppu.GetCtrlNmiEnable() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 } else {
                     while ( renderer->bus.ppu.GetCtrlNmiEnable() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                     while ( !renderer->bus.ppu.GetCtrlNmiEnable() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 }
                 break;
@@ -161,14 +162,14 @@ void UIComponent::DebugControls( const std::string &parentLabel )
             case 6: // IRQ
                 if ( !renderer->bus.cpu.GetInterruptDisableFlag() ) {
                     while ( !renderer->bus.cpu.GetInterruptDisableFlag() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 } else {
                     while ( renderer->bus.cpu.GetInterruptDisableFlag() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                     while ( !renderer->bus.cpu.GetInterruptDisableFlag() && !didTimeout() ) {
-                        renderer->bus.cpu.DecodeExecute();
+                        execute();
                     }
                 }
                 break;

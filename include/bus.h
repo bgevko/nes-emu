@@ -37,6 +37,18 @@ class Bus
     */
     [[nodiscard]] u8 Read( uint16_t address, bool debugMode = false );
     void             Write( u16 address, u8 data );
+    bool             Clock();
+    void             ProcessDma();
+
+    /*
+    ################################
+    ||      Global Variables      ||
+    ################################
+    */
+    bool dmaInProgress = false;
+    u16  dmaAddr = 0x00;
+    u16  dmaOffset = 0x00;
+    u64  systemClock = 0;
 
     /*
     ################################

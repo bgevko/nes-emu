@@ -117,6 +117,11 @@ TEST_F( PpuTest, DmaTransfer )
     // now, hit the dma spot with 0x02
     cpu.Write( 0x4014, 0x02 );
 
+    // clock the cpu 513 times
+    for ( u16 i = 0; i < 513; i++ ) {
+        bus.Clock();
+    }
+
     // Data should have transferred
     for ( u16 i = 0; i < 256; i++ ) {
         auto val = cpu.Read( 0x200 + i );

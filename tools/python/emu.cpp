@@ -110,11 +110,12 @@ class Emulator
     void Step( int n = 1 )
     {
         for ( int i = 0; i < n; i++ ) {
-            cpu.DecodeExecute();
+            bus.Clock();
         }
     }
 
     u8 Read( u16 addr ) const { return bus.cpu.Read( addr ); }
+    u8 PpuRead( u16 addr ) { return bus.ppu.Read( addr ); }
 
     void EnableMesenTrace( int n = 100 )
     {
@@ -181,5 +182,6 @@ PYBIND11_MODULE( emu, m ) // <-- Python module name. Must match the name in the 
         .def( "disable_mesen_trace", &Emulator::DisableMesenTrace, "Disable Mesen trace log" )
         .def( "print_mesen_trace", &Emulator::PrintMesenTrace, "Print Mesen trace log" )
         .def( "read", &Emulator::Read, "Read from CPU memory", py::arg( "addr" ) )
+        .def( "ppu_read", &Emulator::PpuRead, "Read from PPU memory", py::arg( "addr" ) )
         .def_static( "test", &Emulator::Test, "Test function" );
 }

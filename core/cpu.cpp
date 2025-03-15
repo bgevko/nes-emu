@@ -227,7 +227,7 @@ void CPU::Reset()
     _x = 0x00;
     _y = 0x00;
     _s = 0xFD;
-    _p = 0x00 | Unused | InterruptDisable;
+    _p = 0x00 | Unused;
 
     // The program counter is usually read from the reset vector of a game, which is
     // located at 0xFFFC and 0xFFFD. If no cartridge, we'll assume 0x00 for both
@@ -254,13 +254,6 @@ void CPU::DecodeExecute()
      * and executes that instruction.
      *
      */
-
-    // Handle NMI
-    if ( _pendingNmi ) {
-        NMI();
-        _pendingNmi = false;
-        return;
-    }
 
     if ( _traceEnabled ) {
         AddTraceLog( LogLineAtPC( true ) );

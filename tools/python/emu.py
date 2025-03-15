@@ -19,18 +19,6 @@ def print_interactive(msg):
     """Prints messages to stderr so they are not captured when piping stdout."""
     print(msg, file=sys.stderr)
 
-e.preset()
-e.enable_mesen_trace(100000)
-
-# Only show interactive messages if running in a tty.
-if sys.stdout.isatty():
-    print_interactive(f"{GREEN}e = emu.Emulator(){RESET}")
-    print_interactive(f"{BLUE}Loading ROM: custom.nes{RESET}")
-    print_interactive(f"{GREEN}e.preset(){RESET}")
-    print_interactive(f"{CYAN}Done{RESET}")
-    print_interactive(f"{YELLOW}Use 'e' to access the emulator object{RESET}")
-    print_interactive(f"For available commands, type {YELLOW}'commands()'{RESET}")
-
 def bind_method(method_name):
     def wrapper(*args, **kwargs):
         attr = getattr(e, method_name)
@@ -61,7 +49,8 @@ method_names = [
     # Methods
     "log", "step", "test",
     "enable_mesen_trace", "disable_mesen_trace", 
-    "print_mesen_trace", "debug_reset", "read"
+    "print_mesen_trace", "debug_reset", "read",
+    "ppu_read"
 ]
 for name in method_names:
     globals()[name] = bind_method(name)
@@ -77,10 +66,14 @@ def commands():
     print(f"{YELLOW}out(filename){RESET} # Redirect stdout to a file")
 
 def step_and_trace(n = 100):
+    e.enable_mesen_trace(n)
     e.step(n)
     e.print_mesen_trace()
+    e.disable_mesen_trace()
 
 def main():
-    step_and_trace(100000)
+    e.load("../../roms/palette.nes")
+    e.debug_reset()
+    step_and_trace(16572)
 if __name__ == "__main__":
     main()

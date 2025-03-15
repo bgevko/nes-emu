@@ -28,6 +28,13 @@ def main():
         for line_num, (line1, line2) in enumerate(zip(file1, file2), 1):
             parsed1 = parse_line_type1(line1)
             parsed2 = parse_line_type2(line2)
+
+            if not parsed1:
+                print(f"Error parsing line {line_num} in out.txt")
+                break
+            if not parsed2:
+                print(f"Error parsing line {line_num} in mesen.txt")
+                break
             
             # Compare the parsed fields.
             if parsed1 != parsed2:

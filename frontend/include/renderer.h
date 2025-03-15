@@ -89,7 +89,6 @@ class Renderer
     u16  fps = 0;
     u64  frameCount = 0;
 
-    u64                    currentFrame = 0;
     std::array<u32, 16384> patternTable0Buffer{};
     std::array<u32, 16384> patternTable1Buffer{};
     std::array<u32, 61440> nametable0Buffer{};
@@ -109,7 +108,7 @@ class Renderer
         MARIO,
         CUSTOM,
     };
-    u8 romSelected = RomSelected::CUSTOM;
+    u8 romSelected = RomSelected::PALETTE;
 
     /*
     ################################
@@ -137,14 +136,12 @@ class Renderer
         bus.ppu.onFrameReady = [this]( const u32 *frameBuffer ) {
             this->ProcessPpuFrameBuffer( frameBuffer );
         };
-        currentFrame = bus.ppu.GetFrame();
     }
 
     void LoadNewCartridge( const std::string &newRomFile )
     {
         bus.cartridge.LoadRom( newRomFile );
         bus.DebugReset();
-        currentFrame = bus.ppu.GetFrame();
         frameCount = 0;
     }
 
@@ -540,15 +537,16 @@ class Renderer
     #                              #
     ################################
     */
+    u64  debug = 0;
     void ExecuteFrame()
     {
-        while ( currentFrame == bus.ppu.GetFrame() ) {
+        while ( !bus.Clock() ) {
             if ( paused ) {
                 break;
             }
-            bus.cpu.DecodeExecute();
         }
-        currentFrame = bus.ppu.GetFrame();
+        debug++;
+        fmt::print( "Debug: {}\n", debug );
     }
 
     void UpdateUiWindows() {}
