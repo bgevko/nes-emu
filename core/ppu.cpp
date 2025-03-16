@@ -58,7 +58,7 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
             return ppuStatus.value;
         }
 
-        u8 const data = ( ppuStatus.value & 0xE0 ) | ( ppuDataBuffer & 0x1F );
+        u8 const data = ( ppuStatus.value & 0xE0 ) | ( vramBuffer & 0x1F );
         ppuStatus.bit.verticalBlank = 0;
         addrLatch = false;
         bus->cpu.SetReading2002( false );
@@ -72,13 +72,17 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
            If called while renderingEnabled and in visible scanline range (0-239),
            Returns corrupted data (0xFF)
         */
+        u8 value = oam.at( oamAddr & 0xFF );
         if ( debugMode ) {
-            return oam.at( oamAddr & 0xFF );
+            return value;
         }
         if ( IsRenderingEnabled() && scanline >= 0 && scanline <= 239 ) {
             return 0xFF;
         }
-        return oam.at( oamAddr & 0xFF );
+        if ( ( oamAddr & 0x03 ) == 3 ) {
+            value &= 0xE3;
+        }
+        return value;
     }
 
     // 2007: PPU Data
@@ -86,21 +90,21 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
         /*
           Reads the data at the current vramAddr
           When reading from palette memory, (0x3F00-0x3FFF), direct data is returned
-          Otherwise, the data from the current ppuDataBuffer is returned, simulating
+          Otherwise, the data from the current vramBuffer is returned, simulating
           a delayed read by 1 cycle, and the vramAddr is then incremented by 1 or 32.
           1 if ppuCtrl increment mode is 0, 32 if 1.
-          The ppuDataBuffer is then updated with the data at the new vramAddr, in preparation
+          The vramBuffer is then updated with the data at the new vramAddr, in preparation
           for the next non-palette memory read.
          */
         // Debug mode has no side effects
         if ( debugMode ) {
-            return ppuDataBuffer;
+            return vramBuffer;
         }
 
-        u8 data = ppuDataBuffer;
-        ppuDataBuffer = Read( vramAddr.value );
+        u8 data = vramBuffer;
+        vramBuffer = Read( vramAddr.value );
         if ( vramAddr.value >= 0x3F00 && vramAddr.value <= 0x3FFF ) {
-            data = ppuDataBuffer;
+            data = vramBuffer;
         }
 
         vramAddr.value += ppuCtrl.bit.vramIncrement ? 32 : 1;
@@ -378,8 +382,12 @@ void PPU::Write( u16 address, u8 data ) // NOLINT
         address &= 0x1F;
 
         // Handle mirroring of 3F10, 3F14, 3F18, 3F1C to 3F00, 3F04, 3F08, 3F0C
-        if ( address >= 0x10 && ( address & 0x03 ) == 0 ) {
+        if ( ( address & 0x03 ) == 0 ) {
+            // write to both the mirrored and original address
             address &= 0x0F;
+            paletteMemory.at( address ) = data;
+            paletteMemory.at( address + 0x10 ) = data;
+            return;
         }
 
         paletteMemory.at( address ) = data;

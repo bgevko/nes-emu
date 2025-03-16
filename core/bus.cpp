@@ -81,9 +81,9 @@ void Bus::Write( const u16 address, const u8 data )
 
     // PPU DMA: 0x4014
     if ( address == 0x4014 ) {
-        // DEBUG: Disable
-        //  dmaInProgress = true;
-        //  dmaAddr = data << 8;
+        dmaInProgress = true;
+        dmaAddr = data << 8;
+        dmaOffset = 0;
         return;
     }
 
@@ -113,6 +113,7 @@ void Bus::ProcessDma()
 {
     const u64 cycle = cpu.GetCycles();
 
+    u8 oamAddr = ppu.oamAddr;
     // Wait first read is on an odd cycle, wait it out.
     if ( dmaOffset == 0 && cycle % 2 == 1 ) {
         cpu.Tick();
@@ -121,9 +122,10 @@ void Bus::ProcessDma()
 
     // Read into OAM on even, load next byte on odd
     if ( cycle % 2 == 0 ) {
-        auto data = Read( dmaAddr | dmaOffset );
+        auto data = Read( dmaAddr + dmaOffset );
         cpu.Tick();
-        ppu.oam.at( dmaOffset++ ) = data;
+        ppu.oam.at( ( oamAddr + dmaOffset ) & 0xFF ) = data;
+        dmaOffset++;
     } else {
         dmaInProgress = dmaOffset < 256;
         cpu.Tick();

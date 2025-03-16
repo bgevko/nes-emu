@@ -29,6 +29,7 @@ class PPU
     u16        GetCycles() const { return cycle; }
     u64        GetFrame() const { return frame; }
     u32        GetMasterPaletteColor( u8 index ) const { return nesPaletteRgbValues.at( index ); }
+    u8         GetPaletteEntry( u8 index ) const { return paletteMemory.at( index ); }
 
     u8 GetPpuCtrl() const { return ppuCtrl.value; }
     u8 GetCtrlNametableX() const { return ppuCtrl.bit.nametableX; }
@@ -91,6 +92,7 @@ class PPU
     */
     void SetScanline( s16 val ) { scanline = val; }
     void SetCycles( u16 cycles ) { cycle = cycles; }
+    void SetPaletteEntry( u8 index, u8 value ) { paletteMemory.at( index ) = value; }
 
     /*
     ################################
@@ -252,7 +254,7 @@ class PPU
         ppuAddr = 0x00;
         ppuData = 0x00;
         addrLatch = false;
-        ppuDataBuffer = 0x00;
+        vramBuffer = 0x00;
         vramAddr.value = 0x0000;
         tempAddr.value = 0x0000;
         fineX = 0x00;
@@ -629,7 +631,7 @@ class PPU
     bool addrLatch = false;
 
     // Stores last data written to _ppuData
-    u8 ppuDataBuffer = 0x00;
+    u8 vramBuffer = 0x00;
 
     /*
     ################################################################

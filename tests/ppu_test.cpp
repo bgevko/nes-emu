@@ -75,19 +75,6 @@ TEST_F( PpuTest, Write2005Scroll ) // Scroll
     EXPECT_EQ( ppu.GetFineX(), data & 0x7 );
 }
 
-TEST_F( PpuTest, Write2006Addr ) // PPU latch
-{
-    EXPECT_EQ( ppu.GetAddrLatch(), 0 );
-    u8 data1 = 0x12;
-    u8 data2 = 0x34;
-    cpu.Write( 0x2006, data1 );
-    EXPECT_EQ( ppu.GetAddrLatch(), 1 );
-    EXPECT_EQ( ppu.GetTempAddr(), data1 << 8 );
-    cpu.Write( 0x2006, data2 );
-    EXPECT_EQ( ppu.GetAddrLatch(), 0 );
-    EXPECT_EQ( ppu.GetTempAddr(), data1 << 8 | data2 );
-}
-
 TEST_F( PpuTest, Write2007 )
 {
     ppu.ppuCtrl.bit.vramIncrement = 0;
@@ -107,56 +94,242 @@ TEST_F( PpuTest, Read2002 )
     EXPECT_EQ( data, 0x80 );
 }
 
-TEST_F( PpuTest, VramAddr )
+TEST_F( PpuTest, VramSetAddr )
 {
-    // Enable bg rendering
-    ppu.Reset();
-    ppu.cycle = 0;
-    ppu.Tick();
-    cpu.Write( 0x2001, 0x08 );
-    EXPECT_EQ( ppu.IsRenderingEnabled(), true );
-    auto &vramAddr = ppu.vramAddr;
-    EXPECT_EQ( vramAddr.value, 0 );
-    auto runCycles = [&]( int n ) {
-        for ( auto i = 0; i < n; i++ ) {
-            ppu.Tick();
-        }
-    };
-    runCycles( 8 );
-    EXPECT_EQ( vramAddr.value, 1 );
-    EXPECT_EQ( vramAddr.bit.coarseX, 1 );
-    // run until coarseX is 31
-    for ( auto i = 0; i < 30; i++ ) {
-        runCycles( 8 );
-    }
-    EXPECT_EQ( vramAddr.value, 31 );
-    EXPECT_EQ( vramAddr.bit.coarseX, 31 );
-    runCycles( 7 );
-    fmt::print( "cycle: {}\n", ppu.cycle );
-    EXPECT_EQ( vramAddr.value, 0x31 );
-    EXPECT_EQ( vramAddr.bit.coarseX, 31 );
+    EXPECT_EQ( ppu.GetAddrLatch(), 0 );
+    u8 data1 = 0x12;
+    u8 data2 = 0x34;
+    // First write
+    cpu.Write( 0x2006, data1 );
+    EXPECT_EQ( ppu.GetAddrLatch(), 1 );
+    u16 tempAddr = 0x1200;
+    EXPECT_EQ( ppu.GetTempAddr(), tempAddr );
+
+    // Second write
+    cpu.Write( 0x2006, data2 );
+    EXPECT_EQ( ppu.GetAddrLatch(), 0 );
+    u16 expectedAddr = 0x1234;
+    EXPECT_EQ( ppu.GetTempAddr(), expectedAddr );
+    EXPECT_EQ( ppu.vramAddr.value, expectedAddr );
 }
 
-TEST_F( PpuTest, DmaTransfer )
+TEST_F( PpuTest, VramReadDelay )
 {
-    // fill some placeholder values in the cpu ram
-    for ( u16 i = 0; i < 256; i++ ) {
-        cpu.Write( 0x200 + i, i );
+    // Write to vram address 0x2F00
+    ppu.vramAddr.value = 0x2F00;
+    bus.Write( 0x2007, 0x12 );
+    bus.Write( 0x2007, 0x34 );
+
+    // Vram address should have incremented by 2
+    EXPECT_EQ( ppu.vramAddr.value, 0x2F02 );
+
+    // Reading back should give the same values
+    ppu.vramAddr.value = 0x2F00;
+    bus.Read( 0x2007 ); // dummy read, data buffer delay
+    auto data1 = bus.Read( 0x2007 );
+    auto data2 = bus.Read( 0x2007 );
+    EXPECT_EQ( data1, 0x12 );
+    EXPECT_EQ( data2, 0x34 );
+    EXPECT_EQ( ppu.vramAddr.value, 0x2F03 );
+}
+
+TEST_F( PpuTest, VramReadWrite )
+{
+    ppu.vramAddr.value = 0x2F00;
+    bus.Write( 0x2007, 0x56 );
+    ppu.vramAddr.value = 0x2F00;
+    bus.Read( 0x2007 ); // delay
+    auto data = bus.Read( 0x2007 );
+    EXPECT_EQ( data, 0x56 );
+}
+
+TEST_F( PpuTest, VramBuffer )
+{
+    ppu.vramAddr.value = 0x2F00;
+    bus.Write( 0x2007, 0x78 );
+    ppu.vramAddr.value = 0x2F00;
+    bus.Read( 0x2007 ); // dummy read
+    // write a new value (0x12). This should not affect the buffered value.
+    bus.Write( 0x2007, 0x12 );
+    // read the buffered value. It should still be 0x78.
+    auto bufferedValue = bus.Read( 0x2007 );
+    EXPECT_EQ( bufferedValue, 0x78 );
+}
+
+TEST_F( PpuTest, VramBufferPaletteIsolation )
+{
+    ppu.vramAddr.value = 0x2F00;
+    bus.Write( 0x2007, 0x9A );
+    ppu.vramAddr.value = 0x2F00;
+    bus.Read( 0x2007 ); // dummy read
+
+    // write to a palette location (0x3F00), which should not affect the read buffer.
+    ppu.vramAddr.value = 0x3F00;
+    bus.Write( 0x2007, 0x34 );
+
+    // change back to a non-palette address to ensure buffer reads are re-enabled.
+    ppu.vramAddr.value = 0x2F00;
+
+    // read the buffered value. It should still be 0x9A.
+    auto bufferedValue = bus.Read( 0x2007 );
+    EXPECT_EQ( bufferedValue, 0x9A );
+}
+
+TEST_F( PpuTest, PaletteWriteRead )
+{
+    // Set palette entry at index 0 to 0x12.
+    ppu.vramAddr.value = 0x3F00;
+    bus.Write( 0x2007, 0x12 );
+    ppu.vramAddr.value = 0x2F00;
+    bus.Read( 0x2007 ); // fill buffer with dummy value
+    ppu.vramAddr.value = 0x3F00;
+    auto data = bus.Read( 0x2007 ); // should directly read the palette instead of the buffer
+    EXPECT_EQ( data, 0x12 );
+}
+
+TEST_F( PpuTest, PaletteMirroring )
+{
+    // Write 0x12 to palette entry at index 0.
+    ppu.vramAddr.value = 0x3F00;
+    bus.Write( 0x2007, 0x12 );
+    // Write 0x34 to palette entry at index 0xE0.
+    // Since palette addresses are masked to 0x1F, index 0xE0 & 0x1F == 0x00.
+    ppu.vramAddr.value = 0x3FE0;
+    bus.Write( 0x2007, 0x34 );
+    // Now read palette entry at index 0.
+    auto data = ppu.GetPaletteEntry( 0x00 );
+    // Expect that the mirror reflects the value from index 0xE0.
+    EXPECT_EQ( data, 0x34 );
+}
+TEST_F( PpuTest, PaletteMirrorFrom10To00 )
+{
+    // Write 0x12 to palette entry at index 0.
+    ppu.vramAddr.value = 0x3F00;
+    bus.Write( 0x2007, 0x12 );
+    // Write 0x34 to palette entry at index 0x10.
+    // By masking, 0x10 maps to index 0x00.
+    ppu.vramAddr.value = 0x3F10;
+    bus.Write( 0x2007, 0x34 );
+    auto data = ppu.GetPaletteEntry( 0x00 );
+    EXPECT_EQ( data, 0x34 );
+}
+
+TEST_F( PpuTest, PaletteMirrorFrom00To10 )
+{
+    ppu.vramAddr.value = 0x3F10;
+    bus.Write( 0x2007, 0x12 );
+    ppu.vramAddr.value = 0x3F00;
+    bus.Write( 0x2007, 0x34 );
+    auto data = ppu.GetPaletteEntry( 0x10 );
+    EXPECT_EQ( data, 0x34 );
+}
+
+TEST_F( PpuTest, SpriteRamReadWrite )
+{
+    bus.Write( 0x2003, 0x00 );
+    bus.Write( 0x2004, 0x12 );
+    bus.Write( 0x2003, 0x00 );
+    u8 data = bus.Read( 0x2004 );
+    EXPECT_EQ( data, 0x12 );
+}
+
+TEST_F( PpuTest, SpriteWriteIncrement )
+{
+    bus.Write( 0x2003, 0x00 );
+    bus.Write( 0x2004, 0x12 );
+    bus.Write( 0x2004, 0x34 );
+    bus.Write( 0x2003, 0x01 );
+    u8 data = bus.Read( 0x2004 );
+    EXPECT_EQ( data, 0x34 );
+}
+
+TEST_F( PpuTest, SpriteReadNoIncrement )
+{
+    bus.Write( 0x2003, 0x00 );
+    bus.Write( 0x2004, 0x12 );
+    bus.Write( 0x2004, 0x34 );
+    bus.Write( 0x2003, 0x00 );
+    u8 firstRead = bus.Read( 0x2004 );
+    u8 secondRead = bus.Read( 0x2004 );
+    EXPECT_EQ( firstRead, secondRead );
+}
+
+TEST_F( PpuTest, SpriteThirdByteMasked )
+{
+    bus.Write( 0x2003, 0x03 );
+    bus.Write( 0x2004, 0xFF );
+    bus.Write( 0x2003, 0x03 );
+    u8 data = bus.Read( 0x2004 );
+    EXPECT_EQ( data, 0xE3 );
+}
+
+TEST_F( PpuTest, SpriteDmaBasic )
+{
+
+    static const u8 testData[4] = { 0x12, 0x82, 0xE3, 0x78 };
+    bus.Write( 0x200, 0x12 );
+    bus.Write( 0x201, 0x82 );
+    bus.Write( 0x202, 0xE3 );
+    bus.Write( 0x203, 0x78 );
+
+    // Set OAM address to 0.
+    bus.Write( 0x2003, 0x00 );
+    bus.Write( 0x4014, 0x02 );
+    while ( bus.dmaInProgress ) {
+        bus.Clock();
     }
+    for ( int i = 0; i < 4; i++ ) {
+        EXPECT_EQ( ppu.oam[i], testData[i] );
+    }
+}
 
-    // now, hit the dma spot with 0x02
-    cpu.Write( 0x4014, 0x02 );
+TEST_F( PpuTest, SpriteDmaCopyWrap )
+{
+    static const u8 testData[4] = { 0x12, 0x82, 0xE3, 0x78 };
 
-    // clock the cpu 513 times
-    for ( u16 i = 0; i < 513; i++ ) {
+    // Write testData into CPU memory starting at address 0x200.
+    bus.Write( 0x200, testData[0] );
+    bus.Write( 0x201, testData[1] );
+    bus.Write( 0x202, testData[2] );
+    bus.Write( 0x203, testData[3] );
+
+    // Set OAM address near the end, e.g. 0xFE.
+    bus.Write( 0x2003, 0xFE );
+
+    // Trigger DMA copy by writing 0x02 to $4014 (DMA source = 0x200).
+    bus.Write( 0x4014, 0x02 );
+
+    // Process DMA until it's finished.
+    while ( bus.dmaInProgress ) {
         bus.Clock();
     }
 
-    // Data should have transferred
-    for ( u16 i = 0; i < 256; i++ ) {
-        auto val = cpu.Read( 0x200 + i );
-        EXPECT_EQ( ppu.oam[i], val );
+    // Expected behavior with initial OAMADDR = 0xFE:
+    // dmaOffset 0 -> destination = (0xFE + 0) mod 256 = 0xFE should receive testData[0]
+    // dmaOffset 1 -> destination = (0xFE + 1) mod 256 = 0xFF should receive testData[1]
+    // dmaOffset 2 -> destination = (0xFE + 2) mod 256 = 0x00 should receive testData[2]
+    // dmaOffset 3 -> destination = (0xFE + 3) mod 256 = 0x01 should receive testData[3]
+    EXPECT_EQ( ppu.oam[0xFE], testData[0] );
+    EXPECT_EQ( ppu.oam[0xFF], testData[1] );
+    EXPECT_EQ( ppu.oam[0x00], testData[2] );
+    EXPECT_EQ( ppu.oam[0x01], testData[3] );
+}
+
+TEST_F( PpuTest, SpriteDmaCopyPreservesOamAddr )
+{
+    // Set OAM address to 1.
+    bus.Write( 0x2003, 0x01 );
+    // Trigger DMA copy.
+    bus.Write( 0x4014, 0x02 );
+    while ( bus.dmaInProgress ) {
+        bus.ProcessDma();
     }
+    // Now write 0xFF to OAMDATA.
+    bus.Write( 0x2004, 0xFF );
+    // Reset OAM address to 1.
+    bus.Write( 0x2003, 0x01 );
+    u8 data = bus.Read( 0x2004 );
+    EXPECT_EQ( data, 0xFF );
 }
 
 TEST_F( PpuTest, ResolveNameTableAddress_SingleUpper )

@@ -97,20 +97,12 @@ class Renderer
     std::array<u32, 61440> nametable2Buffer{};
     std::array<u32, 61440> nametable3Buffer{};
 
-    std::array<std::string, 10> testRoms = {
-        std::string( ROM_DIR ) + "/palette.nes",
-        std::string( ROM_DIR ) + "/color_test.nes",
-        std::string( ROM_DIR ) + "/nestest.nes",
-        std::string( ROM_DIR ) + "/mario.nes",
-        std::string( ROM_DIR ) + "/custom.nes",
-        std::string( ROM_DIR ) + "/scanline.nes",
-        std::string( ROM_DIR ) + "/blargg_palette_ram.nes",
-        std::string( ROM_DIR ) + "/dk.nes",
-        std::string( ROM_DIR ) + "/ice_climber.nes",
-        std::string( ROM_DIR ) + "/ducktales.nes",
-
-    };
-    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, PALETTE_RAM, DK };
+#define ROM( x ) ( std::string( ROM_DIR ) + "/" + ( x ) )
+    std::vector<std::string> testRoms = {
+        ROM( "palette.nes" ),   ROM( "color_test.nes" ),   ROM( "nestest.nes" ), ROM( "mario.nes" ),
+        ROM( "custom.nes" ),    ROM( "scanline.nes" ),     ROM( "dk.nes" ),      ROM( "ice_climber.nes" ),
+        ROM( "ducktales.nes" ), ROM( "instr_test-v5.nes" ) };
+    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, DK, V5 };
     u8 romSelected = RomSelected::NESTEST;
 
     /*
