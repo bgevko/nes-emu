@@ -24,6 +24,7 @@
 #include "cartridge.h"
 #include <fmt/base.h>
 #include <gtest/gtest.h>
+#include "config.h"
 
 class PpuTest : public ::testing::Test
 // This class is a test fixture that provides shared setup and teardown for all tests
@@ -36,7 +37,7 @@ class PpuTest : public ::testing::Test
 
     PpuTest()
     {
-        std::string romFile = "tests/roms/palette.nes";
+        std::string romFile = std::string( ROM_DIR ) + "/palette.nes";
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }
@@ -106,6 +107,36 @@ TEST_F( PpuTest, Read2002 )
     EXPECT_EQ( data, 0x80 );
 }
 
+TEST_F( PpuTest, VramAddr )
+{
+    // Enable bg rendering
+    ppu.Reset();
+    ppu.cycle = 0;
+    ppu.Tick();
+    cpu.Write( 0x2001, 0x08 );
+    EXPECT_EQ( ppu.IsRenderingEnabled(), true );
+    auto &vramAddr = ppu.vramAddr;
+    EXPECT_EQ( vramAddr.value, 0 );
+    auto runCycles = [&]( int n ) {
+        for ( auto i = 0; i < n; i++ ) {
+            ppu.Tick();
+        }
+    };
+    runCycles( 8 );
+    EXPECT_EQ( vramAddr.value, 1 );
+    EXPECT_EQ( vramAddr.bit.coarseX, 1 );
+    // run until coarseX is 31
+    for ( auto i = 0; i < 30; i++ ) {
+        runCycles( 8 );
+    }
+    EXPECT_EQ( vramAddr.value, 31 );
+    EXPECT_EQ( vramAddr.bit.coarseX, 31 );
+    runCycles( 7 );
+    fmt::print( "cycle: {}\n", ppu.cycle );
+    EXPECT_EQ( vramAddr.value, 0x31 );
+    EXPECT_EQ( vramAddr.bit.coarseX, 31 );
+}
+
 TEST_F( PpuTest, DmaTransfer )
 {
     // fill some placeholder values in the cpu ram
@@ -115,6 +146,11 @@ TEST_F( PpuTest, DmaTransfer )
 
     // now, hit the dma spot with 0x02
     cpu.Write( 0x4014, 0x02 );
+
+    // clock the cpu 513 times
+    for ( u16 i = 0; i < 513; i++ ) {
+        bus.Clock();
+    }
 
     // Data should have transferred
     for ( u16 i = 0; i < 256; i++ ) {

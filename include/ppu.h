@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "cpu.h"
 #include "mappers/mapper-base.h"
 #include "utils.h"
@@ -38,15 +39,16 @@ class PPU
     u8 GetCtrlSpriteSize() const { return ppuCtrl.bit.spriteSize; }
     u8 GetCtrlNmiEnable() const { return ppuCtrl.bit.nmiEnable; }
 
-    u8 GetPpuMask() const { return ppuMask.value; }
-    u8 GetMaskGrayscale() const { return ppuMask.bit.grayscale; }
-    u8 GetMaskShowBgLeft() const { return ppuMask.bit.renderBackgroundLeft; }
-    u8 GetMaskShowSpritesLeft() const { return ppuMask.bit.renderSpritesLeft; }
-    u8 GetMaskShowBg() const { return ppuMask.bit.renderBackground; }
-    u8 GetMaskShowSprites() const { return ppuMask.bit.renderSprites; }
-    u8 GetMaskEnhanceRed() const { return ppuMask.bit.enhanceRed; }
-    u8 GetMaskEnhanceGreen() const { return ppuMask.bit.enhanceGreen; }
-    u8 GetMaskEnhanceBlue() const { return ppuMask.bit.enhanceBlue; }
+    u8   GetPpuMask() const { return ppuMask.value; }
+    u8   GetMaskGrayscale() const { return ppuMask.bit.grayscale; }
+    u8   GetMaskRenderBackgroundLeft() const { return ppuMask.bit.renderBackgroundLeft; }
+    u8   GetMaskRenderSpritesLeft() const { return ppuMask.bit.renderSpritesLeft; }
+    u8   GetMaskRenderBackground() const { return ppuMask.bit.renderBackground; }
+    u8   GetMaskRenderSprites() const { return ppuMask.bit.renderSprites; }
+    u8   GetMaskEnhanceRed() const { return ppuMask.bit.enhanceRed; }
+    u8   GetMaskEnhanceGreen() const { return ppuMask.bit.enhanceGreen; }
+    u8   GetMaskEnhanceBlue() const { return ppuMask.bit.enhanceBlue; }
+    bool IsRenderingEnabled() const { return GetMaskRenderBackground() || GetMaskRenderSprites(); }
 
     u8 GetPpuStatus() const { return ppuStatus.value; }
     u8 GetStatusSpriteOverflow() const { return ppuStatus.bit.spriteOverflow; }
@@ -95,8 +97,8 @@ class PPU
     ||      CPU Read / Write      ||
     ################################
     */
-    [[nodiscard]] u8 HandleCpuRead( u16 address, bool debugMode = false );
-    void             HandleCpuWrite( u16 address, u8 data );
+    u8   HandleCpuRead( u16 address, bool debugMode = false );
+    void HandleCpuWrite( u16 address, u8 data );
 
     /*
     ################################
@@ -120,26 +122,126 @@ class PPU
     void DmaTransfer( u8 data );
     u16  ResolveNameTableAddress( u16 addr, int testMirrorMode = -1 ) const;
     void Tick();
-    void LoadNextBgShiftRegisters();
-    void UpdateShiftRegisters();
-    void LoadNametableByte();
-    void LoadAttributeByte();
-    void LoadPatternPlane0Byte();
-    void LoadPatternPlane1Byte();
-    void IncrementScrollX();
-    void IncrementScrollY();
-    u8   GetBgPalette();
-    u8   GetSpritePalette();
-    u8   GetBgPixel();
-    u8   GetSpritePixel();
-    u32  GetOutputPixel( u8 bgPixel, u8 spritePixel, u8 bgPalette, u8 spritePalette );
-    void TriggerNmi() const;
+
+    void LoadBgShifters()
+    {
+        /* @brief Loads the next background tile information (lower 8 bits) into the background shifters
+         */
+        bgShiftPatternLow = ( bgShiftPatternLow & 0xFF00 ) | bgPlane0Byte;
+        bgShiftPatternHigh = ( bgShiftPatternHigh & 0xFF00 ) | bgPlane1Byte;
+        u8 const lowMask = ( attributeByte & 0b01 ) ? 0xFF : 0x00;
+        u8 const highMask = ( attributeByte & 0b10 ) ? 0xFF : 0x00;
+        bgShiftAttributeLow = ( bgShiftAttributeLow & 0xFF00 ) | lowMask;
+        bgShiftAttributeHigh = ( bgShiftAttributeHigh & 0xFF00 ) | highMask;
+    }
+    void UpdateShifters()
+    {
+        bgShiftPatternLow <<= 1;
+        bgShiftPatternHigh <<= 1;
+        bgShiftAttributeLow <<= 1;
+        bgShiftAttributeHigh <<= 1;
+        if ( ppuMask.bit.renderSprites && cycle >= 1 && cycle <= 256 ) {
+            // TODO: Sprite shifters
+        }
+    }
+    void LoadNametableByte()
+    {
+        /*  @brief: Loads the current nametable byte from VRAM into nametableByte
+            @details: Nametable is a 1 KiB region that stores background tile indeces.
+            in other words, it's the layout of the background tiles on the screen. This function
+            sets the nametableByte to the tile that the vram address is pointing to. In essence,
+            it's telling the PPU which tile will appear in the background, but not the pixel data.
+            The pixel data is acquired from the pattern table, which contains indices 0-3. The actual
+            palette is in the attribute table, which defines what 0-3 will look like.
+         */
+
+        // Grab the first 12 bits of the VRAM address
+        // which provide nametable select, coarse Y scroll, and coarse x scroll information
+        // Nametable address is 0x2000 plus the offset of the vram address.
+        nametableByte = Read( 0x2000 | ( vramAddr.value & 0x0FFF ) );
+    }
+    void LoadAttributeByte()
+    {
+        u16 const nametableSelect = vramAddr.value & 0x0C00;
+        u8 const  attrX = vramAddr.bit.coarseX >> 2;
+        u8 const  attrY = ( vramAddr.bit.coarseY >> 2 ) << 3;
+        u16 const attrAddr = 0x23C0 | nametableSelect | attrY | attrX;
+        attributeByte = Read( attrAddr );
+        if ( vramAddr.bit.coarseY & 0x02 )
+            attributeByte >>= 4;
+        if ( vramAddr.bit.coarseX & 0x02 )
+            attributeByte >>= 2;
+        attributeByte &= 0x03;
+    }
+
+    void LoadPatternPlane0Byte()
+    {
+        u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+        u16 const tileOffset = nametableByte << 4;
+        u16 const rowOffset = vramAddr.bit.fineY;
+        bgPlane0Byte = Read( bgPatternOffset + tileOffset + rowOffset );
+    }
+    void LoadPatternPlane1Byte()
+    {
+        u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+        u16 const tileOffset = nametableByte << 4;
+        u16 const rowOffset = vramAddr.bit.fineY;
+        bgPlane1Byte = Read( bgPatternOffset + tileOffset + rowOffset + 8 );
+    }
+    void IncrementScrollX()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+
+        if ( vramAddr.bit.coarseX == 31 ) {
+            vramAddr.bit.coarseX = 0;
+            vramAddr.bit.nametableX = ~vramAddr.bit.nametableX;
+        } else {
+            vramAddr.bit.coarseX++;
+        }
+    }
+    void IncrementScrollY()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        if ( vramAddr.bit.fineY < 7 ) {
+            vramAddr.bit.fineY++;
+        } else {
+            vramAddr.bit.fineY = 0;
+            if ( vramAddr.bit.coarseY == 29 ) {
+                vramAddr.bit.coarseY = 0;
+                vramAddr.bit.nametableY = ~vramAddr.bit.nametableY;
+            } else if ( vramAddr.bit.coarseY == 31 ) {
+                vramAddr.bit.coarseY = 0;
+            } else {
+                vramAddr.bit.coarseY++;
+            }
+        }
+    }
+    void TransferX()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        vramAddr.bit.nametableX = tempAddr.bit.nametableX;
+        vramAddr.bit.coarseX = tempAddr.bit.coarseX;
+    }
+    void TransferY()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        vramAddr.bit.fineY = tempAddr.bit.fineY;
+        vramAddr.bit.nametableY = tempAddr.bit.nametableY;
+        vramAddr.bit.coarseY = tempAddr.bit.coarseY;
+    }
     void Reset()
     {
         scanline = 0;
-        cycle = 4;
+        cycle = 0;
         frame = 1;
-        isRenderingEnabled = false;
         preventVBlank = false;
         ppuCtrl.value = 0x00;
         ppuMask.value = 0x00;
@@ -347,6 +449,25 @@ class PPU
         return buffer;
     }
 
+    u32 GetOutputPixel()
+    {
+        u8 bgPixel = 0x00;
+        u8 bgPalette = 0x00;
+        if ( ppuMask.bit.renderBackground ) {
+            u16 const bitMux = 0x8000 >> fineX;
+            u8 const  p0Pixel = ( bgShiftPatternLow & bitMux ) > 0;
+            u8 const  p1Pixel = ( bgShiftPatternHigh & bitMux ) > 0;
+
+            bgPixel = ( p1Pixel << 1 ) | p0Pixel;
+            u8 const p0 = ( bgShiftAttributeLow & bitMux ) > 0;
+            u8 const p1 = ( bgShiftAttributeHigh & bitMux ) > 0;
+            bgPalette = ( p1 << 1 ) | p0;
+        }
+        u16 const paletteAddr = 0x3F00 + ( bgPalette << 2 ) + bgPixel;
+        u8 const  paletteIdx = Read( paletteAddr ) & 0x3F;
+        return nesPaletteRgbValues.at( paletteIdx );
+    }
+
     /*
     ################################
     ||      Global Variables      ||
@@ -356,8 +477,9 @@ class PPU
     int  systemPaletteIdx = 0;
     int  maxSystemPalettes = 3;
 
-    std::array<std::string, 3> systemPalettePaths = { "palettes/palette1.pal", "palettes/palette2.pal",
-                                                      "palettes/palette3.pal" };
+    std::array<std::string, 3> systemPalettePaths = { std::string( PALETTES_DIR ) + "/palette1.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette2.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette3.pal" };
 
     /*
     ################################
@@ -365,10 +487,10 @@ class PPU
     ################################
     */
     s16            scanline = 0;
-    u16            cycle = 4;
+    u16            cycle = 0;
     u64            frame = 1;
-    bool           isRenderingEnabled = false;
     bool           preventVBlank = false;
+    bool           nmiReady = false;
     array<u32, 64> nesPaletteRgbValues{};
 
     /*
@@ -377,6 +499,10 @@ class PPU
     ################################
     */
     array<u32, 61440> frameBuffer{};
+    u32               bufferIdx = 0;
+    void              ClearFrameBuffer() { frameBuffer.fill( 0x00000000 ); }
+    void              IncBufferIdx() { bufferIdx = ( bufferIdx + 1 ) % 61440; }
+    bool              IsBufferFull() const { return bufferIdx == 0; }
 
     /*
     ################################

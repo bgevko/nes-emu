@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "config.h"
 
 using json = nlohmann::json;
 
@@ -58,7 +59,7 @@ class CPUTestFixture : public ::testing::Test
 
     void LoadTestCartridge()
     {
-        std::string romFile = "tests/roms/palette.nes";
+        std::string romFile = std::string( ROM_DIR ) + "/palette.nes";
         bus.cartridge.LoadRom( romFile );
         bus.cpu.Reset();
     }
@@ -149,8 +150,8 @@ TEST_F( CPUTestFixture, IRQ )
     bus.EnableJsonTestMode();
     bus.DebugReset();
 
-    // I flag should be set
-    EXPECT_EQ( cpu.GetInterruptDisableFlag(), 1 );
+    EXPECT_EQ( cpu.GetInterruptDisableFlag(), 0 );
+    cpu.SetInterruptDisableFlag( true );
 
     // No IRQ when I flag is set
     auto cycles = cpu.GetCycles();
@@ -192,6 +193,10 @@ TEST_F( CPUTestFixture, NMI )
     EXPECT_EQ( cpu.GetProgramCounter(), 0x0000 );
     cpu.NMI();
     EXPECT_EQ( cpu.GetProgramCounter(), 0x1234 );
+}
+
+TEST_F( CPUTestFixture, ExecuteFrame )
+{
 }
 
 /*

@@ -31,11 +31,16 @@ u8 Bus::Read( const u16 address, bool debugMode )
         return ppu.HandleCpuRead( ppuRegister, debugMode );
     }
 
-    // APU and I/O Registers: 0x4000 - 0x401F
-    if ( address >= 0x4000 && address <= 0x401F ) {
-        // Handle reads from controller ports and other I/O
-        // apu read will go here. For now, return from temp private member of bus
+    // APU
+    if ( address == 0x4015 ) {
         return _apuIoMemory.at( address & 0x001F );
+    }
+
+    // Controller read
+    if ( address >= 0x4016 && address <= 0x4017 ) {
+        auto data = ( controllerState[address & 0x0001] & 0x80 ) > 0;
+        controllerState[address & 0x0001] <<= 1;
+        return data;
     }
 
     // 4020 and up is cartridge territory
@@ -76,13 +81,21 @@ void Bus::Write( const u16 address, const u8 data )
 
     // PPU DMA: 0x4014
     if ( address == 0x4014 ) {
-        ppu.DmaTransfer( data );
+        // DEBUG: Disable
+        //  dmaInProgress = true;
+        //  dmaAddr = data << 8;
         return;
     }
 
-    // APU and I/O Registers: 0x4000 - 0x401F
-    if ( address >= 0x4000 && address <= 0x401F ) {
-        _apuIoMemory.at( address & 0x001F ) = data; // temp
+    // APU
+    if ( address >= 0x4000 && address <= 0x4015 ) {
+        _apuIoMemory.at( address & 0x001F ) = data;
+        return;
+    }
+
+    // Controller input
+    if ( address >= 0x4016 && address <= 0x4017 ) {
+        controllerState[address & 0x0001] = controller[address & 0x0001];
         return;
     }
 
@@ -94,6 +107,43 @@ void Bus::Write( const u16 address, const u8 data )
     // Unhandled address ranges
     // Optionally log a warning or ignore
     std::cout << "Unhandled write to address: " << std::hex << address << "\n";
+}
+
+void Bus::ProcessDma()
+{
+    const u64 cycle = cpu.GetCycles();
+
+    // Wait first read is on an odd cycle, wait it out.
+    if ( dmaOffset == 0 && cycle % 2 == 1 ) {
+        cpu.Tick();
+        return;
+    }
+
+    // Read into OAM on even, load next byte on odd
+    if ( cycle % 2 == 0 ) {
+        auto data = Read( dmaAddr | dmaOffset );
+        cpu.Tick();
+        ppu.oam.at( dmaOffset++ ) = data;
+    } else {
+        dmaInProgress = dmaOffset < 256;
+        cpu.Tick();
+    }
+}
+
+bool Bus::Clock()
+{
+    if ( dmaInProgress ) {
+        ProcessDma();
+    } else {
+        cpu.DecodeExecute();
+    }
+
+    if ( ppu.nmiReady ) {
+        ppu.nmiReady = false;
+        cpu.NMI();
+    }
+
+    return false;
 }
 
 /*

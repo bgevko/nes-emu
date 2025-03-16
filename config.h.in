@@ -1,0 +1,13 @@
+// Template file. These values are replaced by cmake during the build process.
+// Final fiile will be config.h, in the target build directory.
+// This gives access to proper paths.
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// Set the path variables in CMakelists.txt
+#define ROOT_DIR "@ROOT_DIR@"
+#define ROM_DIR "@ROM_DIR@"
+#define FONTS_DIR "@FONTS_DIR@"
+#define PALETTES_DIR "@PALETTES_DIR@"
+
+#endif // CONFIG_H

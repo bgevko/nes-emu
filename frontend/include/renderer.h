@@ -23,9 +23,9 @@
 #include <iostream>
 #include <csignal>
 #include <string>
-#include <memory>
 #include "theme.h"
 #include "chrono"
+#include "config.h"
 
 using u32 = uint32_t;
 using u64 = uint64_t;
@@ -97,18 +97,21 @@ class Renderer
     std::array<u32, 61440> nametable2Buffer{};
     std::array<u32, 61440> nametable3Buffer{};
 
-    std::array<std::string, 5> testRoms = {
-        "tests/roms/palette.nes", "tests/roms/color_test.nes", "tests/roms/nestest.nes",
-        "tests/roms/mario.nes",   "tests/tools/custom.nes",
+    std::array<std::string, 10> testRoms = {
+        std::string( ROM_DIR ) + "/palette.nes",
+        std::string( ROM_DIR ) + "/color_test.nes",
+        std::string( ROM_DIR ) + "/nestest.nes",
+        std::string( ROM_DIR ) + "/mario.nes",
+        std::string( ROM_DIR ) + "/custom.nes",
+        std::string( ROM_DIR ) + "/scanline.nes",
+        std::string( ROM_DIR ) + "/blargg_palette_ram.nes",
+        std::string( ROM_DIR ) + "/dk.nes",
+        std::string( ROM_DIR ) + "/ice_climber.nes",
+        std::string( ROM_DIR ) + "/ducktales.nes",
+
     };
-    enum RomSelected : u8 {
-        PALETTE,
-        COLOR_TEST,
-        NESTEST,
-        MARIO,
-        CUSTOM,
-    };
-    u8 romSelected = RomSelected::PALETTE;
+    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, PALETTE_RAM, DK };
+    u8 romSelected = RomSelected::NESTEST;
 
     /*
     ################################
@@ -309,9 +312,13 @@ class Renderer
         ImFontConfig fontConfig;
         fontConfig.RasterizerDensity = 4.0F;
         float const fontSize = 16.0F;
-        fontMenu = io->Fonts->AddFontFromFileTTF( "fonts/font-menu.otf", fontSize, &fontConfig );
-        fontMono = io->Fonts->AddFontFromFileTTF( "fonts/font-mono.ttf", fontSize, &fontConfig );
-        fontMonoBold = io->Fonts->AddFontFromFileTTF( "fonts/font-mono-bold.ttf", fontSize, &fontConfig );
+        std::string fontsDir = std::string( FONTS_DIR );
+        fontMenu =
+            io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-menu.otf" ).c_str(), fontSize, &fontConfig );
+        fontMono =
+            io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-mono.ttf" ).c_str(), fontSize, &fontConfig );
+        fontMonoBold = io->Fonts->AddFontFromFileTTF( ( fontsDir + "/font-mono-bold.ttf" ).c_str(), fontSize,
+                                                      &fontConfig );
 
         // Setup Dear ImGui style
         ImGui::StyleColorsLight();
@@ -448,6 +455,18 @@ class Renderer
                 running = false;
             }
         }
+        bus.controller[0] = 0x00;
+        const Uint8 *keystate = SDL_GetKeyboardState( nullptr );
+
+        // Map keys to controller bits
+        bus.controller[0] |= keystate[SDL_SCANCODE_X] ? 0x80 : 0x00;     // A Button
+        bus.controller[0] |= keystate[SDL_SCANCODE_Z] ? 0x40 : 0x00;     // B Button
+        bus.controller[0] |= keystate[SDL_SCANCODE_A] ? 0x20 : 0x00;     // Select
+        bus.controller[0] |= keystate[SDL_SCANCODE_S] ? 0x10 : 0x00;     // Start
+        bus.controller[0] |= keystate[SDL_SCANCODE_UP] ? 0x08 : 0x00;    // Up
+        bus.controller[0] |= keystate[SDL_SCANCODE_DOWN] ? 0x04 : 0x00;  // Down
+        bus.controller[0] |= keystate[SDL_SCANCODE_LEFT] ? 0x02 : 0x00;  // Left
+        bus.controller[0] |= keystate[SDL_SCANCODE_RIGHT] ? 0x01 : 0x00; // Right
     }
 
     /*
@@ -541,7 +560,7 @@ class Renderer
             if ( paused ) {
                 break;
             }
-            bus.cpu.DecodeExecute();
+            bus.Clock();
         }
         currentFrame = bus.ppu.GetFrame();
     }

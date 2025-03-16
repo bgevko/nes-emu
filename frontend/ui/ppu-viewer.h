@@ -3,7 +3,6 @@
 #include "ui-component.h"
 #include "renderer.h"
 #include <imgui.h>
-#include <cinttypes>
 
 class PpuViewerWindow : public UIComponent
 {
@@ -34,7 +33,7 @@ class PpuViewerWindow : public UIComponent
 
         if ( ImGui::Begin( "PPU Viewer", &visible, windowFlags ) ) {
             RenderMenuBar();
-            DebugControls();
+            DebugControls( "PPU Viewer Debugger" );
             ImGui::Spacing();
             ImGui::PushFont( renderer->fontMono );
 
@@ -193,33 +192,33 @@ class PpuViewerWindow : public UIComponent
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "$2001.1" );
         ImGui::TableSetColumnIndex( 1 );
-        ImGui::Text( "Show Bg Left" );
+        ImGui::Text( "Render Bg Left" );
         ImGui::TableSetColumnIndex( 2 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetMaskShowBgLeft() );
+        ImGui::Text( "%d", renderer->bus.ppu.GetMaskRenderBackgroundLeft() );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "$2001.2" );
         ImGui::TableSetColumnIndex( 1 );
-        ImGui::Text( "Show Spr Left" );
+        ImGui::Text( "Render Spr Left" );
         ImGui::TableSetColumnIndex( 2 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetMaskShowSpritesLeft() );
+        ImGui::Text( "%d", renderer->bus.ppu.GetMaskRenderSpritesLeft() );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "$2001.3" );
         ImGui::TableSetColumnIndex( 1 );
-        ImGui::Text( "Show Bg" );
+        ImGui::Text( "Render Bg" );
         ImGui::TableSetColumnIndex( 2 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetMaskShowBg() );
+        ImGui::Text( "%d", renderer->bus.ppu.GetMaskRenderBackground() );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "$2001.4" );
         ImGui::TableSetColumnIndex( 1 );
-        ImGui::Text( "Show Spr" );
+        ImGui::Text( "Render Spr" );
         ImGui::TableSetColumnIndex( 2 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetMaskShowSprites() );
+        ImGui::Text( "%d", renderer->bus.ppu.GetMaskRenderSprites() );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );

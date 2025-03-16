@@ -3,7 +3,6 @@
 #include "ui-component.h"
 #include "renderer.h"
 #include <imgui.h>
-#include <cinttypes>
 
 class CpuViewerWindow : public UIComponent
 {
@@ -11,7 +10,7 @@ class CpuViewerWindow : public UIComponent
     CPU &cpu; // NOLINT
     CpuViewerWindow( Renderer *renderer ) : UIComponent( renderer ), cpu( renderer->bus.cpu )
     {
-        visible = false;
+        visible = true;
     }
 
     /*
@@ -36,7 +35,7 @@ class CpuViewerWindow : public UIComponent
 
         if ( ImGui::Begin( "CPU Viewer", &visible, windowFlags ) ) {
             RenderMenuBar();
-            DebugControls();
+            DebugControls( "CPU Viewer Debugger" );
             ImGui::Spacing();
             ImGui::PushFont( renderer->fontMono );
 
@@ -54,7 +53,7 @@ class CpuViewerWindow : public UIComponent
     void CpuRegisters()
     {
         ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 1.0f, 1.0f, 1.0f, 1.0f ) );
-        ImGui::BeginChild( "registers", ImVec2( 0, 160 ), ImGuiChildFlags_Borders );
+        ImGui::BeginChild( "CPU Registers", ImVec2( 0, 160 ), ImGuiChildFlags_Borders );
 
         float const innerSpacing = 25.0f;
         float const outerSpacing = 45.0f;

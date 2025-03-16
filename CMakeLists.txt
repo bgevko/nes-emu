@@ -14,6 +14,19 @@ set(FRONTEND_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/include)
 set(UI_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/ui)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
 
+# Define directories for configuration
+SET(ROOT_DIR "${CMAKE_SOURCE_DIR}")
+set(ROM_DIR "${CMAKE_SOURCE_DIR}/roms")
+set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
+set(PALETTES_DIR "${CMAKE_SOURCE_DIR}/palettes")
+
+# Configure the config.h file from the template
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+  "${CMAKE_BINARY_DIR}/config.h"
+)
+include_directories("${CMAKE_BINARY_DIR}")
+
 #[[
 ################################################
 ||                                            ||
@@ -30,6 +43,17 @@ target_include_directories(emu_core PUBLIC ${CORE_INCLUDES})
 # Fmt library
 find_package(fmt CONFIG REQUIRED)
 target_link_libraries(emu_core PRIVATE fmt::fmt)
+
+#[[
+#######################################
+||                                   ||
+||  Interactive CLI Tool (optional)  ||
+||                                   ||
+#######################################
+]]
+if(PYTHON_BINDINGS)
+  add_subdirectory(tools/python)
+endif()
 
 #[[
 ################################################
@@ -79,36 +103,8 @@ if(BUILD_FRONTEND)
   message(STATUS "Fonts: ${CMAKE_SOURCE_DIR}/fonts -> ${CMAKE_BINARY_DIR}/fonts")
   message(STATUS "Tests/Roms: ${CMAKE_SOURCE_DIR}/tests/roms -> ${CMAKE_BINARY_DIR}/tests/roms")
 
-  # Copy assets only if they exist
-  if(EXISTS "${CMAKE_SOURCE_DIR}/palettes")
-    add_custom_command(TARGET emu POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/palettes ${CMAKE_BINARY_DIR}/palettes
-    )
-  else()
-    message(WARNING "WARNING: Palettes directory NOT found!")
-  endif()
-
-  if(EXISTS "${CMAKE_SOURCE_DIR}/fonts")
-    add_custom_command(TARGET emu POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/fonts ${CMAKE_BINARY_DIR}/fonts
-    )
-  else()
-    message(WARNING "WARNING: Fonts directory NOT found!")
-  endif()
-
-  if(EXISTS "${CMAKE_SOURCE_DIR}/tests/roms")
-    add_custom_command(TARGET emu POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/tests/roms ${CMAKE_BINARY_DIR}/tests/roms
-    )
-  else()
-    message(WARNING "WARNING: Tests/Roms directory NOT found!")
-  endif()
-
-  # Force asset copy by adding a target
-  add_custom_target(copy_assets ALL DEPENDS emu)
-  add_dependencies(copy_assets emu)
-
 endif()
+
 
 #[[
 ################################################
