@@ -275,8 +275,9 @@ class PPU
     void       WriteVram( u16 addr, u8 data );
     u16        ResolveNameTableAddress( u16 addr, int testMirrorMode = -1 ) const;
     void       Tick();
-    void       EvaluateSprites();
+    void       SpriteEvalForNextScanline();
     void       OamCopy();
+    void       VblankPeriod();
 
     /*
     ################################################################
@@ -286,12 +287,22 @@ class PPU
     ################################################################
     */
 
-    void PreRenderScanline()
+    void PrerenderScanline()
     {
-        if ( scanline == 261 ) {
+        if ( scanline != 261 ) {
+            return;
+        }
+
+        // Clear status to get ready for next frame
+        if ( cycle == 1 ) {
             ppuStatus.bit.verticalBlank = 0;
             ppuStatus.bit.spriteZeroHit = 0;
             ppuStatus.bit.spriteOverflow = 0;
+
+            for ( int i = 0; i < 8; i++ ) {
+                spriteShiftLow[i] = 0;
+                spriteShiftHigh[i] = 0;
+            }
         }
     }
 
@@ -306,6 +317,7 @@ class PPU
         bgAttributeShiftLow = ( bgAttributeShiftLow & 0xFF00 ) | attrMaskLow;
         bgAttributeShiftHigh = ( bgAttributeShiftHigh & 0xFF00 ) | attrMaskHigh;
     }
+
     void ShiftBgRegisters()
     {
         bgPatternShiftLow <<= 1;
@@ -313,61 +325,112 @@ class PPU
         bgAttributeShiftLow <<= 1;
         bgAttributeShiftHigh <<= 1;
     }
+
     void ShiftSpriteRegisters()
     {
-        // Sprite registers shift only during visible rendering (scanlines 0-239, cycles 1–256)
-        if ( scanline > 239 || cycle < 1 || cycle > 256 ) {
-            return;
-        }
-
-        for ( int i = 0; i < 8; i++ ) {
-            if ( spriteXCounters.at( i ) > 0 ) {
-                spriteXCounters.at( i )--;
-            } else {
-                spriteShiftLow.at( i ) <<= 1;
-                spriteShiftHigh.at( i ) <<= 1;
-            }
-        }
-    }
-
-    void FetchTileData()
-    {
-        // Background fetches (cycles 1–256 and 321–336)
-        if ( ( cycle >= 1 && cycle <= 256 ) || ( cycle >= 321 && cycle <= 336 ) ) {
-            switch ( cycle & 0x07 ) { // equivalent to cycle % 8
-
-                case 1: // Nametable fetch
-                    nametableByte = ReadVram( 0x2000 | ( vramAddr.value & 0x0FFF ) );
-                    break;
-                case 3: // Attribute fetch
-                    FetchAttributeByte();
-                    break;
-                case 5:
-                    FetchPattern0Byte();
-                    break;
-                case 7:
-                    FetchPattern1Byte();
-                    break;
-                case 0:
-                    LoadBgShifters();
-                    IncrementCoarseX();
-                    break;
-                default:
+        if ( scanline <= 239 && ( cycle >= 1 && cycle <= 256 ) ) {
+            for ( int i = 0; i < 8; i++ ) {
+                if ( spriteXCounters.at( i ) > 0 ) {
+                    spriteXCounters.at( i )--;
+                } else {
+                    spriteShiftLow.at( i ) <<= 1;
+                    spriteShiftHigh.at( i ) <<= 1;
+                }
             }
         }
     }
 
     void ClearSecondaryOam()
     {
-        if ( scanline > 239 || ( cycle < 1 || cycle > 64 ) ) {
-            return;
+        if ( scanline <= 239 && ( cycle >= 1 && cycle <= 64 ) ) {
+            // Cycle 1-64: Initialize secondary OAM to 0xFF, every other cycle
+            secondaryOam.data.at( ( cycle - 1 ) >> 1 ) = 0xFF;
         }
-        // Cycle 1-64: Initialize secondary OAM to 0xFF, every other cycle
-        secondaryOam.data.at( ( cycle - 1 ) >> 1 ) = 0xFF;
+    }
+
+    void VisibleScanline()
+    {
+        if ( scanline <= 239 || scanline == 261 ) {
+            // cycle 0 is idle
+            if ( cycle >= 1 && cycle <= 256 ) {
+                FetchBgTileData();
+                ShiftSpriteRegisters();
+
+                if ( cycle <= 64 )
+                    ClearSecondaryOam();
+                else
+                    SpriteEvalForNextScanline();
+            }
+        }
+    }
+
+    void PostVisibleScanline()
+    {
+        // Activity beyond the visible scanline, scanline 0-239 and prerender scanline 261
+        if ( scanline <= 239 || scanline == 261 ) {
+            if ( cycle == 256 ) {
+                IncrementCoarseY();
+            }
+            if ( cycle == 257 ) {
+                LoadBgShifters();
+                TransferX();
+            }
+
+            if ( cycle == 261 ) {
+                FetchSpriteData();
+            }
+
+            // Transfer from temp to vramAddr on cycles 280-304 of the prerender scanline
+            if ( scanline == 261 && cycle >= 280 && cycle <= 304 ) {
+                TransferY();
+            }
+
+            // Cycles 321-336 will fetch the first two tiles for the next scanline
+            if ( cycle >= 321 && cycle <= 336 ) {
+                FetchBgTileData();
+            }
+
+            // Unused fetches
+            if ( cycle == 338 || cycle == 340 ) {
+                FetchNametableByte();
+            }
+        }
+    }
+
+    void FetchNextBgTileData()
+    {
+        if ( cycle >= 321 && cycle <= 336 ) {
+            FetchBgTileData();
+        }
+    }
+
+    void FetchBgTileData()
+    {
+        // Background fetches (cycles 1–256 and 321–336)
+        switch ( cycle & 0x07 ) { // equivalent to cycle % 8
+
+            case 1: // Nametable fetch
+                FetchNametableByte();
+                break;
+            case 3: // Attribute fetch
+                FetchAttributeByte();
+                break;
+            case 5:
+                FetchBgPattern0Byte();
+                break;
+            case 7:
+                FetchBgPattern1Byte();
+                break;
+            case 0:
+                LoadBgShifters();
+                IncrementCoarseX();
+                break;
+            default:
+        }
     }
 
     // Called exactly at cycle 65 to initialize sprite evaluation.
-    void EvaluateSpritesStart()
+    void SpriteEvalForNextScanlineStart()
     {
         if ( cycle != 65 )
             return;
@@ -387,7 +450,7 @@ class PPU
     }
 
     // Called on cycle 256 to finalize sprite evaluation.
-    void EvaluateSpritesEnd()
+    void SpriteEvalForNextScanlineEnd()
     {
         if ( cycle != 256 )
             return;
@@ -395,6 +458,70 @@ class PPU
         sprite0Visible = sprite0Added;
         // Compute how many sprites were copied (each sprite occupies 4 bytes).
         spriteCount = ( ( secondaryOamAddr + 3 ) >> 2 );
+    }
+
+    u16 GetSpritePatternAddress( const SpriteEntry &sprite ) const
+    {
+        bool is8x16 = ppuCtrl.bit.spriteSize;
+        bool isVerticalFlipped = sprite.attribute & 0x80;
+        u8   row = scanline - sprite.y; // original row offset
+
+        // 8x8 Sprite Mode
+        if ( !is8x16 ) {
+            if ( !isVerticalFlipped )
+                return ( ppuCtrl.bit.patternSprite << 12 ) | ( sprite.id << 4 ) | row;
+            return ( ppuCtrl.bit.patternSprite << 12 ) | ( sprite.id << 4 ) | ( 7 - row );
+        }
+
+        // 8x16 Sprite Mode
+        u8 table = sprite.id & 0x01;
+        u8 baseTile = sprite.id & 0xFE;
+        u8 rowInTile = row & 0x07; // row offset within the tile
+
+        if ( !isVerticalFlipped ) {
+            if ( row < 8 ) { // top half
+                return ( table << 12 ) | ( baseTile << 4 ) | rowInTile;
+            } // bottom half
+            return ( table << 12 ) | ( ( baseTile + 1 ) << 4 ) | rowInTile;
+        }
+        if ( row < 8 ) { // top half (flipped, use bottom tile)
+            return ( table << 12 ) | ( ( baseTile + 1 ) << 4 ) | ( 7 - rowInTile );
+        } // bottom half (flipped, use top tile)
+        return ( table << 12 ) | ( baseTile << 4 ) | ( 7 - rowInTile );
+    }
+
+    void FetchSpriteData()
+    {
+        // Sprite data is fetched starting on cycle 261, scanlines 0-239, and pre-render scanline.
+        // We'll do it in one hit
+        if ( ( scanline > 239 && scanline != 261 ) || cycle != 261 ) {
+            return;
+        }
+
+        auto flipByte = []( u8 b ) {
+            b = ( ( b & 0xF0 ) >> 4 ) | ( ( b & 0x0F ) << 4 );
+            b = ( ( b & 0xCC ) >> 2 ) | ( ( b & 0x33 ) << 2 );
+            b = ( ( b & 0xAA ) >> 1 ) | ( ( b & 0x55 ) << 1 );
+            return b;
+        };
+
+        for ( u8 i = 0; i < spriteCount; i++ ) {
+            SpriteEntry sprite = secondaryOam.entries[i];
+
+            u8  row = scanline - sprite.y;
+            u16 patternAddr = GetSpritePatternAddress( sprite );
+            u8  table0Byte = ReadVram( patternAddr );
+            u8  table1Byte = ReadVram( patternAddr + 8 );
+
+            bool isHorizontalFlipped = sprite.attribute & 0x40;
+            if ( isHorizontalFlipped ) {
+                table0Byte = flipByte( table0Byte );
+                table1Byte = flipByte( table1Byte );
+            }
+
+            spriteShiftLow[i] = table0Byte;
+            spriteShiftHigh[i] = table1Byte;
+        }
     }
 
     void FetchAttributeByte()
@@ -411,7 +538,9 @@ class PPU
         attributeByte &= 0x03;
     }
 
-    void FetchPattern0Byte()
+    void FetchNametableByte() { nametableByte = ReadVram( 0x2000 | ( vramAddr.value & 0x0FFF ) ); }
+
+    void FetchBgPattern0Byte()
     {
         u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
         u16 const tileOffset = nametableByte << 4;
@@ -419,7 +548,7 @@ class PPU
         bgPattern0Byte = ReadVram( bgPatternOffset + tileOffset + rowOffset );
     }
 
-    void FetchPattern1Byte()
+    void FetchBgPattern1Byte()
     {
         u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
         u16 const tileOffset = nametableByte << 4;

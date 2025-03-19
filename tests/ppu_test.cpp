@@ -427,7 +427,7 @@ TEST_F( PpuTest, EvalSpriteStart )
     ppu.cycle = 65;
     ppu.Tick();
 
-    // Now, verify that EvaluateSpritesStart() has reinitialized the evaluation state.
+    // Now, verify that SpriteEvalForNextScanlineStart() has reinitialized the evaluation state.
     EXPECT_FALSE( ppu.sprite0Added ) << "sprite0Added should be reset to false";
     EXPECT_FALSE( ppu.spriteInRange ) << "spriteInRange should be reset to false";
     EXPECT_EQ( ppu.secondaryOamAddr, 0 ) << "secondaryOamAddr should be reset to 0";
@@ -472,17 +472,17 @@ TEST_F( PpuTest, EvalSprites_Sprite0Added )
     for ( int yVal = 94; yVal < 102; yVal++ ) {
         resetTest();
         ppu.oamCopyBuffer = yVal;
-        ppu.EvaluateSprites();
+        ppu.SpriteEvalForNextScanline();
         EXPECT_TRUE( ppu.sprite0Added ) << "Sprite 0 flag should be set on cycle 66 if in range.";
     }
     // Out of range, 93 and 102, should fail
     resetTest();
     ppu.oamCopyBuffer = 93;
-    ppu.EvaluateSprites();
+    ppu.SpriteEvalForNextScanline();
     EXPECT_FALSE( ppu.sprite0Added ) << "Sprite 0 flag should not be set on cycle 66 if out of range.";
     resetTest();
     ppu.oamCopyBuffer = 102;
-    ppu.EvaluateSprites();
+    ppu.SpriteEvalForNextScanline();
     EXPECT_FALSE( ppu.sprite0Added ) << "Sprite 0 flag should not be set on cycle 66 if out of range.";
 
     // When ppuCtrl.bit.spriteSize is set, the range should account for 16 pixel tall sprites
@@ -491,7 +491,7 @@ TEST_F( PpuTest, EvalSprites_Sprite0Added )
         resetTest();
         ppu.ppuCtrl.bit.spriteSize = 1;
         ppu.oamCopyBuffer = yVal;
-        ppu.EvaluateSprites();
+        ppu.SpriteEvalForNextScanline();
         EXPECT_TRUE( ppu.sprite0Added ) << "Sprite 0 flag range fail for 16 pixel sprites. yVal: " << yVal;
     }
 
@@ -499,12 +499,12 @@ TEST_F( PpuTest, EvalSprites_Sprite0Added )
     resetTest();
     ppu.ppuCtrl.bit.spriteSize = 1;
     ppu.oamCopyBuffer = 85;
-    ppu.EvaluateSprites();
+    ppu.SpriteEvalForNextScanline();
     EXPECT_FALSE( ppu.sprite0Added ) << "Sprite 0 flag should not be set on cycle 66 if out of range.";
     resetTest();
     ppu.ppuCtrl.bit.spriteSize = 1;
     ppu.oamCopyBuffer = 102;
-    ppu.EvaluateSprites();
+    ppu.SpriteEvalForNextScanline();
     EXPECT_FALSE( ppu.sprite0Added ) << "Sprite 0 flag should not be set on cycle 66 if out of range.";
 }
 
@@ -521,8 +521,8 @@ TEST_F( PpuTest, EvalSprites_OddCycle )
     // Set oamAddr to 0.
     ppu.oamAddr = 0x00;
 
-    // Call EvaluateSprites().
-    ppu.EvaluateSprites();
+    // Call SpriteEvalForNextScanline().
+    ppu.SpriteEvalForNextScanline();
 
     // On odd cycle, oamCopyBuffer should equal the value read from primary OAM.
     EXPECT_EQ( ppu.oamCopyBuffer, 0x55 );

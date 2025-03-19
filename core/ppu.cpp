@@ -406,30 +406,16 @@ void PPU::Tick()
     if ( isDisabled ) {
         return;
     }
-    /*
-    Frame start:
-        Scanline 0 (Visible, pixels actually drawn)
-        Scanlines 1–239 (Visible)
-        Scanline 240 (Post-render idle)
-        Scanlines 241–260 (Vertical blanking, VBlank)
-        Scanline 261 (Pre-render; prepares shift registers & scroll)
-    Frame end, repeats next frame starting at scanline 0 again.
-    */
 
     if ( IsRenderingEnabled() ) {
-        ShiftBgRegisters();
-        ShiftSpriteRegisters();
-        FetchTileData();
+        ShiftBgRegisters();    // Every dot
+        VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
+        PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
 
-        ClearSecondaryOam();
-        EvaluateSpritesStart();
-        EvaluateSprites();
-        EvaluateSpritesEnd();
+        RenderPixel();
 
-        if ( scanline >= 0 && scanline <= 239 && cycle >= 1 && cycle <= 256 ) {
-            // renderPixel();
-        }
-        // handleSpecialOperations();
+        VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
+        PrerenderScanline(); // Scanline 261
     }
     cycle++;
     bool const oddFrame = frame & 0x01;
@@ -577,12 +563,43 @@ void PPU::Tick()
 ################################
 */
 
+void PPU::VblankPeriod()
+{
+    // Scanlines 240-260
+    if ( scanline == 241 && scanline <= 260 ) {
+        // If the CPU is reading register 2002 on cycle 0 of scanline 241
+        // Vblank will not be set until the next frame due to a hardware race condition bug
+        if ( cycle == 0 && bus->cpu.IsReading2002() ) {
+            preventVBlank = true;
+        }
+
+        // Set the Vblank flag on cycle 1
+        if ( scanline == 241 && cycle == 1 ) {
+
+            if ( !preventVBlank ) {
+                ppuStatus.bit.verticalBlank = 1;
+
+                // Signal to trigger NMI if enabled
+                if ( ppuCtrl.bit.nmiEnable ) {
+                    nmiReady = true;
+                }
+            }
+            preventVBlank = false;
+        }
+    }
+}
+
 // Called each cycle between cycle 65 and 256 to evaluate sprites.
-void PPU::EvaluateSprites()
+void PPU::SpriteEvalForNextScanline()
 {
     // Only run during visible scanlines (0–239) and cycles 65–256.
     if ( !IsRenderingEnabled() || scanline > 239 || cycle < 65 || cycle > 256 )
         return;
+
+    // Start
+    if ( cycle == 65 ) {
+        SpriteEvalForNextScanlineStart();
+    }
 
     if ( cycle & 0x01 ) // Odd cycle: perform a read.
     {
@@ -592,6 +609,11 @@ void PPU::EvaluateSprites()
         OamCopy();
     }
     oamAddr = ( spriteAddrLo & 0x03 ) | ( spriteAddrHi << 2 );
+
+    // End
+    if ( cycle == 256 ) {
+        SpriteEvalForNextScanlineEnd();
+    }
 }
 
 void PPU::OamCopy()
