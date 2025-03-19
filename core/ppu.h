@@ -108,9 +108,6 @@ class PPU
     int  systemPaletteIdx = 0;
     int  maxSystemPalettes = 3;
 
-    // SDL callback
-    std::function<void( const u32 * )> onFrameReady = nullptr;
-
     /*
     ################################
     ||        PPU Variables       ||
@@ -231,7 +228,6 @@ class PPU
     // Sprite helpers
     SpriteEntry currentSprite{};
     bool        sprite0Added = false;
-    bool        sprite0Visible = false;
     bool        spriteInRange = false;
     u8          spriteCount = 0;
     u8          secondaryOamAddr = 0;
@@ -242,6 +238,9 @@ class PPU
 
     u8 firstVisibleSpriteAddr = 0; // For extra sprites
     u8 lastVisibleSpriteAddr = 0;  // For extra sprites
+
+    // SDL callback
+    std::function<void( const u32 * )> onFrameReady = nullptr;
 
     /*
     ################################
@@ -258,10 +257,13 @@ class PPU
     ################################
     */
     array<u32, 61440> frameBuffer{};
-    u32               bufferIdx = 0;
-    void              ClearFrameBuffer() { frameBuffer.fill( 0x00000000 ); }
-    void              IncBufferIdx() { bufferIdx = ( bufferIdx + 1 ) % 61440; }
-    bool              IsBufferFull() const { return bufferIdx == 0; }
+    array<u32, 61440> GetFrameBuffer() const { return frameBuffer; }
+
+    bool frameBufferReady = false;
+    u32  bufferIdx = 0;
+    void ClearFrameBuffer() { frameBuffer.fill( 0x00000000 ); }
+    void IncBufferIdx() { bufferIdx = ( bufferIdx + 1 ) % 61440; }
+    bool IsBufferFull() const { return bufferIdx == 0; }
 
     /*
     ################################
@@ -320,15 +322,17 @@ class PPU
 
     void ShiftBgRegisters()
     {
-        bgPatternShiftLow <<= 1;
-        bgPatternShiftHigh <<= 1;
-        bgAttributeShiftLow <<= 1;
-        bgAttributeShiftHigh <<= 1;
+        if ( ppuMask.bit.renderBackground ) {
+            bgPatternShiftLow <<= 1;
+            bgPatternShiftHigh <<= 1;
+            bgAttributeShiftLow <<= 1;
+            bgAttributeShiftHigh <<= 1;
+        }
     }
 
     void ShiftSpriteRegisters()
     {
-        if ( scanline <= 239 && ( cycle >= 1 && cycle <= 256 ) ) {
+        if ( ppuMask.bit.renderSprites && scanline <= 239 && ( cycle >= 1 && cycle <= 256 ) ) {
             for ( int i = 0; i < 8; i++ ) {
                 if ( spriteXCounters.at( i ) > 0 ) {
                     spriteXCounters.at( i )--;
@@ -455,7 +459,6 @@ class PPU
         if ( cycle != 256 )
             return;
 
-        sprite0Visible = sprite0Added;
         // Compute how many sprites were copied (each sprite occupies 4 bytes).
         spriteCount = ( ( secondaryOamAddr + 3 ) >> 2 );
     }
@@ -508,7 +511,6 @@ class PPU
         for ( u8 i = 0; i < spriteCount; i++ ) {
             SpriteEntry sprite = secondaryOam.entries[i];
 
-            u8  row = scanline - sprite.y;
             u16 patternAddr = GetSpritePatternAddress( sprite );
             u8  table0Byte = ReadVram( patternAddr );
             u8  table1Byte = ReadVram( patternAddr + 8 );
@@ -590,45 +592,42 @@ class PPU
         }
     }
 
-    void RenderPixel()
+    void FetchBackgroundPixel( u8 &pixel, u8 &palette ) const
     {
-        /*
-          Adopted from OLC NES Implementation
-        */
-        if ( scanline > 239 || cycle < 1 || cycle > 256 ) {
-            return;
-        }
-        u8   bgPixel = 0x00;
-        u8   bgPalette = 0x00;
-        u8   fgPixel = 0x00;
-        u8   fgPalette = 0x00;
-        bool fgPriority = false;
-        bool spriteZeroBeingRendered = false;
-
-        // Background Pixel Rendering
-        if ( ppuMask.bit.renderBackground && ( ppuMask.bit.renderBackgroundLeft || ( cycle >= 9 ) ) ) {
+        if ( ppuMask.bit.renderBackground && ( ppuMask.bit.renderBackgroundLeft || cycle >= 9 ) ) {
+            // Fine X scrolling: determine the bit offset in our shifters.
             u16 bitMux = 0x8000 >> fineX;
-            u8  p0Pixel = ( bgPatternShiftLow & bitMux ) ? 1 : 0;
-            u8  p1Pixel = ( bgPatternShiftHigh & bitMux ) ? 1 : 0;
-            bgPixel = ( p1Pixel << 1 ) | p0Pixel;
+            // Extract the pixel bits from background shifters.
+            u8 p0Pixel = ( bgPatternShiftLow & bitMux ) ? 1 : 0;
+            u8 p1Pixel = ( bgPatternShiftHigh & bitMux ) ? 1 : 0;
+            pixel = ( p1Pixel << 1 ) | p0Pixel;
 
-            u8 bgPal0 = ( bgAttributeShiftLow & bitMux ) ? 1 : 0;
-            u8 bgPal1 = ( bgAttributeShiftHigh & bitMux ) ? 1 : 0;
-            bgPalette = ( bgPal1 << 1 ) | bgPal0;
+            // Extract the palette bits from attribute shifters.
+            u8 pal0 = ( bgAttributeShiftLow & bitMux ) ? 1 : 0;
+            u8 pal1 = ( bgAttributeShiftHigh & bitMux ) ? 1 : 0;
+            palette = ( pal1 << 1 ) | pal0;
         }
+    }
 
-        // Sprite (Foreground) Pixel Rendering
-        if ( ppuMask.bit.renderSprites && ( ppuMask.bit.renderSpritesLeft || ( cycle >= 9 ) ) ) {
+    void FetchForegroundPixel( u8 &pixel, u8 &palette, u8 &priority, bool &spriteZeroBeingRendered )
+    {
+        if ( ppuMask.bit.renderSprites && ( ppuMask.bit.renderSpritesLeft || cycle >= 9 ) ) {
             for ( u8 i = 0; i < spriteCount; i++ ) {
-                if ( spriteXCounters[i] == 0 ) {
-                    u8 fgPixelLo = ( spriteShiftLow[i] & 0x80 ) ? 1 : 0;
-                    u8 fgPixelHi = ( spriteShiftHigh[i] & 0x80 ) ? 1 : 0;
-                    fgPixel = ( fgPixelHi << 1 ) | fgPixelLo;
+                SpriteEntry sprite = secondaryOam.entries[i];
 
-                    fgPalette = ( secondaryOam.entries[i].attribute & 0x03 ) + 0x04;
-                    fgPriority = ( secondaryOam.entries[i].attribute & 0x20 ) == 0;
+                // Only consider sprites whose shift registers are active (x==0).
+                if ( sprite.x == 0 ) {
+                    u8 lo = ( spriteShiftLow[i] & 0x80 ) ? 1 : 0;
+                    u8 hi = ( spriteShiftHigh[i] & 0x80 ) ? 1 : 0;
+                    pixel = ( hi << 1 ) | lo;
 
-                    if ( fgPixel != 0 ) {
+                    // The sprite's palette is in the lower 2 bits with an offset of 4.
+                    palette = ( sprite.attribute & 0x03 ) + 0x04;
+                    // fgPriority is determined by bit 5: clear means the sprite has priority.
+                    priority = ( ( sprite.attribute & 0x20 ) == 0 );
+
+                    // As soon as we find a nontransparent sprite pixel, use it.
+                    if ( pixel != 0 ) {
                         if ( i == 0 ) {
                             spriteZeroBeingRendered = true;
                         }
@@ -637,21 +636,38 @@ class PPU
                 }
             }
         }
+    }
+
+    [[nodiscard]] u32 GetOutputPixel()
+    {
+        u8   bgPixel = 0;
+        u8   bgPalette = 0;
+        u8   fgPixel = 0;
+        u8   fgPalette = 0;
+        u8   fgPriority = 0;
+        bool spriteZeroBeingRendered = false;
+
+        FetchBackgroundPixel( bgPixel, bgPalette );
+        FetchForegroundPixel( fgPixel, fgPalette, fgPriority, spriteZeroBeingRendered );
 
         // Pixel Priority Decision
         u8 finalPixel = 0x00;
         u8 finalPalette = 0x00;
 
         if ( bgPixel == 0 && fgPixel == 0 ) {
-            finalPixel = 0x00;
-            finalPalette = 0x00;
-        } else if ( bgPixel == 0 && fgPixel > 0 ) {
+            // Both background and foreground are transparent.
+            finalPixel = 0;
+            finalPalette = 0;
+        } else if ( bgPixel == 0 ) {
+            // Background transparent, foreground visible.
             finalPixel = fgPixel;
             finalPalette = fgPalette;
-        } else if ( bgPixel > 0 && fgPixel == 0 ) {
+        } else if ( fgPixel == 0 ) {
+            // Foreground transparent, background visible.
             finalPixel = bgPixel;
             finalPalette = bgPalette;
-        } else { // Both visible, decide priority
+        } else {
+            // Both are non-transparent. Sprite priority determines which one is visible.
             if ( fgPriority ) {
                 finalPixel = fgPixel;
                 finalPalette = fgPalette;
@@ -659,17 +675,16 @@ class PPU
                 finalPixel = bgPixel;
                 finalPalette = bgPalette;
             }
-
-            // Sprite Zero Hit Detection
-            if ( sprite0Visible && spriteZeroBeingRendered ) {
-                if ( ppuMask.bit.renderBackground && ppuMask.bit.renderSprites ) {
-                    bool leftClipDisabled =
-                        !( ppuMask.bit.renderBackgroundLeft || ppuMask.bit.renderSpritesLeft );
-                    if ( ( !leftClipDisabled && cycle >= 9 && cycle < 258 ) ||
-                         ( leftClipDisabled && cycle >= 1 && cycle < 258 ) ) {
-                        ppuStatus.bit.spriteZeroHit = 1;
-                    }
-                }
+        }
+        // --- Sprite Zero Hit Detection ---
+        if ( sprite0Added && spriteZeroBeingRendered &&
+             ( ppuMask.bit.renderBackground && ppuMask.bit.renderSprites ) ) {
+            // The left edge of the screen uses separate masking; otherwise,
+            // the effective range is cycles 9-257.
+            if ( ( ppuMask.bit.renderBackgroundLeft || ppuMask.bit.renderSpritesLeft )
+                     ? ( cycle >= 1 && cycle < 258 )
+                     : ( cycle >= 9 && cycle < 258 ) ) {
+                ppuStatus.bit.spriteZeroHit = 1;
             }
         }
 
@@ -677,8 +692,12 @@ class PPU
         u16 paletteAddr = 0x3F00 + ( finalPalette << 2 ) + finalPixel;
         u8  paletteIdx = ReadVram( paletteAddr ) & 0x3F;
         u32 rgbColor = nesPaletteRgbValues.at( paletteIdx );
+        return rgbColor;
+    }
 
-        frameBuffer.at( bufferIdx ) = rgbColor;
+    void UpdateFrameBuffer()
+    {
+        frameBuffer.at( bufferIdx ) = GetOutputPixel();
         IncBufferIdx();
 
         if ( IsBufferFull() ) {

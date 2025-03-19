@@ -112,6 +112,8 @@ class Renderer
     */
     UIManager ui;
     Bus       bus;
+    CPU      &cpu = bus.cpu;
+    PPU      &ppu = bus.ppu;
 
     Renderer() : ui( this ) { InitEmulator(); }
 
@@ -127,18 +129,16 @@ class Renderer
     {
         auto romFile = testRoms.at( romSelected );
         bus.cartridge.LoadRom( romFile );
-        bus.cpu.Reset();
-        bus.ppu.onFrameReady = [this]( const u32 *frameBuffer ) {
-            this->ProcessPpuFrameBuffer( frameBuffer );
-        };
-        currentFrame = bus.ppu.frame;
+        cpu.Reset();
+        ppu.onFrameReady = [this]( const u32 *frameBuffer ) { this->ProcessPpuFrameBuffer( frameBuffer ); };
+        currentFrame = ppu.frame;
     }
 
     void LoadNewCartridge( const std::string &newRomFile )
     {
         bus.cartridge.LoadRom( newRomFile );
         bus.DebugReset();
-        currentFrame = bus.ppu.frame;
+        currentFrame = ppu.frame;
         frameCount = 0;
     }
 
@@ -548,31 +548,31 @@ class Renderer
     */
     void ExecuteFrame()
     {
-        while ( currentFrame == bus.ppu.frame ) {
+        while ( currentFrame == ppu.frame ) {
             if ( paused ) {
                 break;
             }
             bus.Clock();
         }
-        currentFrame = bus.ppu.frame;
+        currentFrame = ppu.frame;
     }
 
     void UpdateUiWindows() {}
     void UpdatePatternTableTextures()
     {
         if ( updatePatternTables ) {
-            patternTable0Buffer = bus.ppu.GetPatternTable( 0 );
-            patternTable1Buffer = bus.ppu.GetPatternTable( 1 );
+            patternTable0Buffer = ppu.GetPatternTable( 0 );
+            patternTable1Buffer = ppu.GetPatternTable( 1 );
         }
     }
 
     void UpdateNametableTextures()
     {
         if ( updateNametables ) {
-            nametable0Buffer = bus.ppu.GetNametable( 0 );
-            nametable1Buffer = bus.ppu.GetNametable( 1 );
-            nametable2Buffer = bus.ppu.GetNametable( 2 );
-            nametable3Buffer = bus.ppu.GetNametable( 3 );
+            nametable0Buffer = ppu.GetNametable( 0 );
+            nametable1Buffer = ppu.GetNametable( 1 );
+            nametable2Buffer = ppu.GetNametable( 2 );
+            nametable3Buffer = ppu.GetNametable( 3 );
         }
     }
 
@@ -629,7 +629,7 @@ class Renderer
 
     void CalculateFps()
     {
-        u64 const framesRendered = bus.ppu.frame;
+        u64 const framesRendered = ppu.frame;
         u16 const framesThisSecond = framesRendered - frameCount;
         frameCount = framesRendered;
         fps = framesThisSecond;

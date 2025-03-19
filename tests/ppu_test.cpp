@@ -638,9 +638,9 @@ TEST_F( PpuTest, FetchPatternBytes )
     bus.cartridge.SetChrROM( targetAddr, 0x55 );
     bus.cartridge.SetChrROM( targetAddr + 8, 0xAA );
 
-    ppu.FetchPattern0Byte();
+    ppu.FetchBgPattern0Byte();
     EXPECT_EQ( ppu.bgPatternShiftLow, 0x55 ) << "Pattern low byte should be 0x55";
-    ppu.FetchPattern1Byte();
+    ppu.FetchBgPattern1Byte();
     EXPECT_EQ( ppu.bgPatternShiftHigh, 0xAA ) << "Pattern high byte should be 0xAA";
 
     ppu.ppuCtrl.bit.patternBackground = 1; // 0x1000
@@ -650,9 +650,9 @@ TEST_F( PpuTest, FetchPatternBytes )
     bus.cartridge.SetChrROM( targetAddr, 0x12 );
     bus.cartridge.SetChrROM( targetAddr + 8, 0x34 );
 
-    ppu.FetchPattern0Byte();
+    ppu.FetchBgPattern0Byte();
     EXPECT_EQ( ppu.bgPatternShiftLow, 0x12 ) << "Pattern low byte should be 0x12";
-    ppu.FetchPattern1Byte();
+    ppu.FetchBgPattern1Byte();
     EXPECT_EQ( ppu.bgPatternShiftHigh, 0x34 ) << "Pattern high byte should be 0x34";
 }
 
@@ -782,7 +782,7 @@ TEST_F( PpuTest, ShiftSpriteRegisters_NoShiftOutsideVisibleRange )
     }
 }
 
-TEST_F( PpuTest, RenderPixel_Sprite0HitDetection )
+TEST_F( PpuTest, GetOutputPixel_Sprite0HitDetection )
 {
     // TODO: Implement
 }

@@ -407,16 +407,14 @@ void PPU::Tick()
         return;
     }
 
-    if ( IsRenderingEnabled() ) {
-        ShiftBgRegisters();    // Every dot
-        VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
-        PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
+    ShiftBgRegisters();    // Every dot
+    VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
+    PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
 
-        RenderPixel();
+    UpdateFrameBuffer();
 
-        VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
-        PrerenderScanline(); // Scanline 261
-    }
+    VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
+    PrerenderScanline(); // Scanline 261
     cycle++;
     bool const oddFrame = frame & 0x01;
     if ( cycle > 340 || ( scanline == 261 && cycle > ( oddFrame ? 339 : 340 ) ) ) {
@@ -428,132 +426,6 @@ void PPU::Tick()
         }
     }
 }
-
-// void PPU::Tick() // NOLINT
-// {
-//     if ( isDisabled ) {
-//         return;
-//     }
-//
-//     if ( scanline >= -1 && scanline < 240 ) {
-//
-//         bool const oddFrameSkip = ( scanline == 0 && cycle == 0 && ( frame & 0x01 ) == 1 );
-//         if ( oddFrameSkip && IsRenderingEnabled() ) {
-//             cycle = 1;
-//         }
-//
-//         // Pre-render scanline
-//         if ( scanline == -1 && cycle == 1 ) {
-//             ppuStatus.bit.verticalBlank = 0;
-//             ppuStatus.bit.spriteOverflow = 0;
-//             ppuStatus.bit.spriteZeroHit = 0;
-//             for ( int i = 0; i < 8; i++ ) {
-//                 // TODO: Reset sprite shifters
-//             }
-//         }
-//
-//         if ( ( cycle >= 2 && cycle < 258 ) || ( cycle >= 321 && cycle < 338 ) ) {
-//             UpdateShifters();
-//             switch ( ( cycle - 1 ) % 8 ) {
-//                 case 0:
-//                     LoadBgShifters();
-//                     LoadNametableByte();
-//                     break;
-//                 case 2:
-//                     LoadAttributeByte();
-//                     break;
-//                 case 4:
-//                     LoadPatternPlane0Byte();
-//                     break;
-//                 case 6:
-//                     LoadPatternPlane1Byte();
-//                     break;
-//                 case 7:
-//                     IncrementScrollX();
-//                     break;
-//                 default:
-//                     break;
-//             }
-//         }
-//
-//         if ( cycle == 256 ) {
-//             IncrementScrollY();
-//         }
-//         if ( cycle == 257 ) {
-//             LoadBgShifters();
-//             TransferX();
-//         }
-//         // Dummy read at end of scanline
-//         if ( cycle == 338 || cycle == 340 ) {
-//             LoadNametableByte();
-//         }
-//         if ( scanline == -1 && cycle >= 280 && cycle < 305 ) {
-//             TransferY();
-//         }
-//
-//         if ( cycle == 257 && scanline >= 0 ) {
-//             // TODO: sprite rendering
-//         }
-//     }
-//
-//     // Drawing
-//     if ( scanline >= 0 && scanline < 240 && cycle >= 2 && cycle < 258 ) {
-//         u32 const pixel = GetOutputPixel();
-//         frameBuffer.at( bufferIdx ) = pixel;
-//         IncBufferIdx();
-//         if ( IsBufferFull() ) {
-//             if ( onFrameReady != nullptr ) {
-//                 onFrameReady( frameBuffer.data() );
-//             }
-//             ClearFrameBuffer();
-//         }
-//     }
-//
-//     /*
-//     ################################
-//     ||        Vblank Start        ||
-//     ################################
-//     */
-//     if ( scanline == 241 && scanline <= 260 ) {
-//         // If the CPU is reading register 2002 on cycle 0 of scanline 241
-//         // Vblank will not be set until the next frame due to a hardware race condition bug
-//         if ( cycle == 0 && bus->cpu.IsReading2002() ) {
-//             preventVBlank = true;
-//         }
-//
-//         // Set the Vblank flag on cycle 1
-//         if ( scanline == 241 && cycle == 1 ) {
-//
-//             // Vblank and NMI
-//             if ( !preventVBlank ) {
-//                 ppuStatus.bit.verticalBlank = 1;
-//
-//                 // Trigger NMI if NMI is enabled
-//                 if ( ppuCtrl.bit.nmiEnable ) {
-//                     nmiReady = true;
-//                 }
-//             }
-//             preventVBlank = false;
-//         }
-//     }
-//
-//     cycle++;
-//
-//     /*
-//     ################################
-//     ||       End Of Scanline      ||
-//     ################################
-//     */
-//     if ( cycle > 340 ) {
-//         cycle = 0;
-//         scanline++;
-//
-//         if ( scanline > 260 ) {
-//             scanline = -1;
-//             frame++;
-//         }
-//     }
-// }
 
 /*
 ################################
