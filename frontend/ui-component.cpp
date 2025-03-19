@@ -49,7 +49,7 @@ void UIComponent::DebugControls( const std::string &parentLabel )
     ImGui::PopFont();
     ImGui::SameLine();
     ImGui::Indent( innerSpacing );
-    ImGui::Text( "%hu", renderer->bus.ppu.GetCycles() );
+    ImGui::Text( "%hu", renderer->bus.ppu.cycle );
 
     ImGui::SameLine();
     ImGui::Indent( outerSpacing );
@@ -58,7 +58,7 @@ void UIComponent::DebugControls( const std::string &parentLabel )
     ImGui::PopFont();
     ImGui::SameLine();
     ImGui::Indent( innerSpacing );
-    ImGui::Text( "%hd", renderer->bus.ppu.GetScanline() );
+    ImGui::Text( "%hd", renderer->bus.ppu.scanline );
 
     ImGui::SameLine();
     ImGui::Indent( outerSpacing );
@@ -131,15 +131,15 @@ void UIComponent::DebugControls( const std::string &parentLabel )
                 }
                 break;
             case 3: { // Scanlines
-                auto const target = renderer->bus.ppu.GetScanline() + i0;
-                while ( renderer->bus.ppu.GetScanline() < target && !didTimeout() ) {
+                auto const target = renderer->bus.ppu.scanline + i0;
+                while ( renderer->bus.ppu.scanline < target && !didTimeout() ) {
                     execute();
                 }
                 break;
             }
             case 4: { // Frame
-                auto const target = renderer->bus.ppu.GetFrame() + i0;
-                while ( renderer->bus.ppu.GetFrame() < target && !didTimeout() ) {
+                auto const target = renderer->bus.ppu.frame + i0;
+                while ( renderer->bus.ppu.frame < target && !didTimeout() ) {
                     execute();
                 }
                 break;

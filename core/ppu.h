@@ -1,0 +1,781 @@
+#pragma once
+#include "config.h"
+#include "cpu.h"
+#include "mappers/mapper-base.h"
+#include "utils.h"
+#include <cstdint>
+#include <array>
+#include <functional>
+#include <string>
+
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using s16 = std::int16_t;
+
+union PPUCTRL {
+    struct {
+        u8 nametableX : 1;
+        u8 nametableY : 1;
+        u8 vramIncrement : 1;
+        u8 patternSprite : 1;
+        u8 patternBackground : 1;
+        u8 spriteSize : 1;
+        u8 slaveMode : 1; // unused
+        u8 nmiEnable : 1;
+    } bit;
+    u8 value = 0x00;
+};
+union PPUMASK {
+    struct {
+        u8 grayscale : 1;
+        u8 renderBackgroundLeft : 1;
+        u8 renderSpritesLeft : 1;
+        u8 renderBackground : 1;
+        u8 renderSprites : 1;
+        u8 enhanceRed : 1;
+        u8 enhanceGreen : 1;
+        u8 enhanceBlue : 1;
+    } bit;
+    u8 value = 0x00;
+};
+union PPUSTATUS {
+    struct {
+        u8 unused : 5;
+        u8 spriteOverflow : 1;
+        u8 spriteZeroHit : 1;
+        u8 verticalBlank : 1;
+    } bit;
+    u8 value = 0x00;
+};
+
+union LoopyRegister {
+    struct {
+        u16 coarseX : 5;
+        u16 coarseY : 5;
+        u16 nametableX : 1;
+        u16 nametableY : 1;
+        u16 fineY : 3;
+        u16 unused : 1;
+    } bit;
+    u16 value = 0x00;
+};
+
+struct SpriteEntry {
+    u8 y;
+    u8 id;
+    u8 attribute;
+    u8 x;
+};
+union OAM {
+    std::array<u8, 256>         data;
+    std::array<SpriteEntry, 64> entries;
+};
+union SecondaryOAM {
+    std::array<u8, 32>         data;
+    std::array<SpriteEntry, 8> entries;
+};
+
+using namespace std;
+
+/*
+################################################################
+||                                                            ||
+||                             PPU                            ||
+||                                                            ||
+################################################################
+*/
+class PPU
+{
+  public:
+    PPU( Bus *bus );
+    Bus *bus;
+
+    /*
+    ################################
+    ||      Helper Variables      ||
+    ################################
+    */
+    std::array<std::string, 3> systemPalettePaths = { std::string( PALETTES_DIR ) + "/palette1.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette2.pal",
+                                                      std::string( PALETTES_DIR ) + "/palette3.pal" };
+
+    array<u32, 64> nesPaletteRgbValues{};
+    u32            GetMasterPaletteColor( u8 index ) const { return nesPaletteRgbValues.at( index ); }
+
+    bool preventVBlank = false;
+    bool nmiReady = false;
+    bool failedPaletteRead = false;
+    int  systemPaletteIdx = 0;
+    int  maxSystemPalettes = 3;
+
+    // SDL callback
+    std::function<void( const u32 * )> onFrameReady = nullptr;
+
+    /*
+    ################################
+    ||        PPU Variables       ||
+    ################################
+    */
+    u16  scanline = 0;
+    u16  GetScanline() const { return scanline; }
+    void SetScanline( u16 line ) { scanline = line; }
+
+    u16  cycle = 0;
+    u16  GetCycles() const { return cycle; }
+    void SetCycles( u16 cycles ) { cycle = cycles; }
+
+    u64 frame = 1;
+    u64 GetFrame() const { return frame; }
+
+    PPUCTRL ppuCtrl; // $2000
+    u8      GetPpuCtrl() const { return ppuCtrl.value; }
+    u8      GetCtrlNametableX() const { return ppuCtrl.bit.nametableX; }
+    u8      GetCtrlNametableY() const { return ppuCtrl.bit.nametableY; }
+    u8      GetCtrlIncrementMode() const { return ppuCtrl.bit.vramIncrement; }
+    u8      GetCtrlPatternSprite() const { return ppuCtrl.bit.patternSprite; }
+    u8      GetCtrlPatternBackground() const { return ppuCtrl.bit.patternBackground; }
+    u8      GetCtrlSpriteSize() const { return ppuCtrl.bit.spriteSize; }
+    u8      GetCtrlNmiEnable() const { return ppuCtrl.bit.nmiEnable; }
+
+    PPUMASK ppuMask; // $2001
+    u8      GetPpuMask() const { return ppuMask.value; }
+    u8      GetMaskGrayscale() const { return ppuMask.bit.grayscale; }
+    u8      GetMaskRenderBackgroundLeft() const { return ppuMask.bit.renderBackgroundLeft; }
+    u8      GetMaskRenderSpritesLeft() const { return ppuMask.bit.renderSpritesLeft; }
+    u8      GetMaskRenderBackground() const { return ppuMask.bit.renderBackground; }
+    u8      GetMaskRenderSprites() const { return ppuMask.bit.renderSprites; }
+    u8      GetMaskEnhanceRed() const { return ppuMask.bit.enhanceRed; }
+    u8      GetMaskEnhanceGreen() const { return ppuMask.bit.enhanceGreen; }
+    u8      GetMaskEnhanceBlue() const { return ppuMask.bit.enhanceBlue; }
+    bool    IsRenderingEnabled() const { return GetMaskRenderBackground() || GetMaskRenderSprites(); }
+
+    PPUSTATUS ppuStatus; // $2002
+    u8        GetPpuStatus() const { return ppuStatus.value; }
+    u8        GetStatusSpriteOverflow() const { return ppuStatus.bit.spriteOverflow; }
+    u8        GetStatusSpriteZeroHit() const { return ppuStatus.bit.spriteZeroHit; }
+    u8        GetStatusVblank() const { return ppuStatus.bit.verticalBlank; }
+
+    u8 oamAddr = 0x00; // $2003
+    u8 GetOamAddr() const { return oamAddr; }
+
+    u8 oamData = 0x00; // $2004
+    u8 GetOamData() const { return oamData; }
+
+    u8 ppuScroll = 0x00; // $2005
+    u8 GetPpuScroll() const { return ppuScroll; }
+
+    u8 ppuAddr = 0x00; // $2006
+    u8 GetPpuAddr() const { return ppuAddr; }
+
+    u8 ppuData = 0x00; // $2007
+    u8 GetPpuData() const { return ppuData; }
+
+    LoopyRegister vramAddr;
+    u16           GetVramAddr() const { return vramAddr.value; }
+    u8            GetVramCoarseX() const { return vramAddr.bit.coarseX; }
+    u8            GetVramCoarseY() const { return vramAddr.bit.coarseY; }
+    u8            GetVramNametableX() const { return vramAddr.bit.nametableX; }
+    u8            GetVramNametableY() const { return vramAddr.bit.nametableY; }
+    u8            GetVramFineY() const { return vramAddr.bit.fineY; }
+    u8            GetVramUnused() const { return vramAddr.bit.unused; }
+
+    LoopyRegister tempAddr;
+    u16           GetTempAddr() const { return tempAddr.value; }
+    u8            GetTempCoarseX() const { return tempAddr.bit.coarseX; }
+    u8            GetTempCoarseY() const { return tempAddr.bit.coarseY; }
+    u8            GetTempNametableX() const { return tempAddr.bit.nametableX; }
+    u8            GetTempNametableY() const { return tempAddr.bit.nametableY; }
+    u8            GetTempFineY() const { return tempAddr.bit.fineY; }
+    u8            GetTempUnused() const { return tempAddr.bit.unused; }
+
+    u8 fineX = 0x00;
+    u8 GetFineX() const { return fineX; }
+
+    bool addrLatch = false;
+    bool GetAddrLatch() const { return addrLatch; }
+
+    u8              vramBuffer = 0x00;
+    array<u8, 2048> nameTables{};
+    array<u8, 32>   defaultPalette = { 0x09, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x0D, 0x08, 0x10, 0x08,
+                                       0x24, 0x00, 0x00, 0x04, 0x2C, 0x09, 0x01, 0x34, 0x03, 0x00, 0x04,
+                                       0x00, 0x14, 0x08, 0x3A, 0x00, 0x02, 0x00, 0x20, 0x2C, 0x08 };
+
+    array<u8, 32> paletteMemory = defaultPalette;
+    u8            GetPaletteEntry( u8 index ) const { return paletteMemory.at( index ); }
+    void          SetPaletteEntry( u8 index, u8 value ) { paletteMemory.at( index ) = value; }
+
+    OAM         oam{};
+    SpriteEntry GetOamEntry( u8 index ) const { return oam.entries.at( index ); }
+
+    SecondaryOAM secondaryOam{};
+
+    /*
+    ################################
+    ||     Rendering Variables    ||
+    ################################
+    */
+    u8  nametableByte = 0x00;
+    u8  attributeByte = 0x00;
+    u8  bgPattern0Byte = 0x00;
+    u8  bgPattern1Byte = 0x00;
+    u16 bgPatternShiftLow = 0x0000;  // holds bitplane 0 (low bits) of tile pixels
+    u16 bgPatternShiftHigh = 0x0000; // holds bitplane 1 (high bits) of tile pixels
+    u16 bgAttributeShiftLow = 0x00;
+    u16 bgAttributeShiftHigh = 0x00;
+
+    std::array<u8, 8> spriteShiftLow{};  // low bitplane pattern data for each sprite
+    std::array<u8, 8> spriteShiftHigh{}; // high bitplane pattern data for each sprite
+    std::array<u8, 8> spriteXCounters{}; // Count down each tick, sprites start shifting pixels at 0
+    std::array<u8, 8> spriteAttributes{};
+
+    // Sprite helpers
+    SpriteEntry currentSprite{};
+    bool        sprite0Added = false;
+    bool        sprite0Visible = false;
+    bool        spriteInRange = false;
+    u8          spriteCount = 0;
+    u8          secondaryOamAddr = 0;
+    u8          oamCopyBuffer = 0;
+    u8          spriteAddrHi = 0;
+    u8          spriteAddrLo = 0;
+    bool        oamCopyDone = false;
+
+    u8 firstVisibleSpriteAddr = 0; // For extra sprites
+    u8 lastVisibleSpriteAddr = 0;  // For extra sprites
+
+    /*
+    ################################
+    ||       Debug Variables      ||
+    ################################
+    */
+    bool isDisabled = false;
+    void EnableJsonTestMode() { isDisabled = true; }
+    void DisableJsonTestMode() { isDisabled = false; }
+
+    /*
+    ################################
+    ||        SDL Variables       ||
+    ################################
+    */
+    array<u32, 61440> frameBuffer{};
+    u32               bufferIdx = 0;
+    void              ClearFrameBuffer() { frameBuffer.fill( 0x00000000 ); }
+    void              IncBufferIdx() { bufferIdx = ( bufferIdx + 1 ) % 61440; }
+    bool              IsBufferFull() const { return bufferIdx == 0; }
+
+    /*
+    ################################
+    ||     Method Declarations    ||
+    ################################
+    */
+    MirrorMode GetMirrorMode() const;
+    u8         HandleCpuRead( u16 address, bool debugMode = false );
+    void       HandleCpuWrite( u16 address, u8 data );
+    u8         ReadVram( u16 addr );
+    void       WriteVram( u16 addr, u8 data );
+    u16        ResolveNameTableAddress( u16 addr, int testMirrorMode = -1 ) const;
+    void       Tick();
+    void       EvaluateSprites();
+    void       OamCopy();
+
+    /*
+    ################################################################
+    ||                                                            ||
+    ||                    Inline Helper Methods                   ||
+    ||                                                            ||
+    ################################################################
+    */
+
+    void PreRenderScanline()
+    {
+        if ( scanline == 261 ) {
+            ppuStatus.bit.verticalBlank = 0;
+            ppuStatus.bit.spriteZeroHit = 0;
+            ppuStatus.bit.spriteOverflow = 0;
+        }
+    }
+
+    void LoadBgShifters()
+    {
+        /* @brief Loads the next background tile information (lower 8 bits) into the background shifters
+         */
+        bgPatternShiftLow = ( bgPatternShiftLow & 0xFF00 ) | bgPattern0Byte;
+        bgPatternShiftHigh = ( bgPatternShiftHigh & 0xFF00 ) | bgPattern1Byte;
+        u8 const attrMaskLow = ( attributeByte & 0b01 ) ? 0xFF : 0x00;
+        u8 const attrMaskHigh = ( attributeByte & 0b10 ) ? 0xFF : 0x00;
+        bgAttributeShiftLow = ( bgAttributeShiftLow & 0xFF00 ) | attrMaskLow;
+        bgAttributeShiftHigh = ( bgAttributeShiftHigh & 0xFF00 ) | attrMaskHigh;
+    }
+    void ShiftBgRegisters()
+    {
+        bgPatternShiftLow <<= 1;
+        bgPatternShiftHigh <<= 1;
+        bgAttributeShiftLow <<= 1;
+        bgAttributeShiftHigh <<= 1;
+    }
+    void ShiftSpriteRegisters()
+    {
+        // Sprite registers shift only during visible rendering (scanlines 0-239, cycles 1–256)
+        if ( scanline > 239 || cycle < 1 || cycle > 256 ) {
+            return;
+        }
+
+        for ( int i = 0; i < 8; i++ ) {
+            if ( spriteXCounters.at( i ) > 0 ) {
+                spriteXCounters.at( i )--;
+            } else {
+                spriteShiftLow.at( i ) <<= 1;
+                spriteShiftHigh.at( i ) <<= 1;
+            }
+        }
+    }
+
+    void FetchTileData()
+    {
+        // Background fetches (cycles 1–256 and 321–336)
+        if ( ( cycle >= 1 && cycle <= 256 ) || ( cycle >= 321 && cycle <= 336 ) ) {
+            switch ( cycle & 0x07 ) { // equivalent to cycle % 8
+
+                case 1: // Nametable fetch
+                    nametableByte = ReadVram( 0x2000 | ( vramAddr.value & 0x0FFF ) );
+                    break;
+                case 3: // Attribute fetch
+                    FetchAttributeByte();
+                    break;
+                case 5:
+                    FetchPattern0Byte();
+                    break;
+                case 7:
+                    FetchPattern1Byte();
+                    break;
+                case 0:
+                    LoadBgShifters();
+                    IncrementCoarseX();
+                    break;
+                default:
+            }
+        }
+    }
+
+    void ClearSecondaryOam()
+    {
+        if ( scanline > 239 || ( cycle < 1 || cycle > 64 ) ) {
+            return;
+        }
+        // Cycle 1-64: Initialize secondary OAM to 0xFF, every other cycle
+        secondaryOam.data.at( ( cycle - 1 ) >> 1 ) = 0xFF;
+    }
+
+    // Called exactly at cycle 65 to initialize sprite evaluation.
+    void EvaluateSpritesStart()
+    {
+        if ( cycle != 65 )
+            return;
+
+        sprite0Added = false;
+        spriteInRange = false;
+        secondaryOamAddr = 0;
+        oamCopyDone = false;
+
+        // Sprite evaluation can start at any byte in OAM (based on OAMADDR from $2003).
+        // Interpret that byte as the "sprite 0" Y coordinate.
+        spriteAddrHi = ( oamAddr >> 2 ) & 0x3F;
+        spriteAddrLo = oamAddr & 0x03;
+
+        firstVisibleSpriteAddr = spriteAddrHi * 4;
+        lastVisibleSpriteAddr = firstVisibleSpriteAddr;
+    }
+
+    // Called on cycle 256 to finalize sprite evaluation.
+    void EvaluateSpritesEnd()
+    {
+        if ( cycle != 256 )
+            return;
+
+        sprite0Visible = sprite0Added;
+        // Compute how many sprites were copied (each sprite occupies 4 bytes).
+        spriteCount = ( ( secondaryOamAddr + 3 ) >> 2 );
+    }
+
+    void FetchAttributeByte()
+    {
+        u16 const nametableSelect = vramAddr.value & 0x0C00;
+        u8 const  attrX = vramAddr.bit.coarseX >> 2;
+        u8 const  attrY = ( vramAddr.bit.coarseY >> 2 ) << 3;
+        u16 const attrAddr = 0x23C0 | nametableSelect | attrY | attrX;
+        attributeByte = ReadVram( attrAddr );
+        if ( vramAddr.bit.coarseY & 0x02 )
+            attributeByte >>= 4;
+        if ( vramAddr.bit.coarseX & 0x02 )
+            attributeByte >>= 2;
+        attributeByte &= 0x03;
+    }
+
+    void FetchPattern0Byte()
+    {
+        u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+        u16 const tileOffset = nametableByte << 4;
+        u16 const rowOffset = vramAddr.bit.fineY;
+        bgPattern0Byte = ReadVram( bgPatternOffset + tileOffset + rowOffset );
+    }
+
+    void FetchPattern1Byte()
+    {
+        u16 const bgPatternOffset = ppuCtrl.bit.patternBackground == 0 ? 0x0000 : 0x1000;
+        u16 const tileOffset = nametableByte << 4;
+        u16 const rowOffset = vramAddr.bit.fineY;
+        bgPattern1Byte = ReadVram( bgPatternOffset + tileOffset + rowOffset + 8 );
+    }
+
+    void IncrementCoarseX()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+
+        if ( vramAddr.bit.coarseX == 31 ) {
+            vramAddr.bit.coarseX = 0;
+            vramAddr.bit.nametableX = ~vramAddr.bit.nametableX;
+        } else {
+            vramAddr.bit.coarseX++;
+        }
+    }
+
+    void IncrementCoarseY()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        if ( vramAddr.bit.fineY < 7 ) {
+            vramAddr.bit.fineY++;
+        } else {
+            vramAddr.bit.fineY = 0;
+            if ( vramAddr.bit.coarseY == 29 ) {
+                vramAddr.bit.coarseY = 0;
+                vramAddr.bit.nametableY = ~vramAddr.bit.nametableY;
+            } else if ( vramAddr.bit.coarseY == 31 ) {
+                vramAddr.bit.coarseY = 0;
+            } else {
+                vramAddr.bit.coarseY++;
+            }
+        }
+    }
+
+    void RenderPixel()
+    {
+        /*
+          Adopted from OLC NES Implementation
+        */
+        if ( scanline > 239 || cycle < 1 || cycle > 256 ) {
+            return;
+        }
+        u8   bgPixel = 0x00;
+        u8   bgPalette = 0x00;
+        u8   fgPixel = 0x00;
+        u8   fgPalette = 0x00;
+        bool fgPriority = false;
+        bool spriteZeroBeingRendered = false;
+
+        // Background Pixel Rendering
+        if ( ppuMask.bit.renderBackground && ( ppuMask.bit.renderBackgroundLeft || ( cycle >= 9 ) ) ) {
+            u16 bitMux = 0x8000 >> fineX;
+            u8  p0Pixel = ( bgPatternShiftLow & bitMux ) ? 1 : 0;
+            u8  p1Pixel = ( bgPatternShiftHigh & bitMux ) ? 1 : 0;
+            bgPixel = ( p1Pixel << 1 ) | p0Pixel;
+
+            u8 bgPal0 = ( bgAttributeShiftLow & bitMux ) ? 1 : 0;
+            u8 bgPal1 = ( bgAttributeShiftHigh & bitMux ) ? 1 : 0;
+            bgPalette = ( bgPal1 << 1 ) | bgPal0;
+        }
+
+        // Sprite (Foreground) Pixel Rendering
+        if ( ppuMask.bit.renderSprites && ( ppuMask.bit.renderSpritesLeft || ( cycle >= 9 ) ) ) {
+            for ( u8 i = 0; i < spriteCount; i++ ) {
+                if ( spriteXCounters[i] == 0 ) {
+                    u8 fgPixelLo = ( spriteShiftLow[i] & 0x80 ) ? 1 : 0;
+                    u8 fgPixelHi = ( spriteShiftHigh[i] & 0x80 ) ? 1 : 0;
+                    fgPixel = ( fgPixelHi << 1 ) | fgPixelLo;
+
+                    fgPalette = ( secondaryOam.entries[i].attribute & 0x03 ) + 0x04;
+                    fgPriority = ( secondaryOam.entries[i].attribute & 0x20 ) == 0;
+
+                    if ( fgPixel != 0 ) {
+                        if ( i == 0 ) {
+                            spriteZeroBeingRendered = true;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Pixel Priority Decision
+        u8 finalPixel = 0x00;
+        u8 finalPalette = 0x00;
+
+        if ( bgPixel == 0 && fgPixel == 0 ) {
+            finalPixel = 0x00;
+            finalPalette = 0x00;
+        } else if ( bgPixel == 0 && fgPixel > 0 ) {
+            finalPixel = fgPixel;
+            finalPalette = fgPalette;
+        } else if ( bgPixel > 0 && fgPixel == 0 ) {
+            finalPixel = bgPixel;
+            finalPalette = bgPalette;
+        } else { // Both visible, decide priority
+            if ( fgPriority ) {
+                finalPixel = fgPixel;
+                finalPalette = fgPalette;
+            } else {
+                finalPixel = bgPixel;
+                finalPalette = bgPalette;
+            }
+
+            // Sprite Zero Hit Detection
+            if ( sprite0Visible && spriteZeroBeingRendered ) {
+                if ( ppuMask.bit.renderBackground && ppuMask.bit.renderSprites ) {
+                    bool leftClipDisabled =
+                        !( ppuMask.bit.renderBackgroundLeft || ppuMask.bit.renderSpritesLeft );
+                    if ( ( !leftClipDisabled && cycle >= 9 && cycle < 258 ) ||
+                         ( leftClipDisabled && cycle >= 1 && cycle < 258 ) ) {
+                        ppuStatus.bit.spriteZeroHit = 1;
+                    }
+                }
+            }
+        }
+
+        // Write final color to framebuffer
+        u16 paletteAddr = 0x3F00 + ( finalPalette << 2 ) + finalPixel;
+        u8  paletteIdx = ReadVram( paletteAddr ) & 0x3F;
+        u32 rgbColor = nesPaletteRgbValues.at( paletteIdx );
+
+        frameBuffer.at( bufferIdx ) = rgbColor;
+        IncBufferIdx();
+
+        if ( IsBufferFull() ) {
+            if ( onFrameReady ) {
+                onFrameReady( frameBuffer.data() );
+            }
+            ClearFrameBuffer();
+        }
+    }
+
+    void TransferX()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        vramAddr.bit.nametableX = tempAddr.bit.nametableX;
+        vramAddr.bit.coarseX = tempAddr.bit.coarseX;
+    }
+
+    void TransferY()
+    {
+        if ( !IsRenderingEnabled() ) {
+            return;
+        }
+        vramAddr.bit.fineY = tempAddr.bit.fineY;
+        vramAddr.bit.nametableY = tempAddr.bit.nametableY;
+        vramAddr.bit.coarseY = tempAddr.bit.coarseY;
+    }
+
+    void Reset()
+    {
+        scanline = 0;
+        cycle = 0;
+        frame = 1;
+        preventVBlank = false;
+        ppuCtrl.value = 0x00;
+        ppuMask.value = 0x00;
+        ppuStatus.value = 0x00;
+        oamAddr = 0x00;
+        oamData = 0x00;
+        ppuScroll = 0x00;
+        ppuAddr = 0x00;
+        ppuData = 0x00;
+        addrLatch = false;
+        vramBuffer = 0x00;
+        vramAddr.value = 0x0000;
+        tempAddr.value = 0x0000;
+        fineX = 0x00;
+        nameTables.fill( 0x00 );
+        paletteMemory = defaultPalette;
+    }
+
+    void IncrementSystemPalette()
+    {
+        if ( failedPaletteRead ) {
+            return;
+        }
+        systemPaletteIdx = ( systemPaletteIdx + 1 ) % maxSystemPalettes;
+        LoadSystemPalette( systemPaletteIdx );
+    }
+
+    void DecrementSystemPalette()
+    {
+        if ( failedPaletteRead ) {
+            return;
+        }
+        int newIdx = systemPaletteIdx - 1;
+        if ( newIdx < 0 ) {
+            newIdx = maxSystemPalettes - 1;
+        }
+        systemPaletteIdx = newIdx;
+        LoadSystemPalette( systemPaletteIdx );
+    }
+
+    void LoadSystemPalette( int paletteIdx = 0 )
+    {
+        std::string const palettePath = systemPalettePaths.at( paletteIdx );
+        nesPaletteRgbValues = utils::readPalette( palettePath );
+    }
+
+    u8 GetPpuPaletteValue( u8 index ) { return paletteMemory.at( index ); }
+
+    u32 GetPpuPaletteColor( u8 index ) { return nesPaletteRgbValues.at( paletteMemory.at( index ) ); }
+
+    void LoadDefaultSystemPalette()
+    {
+        // clang-format off
+        nesPaletteRgbValues = {
+            0xFF606060, 0xFF7B2100, 0xFF9C0000, 0xFF8B0031, 0xFF6F0059, 0xFF31006F, 0xFF000064, 0xFF00114F,
+            0xFF00192F, 0xFF002927, 0xFF004400, 0xFF373900, 0xFF4F3900, 0xFF000000, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFAEAEAE, 0xFFCE5610, 0xFFFF2C1B, 0xFFEC2060, 0xFFBF00A9, 0xFF5416CA, 0xFF0800CA, 0xFF043A9E,
+            0xFF005167, 0xFF006143, 0xFF007C00, 0xFF537100, 0xFF877100, 0xFF0C0C0C, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFFFFFFF, 0xFFFE9E44, 0xFFFF6C5C, 0xFFFF6699, 0xFFFF60D7, 0xFF9562FF, 0xFF5364FF, 0xFF3094F4,
+            0xFF00ACC2, 0xFF14C490, 0xFF28D252, 0xFF92C620, 0xFFD2BA18, 0xFF4C4C4C, 0xFF0C0C0C, 0xFF0C0C0C,
+            0xFFFFFFFF, 0xFFFFCCA3, 0xFFFFB4A4, 0xFFFFB6C1, 0xFFFFB7E0, 0xFFC5C0FF, 0xFFABBCFF, 0xFF9FD0FF,
+            0xFF90E0FC, 0xFF98EAE2, 0xFFA0F2CA, 0xFFE2EAA0, 0xFFFAE2A0, 0xFFB6B6B6, 0xFF0C0C0C, 0xFF0C0C0C
+        };
+        // clang-format on
+    }
+
+    // Get pattern table data, used in debugging (frontend/ui/pattern-tables.h)
+    std::array<u32, 16384> GetPatternTable( int tableIdx )
+    {
+        std::array<u32, 16384> buffer{};
+        u16 const              baseAddr = tableIdx == 0 ? 0x0000 : 0x1000;
+
+        // 256 tiles in a pattern table
+        for ( int tile = 0; tile < 256; tile++ ) {
+            int const tileX = tile % 16;
+            int const tileY = tile / 16;
+
+            // 16 bytes per tile, split into two bit planes
+            u16 const tileAddr = baseAddr + ( tile * 16 );
+
+            // Each tile is 8x8 pixels
+            for ( int row = 0; row < 8; row++ ) {
+                u8 const plane0Byte = ReadVram( tileAddr + row );
+                u8 const plane1Byte = ReadVram( tileAddr + row + 8 );
+                for ( int bit = 7; bit >= 0; bit-- ) {
+                    u8 const plane0Bit = ( plane0Byte >> bit ) & 0x01;
+                    u8 const plane1Bit = ( plane1Byte >> bit ) & 0x01;
+                    u8 const colorIdx = ( plane1Bit << 1 ) | plane0Bit;
+
+                    // Calculate the buffer index (pixel position)
+                    int const localX = 7 - bit;
+                    int const globalX = ( tileX * 8 ) + localX;
+                    int const globalY = ( tileY * 8 ) + row;
+                    int const bufferIdx = ( globalY * 128 ) + globalX;
+                    buffer.at( bufferIdx ) = GetPpuPaletteColor( colorIdx );
+                }
+            }
+        }
+
+        return buffer;
+    }
+
+    // Nametable data, used in debugging (frontend/ui/nametables.h)
+    std::array<u32, 61440> GetNametable( int nametableIdx )
+    {
+        std::array<u32, 61440> buffer{};
+
+        u16 vramStart = 0x2000;
+        switch ( nametableIdx ) {
+            case 0:
+                vramStart = 0x2000;
+                break;
+            case 1:
+                vramStart = 0x2400;
+                break;
+            case 2:
+                vramStart = 0x2800;
+                break;
+            case 3:
+                vramStart = 0x2C00;
+                break;
+            default:
+                break;
+        }
+
+        /* Vram Structure, for reference
+        yyy NN YYYYY XXXXX
+        ||| || ||||| +++++-- tile X (coarse X scroll)
+        ||| || +++++-------- tile Y (coarse Y scroll)
+        ||| ++-------------- nametable 0-3
+        +++----------------- fine Y scroll
+        */
+
+        u16 const vramEnd = vramStart + 960;
+        u16 const attrBase = vramStart + 960;
+
+        for ( int vramAddr = vramStart; vramAddr < vramEnd; vramAddr++ ) {
+
+            // Determines which 8x8 tile is being processed, which is info provided by the vram addr
+            const int tileX = vramAddr & 0x1F;
+            const int tileY = ( vramAddr >> 5 ) & 0x1F;
+
+            // Bit 4 from ctrl registers determines the pattern table
+            u16 const patternTableBaseAddr = ppuCtrl.bit.patternBackground ? 0x1000 : 0x0000;
+
+            // Vram address determines which tile index to use from the pattern table (0-255)
+            u8 const tileIndex = ReadVram( vramAddr );
+
+            // Combining the two gives the pattern table address
+            u16 const tileAddr = patternTableBaseAddr + ( tileIndex * 16 );
+
+            // Grab the attribute byte, which covers a 32x32 area
+            u8 const  attrX = tileX / 4;
+            u8 const  attrY = tileY / 4;
+            u16 const attrAddr = attrBase + ( attrY * 8 ) + attrX;
+            u8 const  attributeByte = ReadVram( attrAddr );
+
+            // Determine which 4x4 quadrant the tile is in
+            u8 const attrQuadX = ( tileX % 4 ) >> 1;
+            u8 const attrQuadY = ( tileY % 4 ) >> 1;
+            // (0,0) -> 0, (0,1) -> 1, (1,0) -> 2, (1,1) -> 3
+            u8 const quadrant = ( attrQuadY << 1 ) | attrQuadX;
+
+            // Extract the palette index from the attribute byte
+            /*
+                7654 3210
+                |||| ||++- Color bits 3-2 for top left quadrant
+                |||| ++--- Color bits 3-2 for top right quadrant
+                ||++------ Color bits 3-2 for bottom left quadrant
+                ++-------- Color bits 3-2 for bottom right quadrant
+            */
+            u8 const paletteIdx = ( attributeByte >> ( 2 * quadrant ) ) & 0x03;
+
+            // Now, combining all the tile data and adding it to the correct location in the buffer
+            for ( int pixelRow = 0; pixelRow < 8; pixelRow++ ) {
+                u8 const plane0Byte = ReadVram( tileAddr + pixelRow );
+                u8 const plane1Byte = ReadVram( tileAddr + pixelRow + 8 );
+                for ( int bit = 7; bit >= 0; bit-- ) {
+                    u8 const plane0Bit = ( plane0Byte >> bit ) & 0x01;
+                    u8 const plane1Bit = ( plane1Byte >> bit ) & 0x01;
+                    u8 const colorIdx = ( plane1Bit << 1 ) | plane0Bit;
+
+                    // Calculate the buffer index (final pixel position)
+                    int const tilePixelX = 7 - bit;
+                    int const screenPixelX = ( tileX * 8 ) + tilePixelX;
+                    int const screenPixelY = ( tileY * 8 ) + pixelRow;
+                    int const bufferIdx = ( screenPixelY * 256 ) + screenPixelX;
+                    u8 const  finalColorIdx = ( paletteIdx * 4 ) + colorIdx;
+                    buffer.at( bufferIdx ) = GetPpuPaletteColor( finalColorIdx );
+                }
+            }
+        }
+        return buffer;
+    }
+};

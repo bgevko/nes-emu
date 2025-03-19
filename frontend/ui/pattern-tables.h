@@ -268,7 +268,7 @@ class PatternTablesWindow : public UIComponent
         {
             ImGui::BeginGroup();
             u16 const paletteAddress = 0x3F00 + targetId;
-            u8 const  colorIndex = renderer->bus.ppu.Read( paletteAddress );
+            u8 const  colorIndex = renderer->bus.ppu.ReadVram( paletteAddress );
 
             ImGui::Text( "Index" );
             ImGui::SameLine();

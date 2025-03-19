@@ -133,12 +133,12 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
 
     // Scanline num (V)
     if ( verbose ) {
-        std::string const scanlineStr = std::to_string( _bus->ppu.GetScanline() );
+        std::string const scanlineStr = std::to_string( _bus->ppu.scanline );
         // std::string scanline_str_adjusted = std::string( 4 - scanline_str.size(), ' ' );
         output += "  V: " + scanlineStr;
 
         // PPU cycles (H), pad for 3 characters + space
-        u16 const   ppuCycles = _bus->ppu.GetCycles();
+        u16 const   ppuCycles = _bus->ppu.cycle;
         std::string ppuCyclesStr = std::to_string( ppuCycles );
         ppuCyclesStr += std::string( 4 - ppuCyclesStr.size(), ' ' );
         output += "  H: " + ppuCyclesStr; // PPU cycle

@@ -1,5 +1,5 @@
 #pragma once
-#include "ines2.h"
+#include "cartridge-header.h"
 #include <cstdint>
 
 using u8 = uint8_t;

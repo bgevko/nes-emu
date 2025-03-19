@@ -65,21 +65,21 @@ class PpuViewerWindow : public UIComponent
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "PPU Cycle" );
         ImGui::TableSetColumnIndex( 1 );
-        int cycles = renderer->bus.ppu.GetCycles();
+        int cycles = renderer->bus.ppu.cycle;
         ImGui::Text( "%d", cycles );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Scanline" );
         ImGui::TableSetColumnIndex( 1 );
-        int scanline = renderer->bus.ppu.GetScanline();
+        int scanline = renderer->bus.ppu.scanline;
         ImGui::Text( "%d", scanline );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Frame" );
         ImGui::TableSetColumnIndex( 1 );
-        auto frame = renderer->bus.ppu.GetFrame();
+        auto frame = renderer->bus.ppu.frame;
         ImGui::Text( U64_FORMAT_SPECIFIER, frame );
 
         SectionTableEnd();
@@ -343,28 +343,28 @@ class PpuViewerWindow : public UIComponent
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Bg Pattern Low" );
         ImGui::TableSetColumnIndex( 1 );
-        auto bgPatternLow = renderer->bus.ppu.GetBgShiftPatternLow();
+        auto bgPatternLow = renderer->bus.ppu.bgPatternShiftLow;
         ImGui::Text( "$%04X", bgPatternLow );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Bg Pattern High" );
         ImGui::TableSetColumnIndex( 1 );
-        auto bgPatternHigh = renderer->bus.ppu.GetBgShiftPatternHigh();
+        auto bgPatternHigh = renderer->bus.ppu.bgPatternShiftHigh;
         ImGui::Text( "$%04X", bgPatternHigh );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Bg Attr Low" );
         ImGui::TableSetColumnIndex( 1 );
-        auto bgAttrLow = renderer->bus.ppu.GetBgShiftAttributeLow();
+        auto bgAttrLow = renderer->bus.ppu.bgAttributeShiftLow;
         ImGui::Text( "$%04X", bgAttrLow );
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex( 0 );
         ImGui::Text( "Bg Attr High" );
         ImGui::TableSetColumnIndex( 1 );
-        auto bgAttrHigh = renderer->bus.ppu.GetBgShiftAttributeHigh();
+        auto bgAttrHigh = renderer->bus.ppu.bgAttributeShiftHigh;
         ImGui::Text( "$%04X", bgAttrHigh );
 
         SectionTableEnd();

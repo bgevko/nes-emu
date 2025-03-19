@@ -131,14 +131,14 @@ class Renderer
         bus.ppu.onFrameReady = [this]( const u32 *frameBuffer ) {
             this->ProcessPpuFrameBuffer( frameBuffer );
         };
-        currentFrame = bus.ppu.GetFrame();
+        currentFrame = bus.ppu.frame;
     }
 
     void LoadNewCartridge( const std::string &newRomFile )
     {
         bus.cartridge.LoadRom( newRomFile );
         bus.DebugReset();
-        currentFrame = bus.ppu.GetFrame();
+        currentFrame = bus.ppu.frame;
         frameCount = 0;
     }
 
@@ -548,13 +548,13 @@ class Renderer
     */
     void ExecuteFrame()
     {
-        while ( currentFrame == bus.ppu.GetFrame() ) {
+        while ( currentFrame == bus.ppu.frame ) {
             if ( paused ) {
                 break;
             }
             bus.Clock();
         }
-        currentFrame = bus.ppu.GetFrame();
+        currentFrame = bus.ppu.frame;
     }
 
     void UpdateUiWindows() {}
@@ -629,7 +629,7 @@ class Renderer
 
     void CalculateFps()
     {
-        u64 const framesRendered = bus.ppu.GetFrame();
+        u64 const framesRendered = bus.ppu.frame;
         u16 const framesThisSecond = framesRendered - frameCount;
         frameCount = framesRendered;
         fps = framesThisSecond;
