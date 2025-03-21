@@ -5,11 +5,6 @@
 #include <array>
 #include <cstdint>
 
-using u8 = uint8_t;
-using u16 = uint16_t;
-using u64 = uint64_t;
-using s16 = int16_t;
-
 class Cartridge;
 class CPU;
 class PPU;

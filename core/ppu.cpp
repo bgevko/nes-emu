@@ -397,37 +397,6 @@ void PPU::WriteVram( u16 address, u8 data )
 /*
 ################################
 ||                            ||
-||       PPU Cycle Tick       ||
-||                            ||
-################################
-*/
-void PPU::Tick()
-{
-    if ( isDisabled ) {
-        return;
-    }
-    VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
-    PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
-
-    RenderFrameBuffer();
-
-    VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
-    PrerenderScanline(); // Scanline 261
-    cycle++;
-    if ( cycle >= 341 ) {
-        cycle = 0;
-        scanline++;
-        if ( scanline > 261 ) {
-            scanline = 0;
-            frame++;
-            OddFrameSkip();
-        }
-    }
-}
-
-/*
-################################
-||                            ||
 ||           Helpers          ||
 ||                            ||
 ################################
@@ -616,4 +585,36 @@ u16 PPU::ResolveNameTableAddress( u16 addr, int testMirrorMode ) const
 MirrorMode PPU::GetMirrorMode() const
 {
     return bus->cartridge.GetMirrorMode();
+}
+
+/*
+################################
+||                            ||
+||       PPU Cycle Tick       ||
+||                            ||
+################################
+*/
+void PPU::Tick()
+{
+    if ( isDisabled ) {
+        return;
+    }
+    VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
+    PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
+
+    RenderFrameBuffer();
+
+    VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
+    PrerenderScanline(); // Scanline 261
+    cycle++;
+
+    u8 oddFrameOffset = ( frame & 0x01 ) == 1 ? 1 : 0;
+    if ( cycle > ( 340 - oddFrameOffset ) ) {
+        cycle = 0;
+        scanline++;
+        if ( scanline > 261 ) {
+            scanline = 0;
+            frame++;
+        }
+    }
 }

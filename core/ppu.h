@@ -1,89 +1,16 @@
 #pragma once
 #include "config.h"
 #include "cpu.h"
+#include "ppu-types.h"
 #include "mappers/mapper-base.h"
-#include "utils.h"
-#include <cstdint>
 #include <array>
 #include <functional>
+#include <iostream>
 #include <string>
-
-using u8 = std::uint8_t;
-using u16 = std::uint16_t;
-using s16 = std::int16_t;
-
-union PPUCTRL {
-    struct {
-        u8 nametableX : 1;
-        u8 nametableY : 1;
-        u8 vramIncrement : 1;
-        u8 patternSprite : 1;
-        u8 patternBackground : 1;
-        u8 spriteSize : 1;
-        u8 slaveMode : 1; // unused
-        u8 nmiEnable : 1;
-    } bit;
-    u8 value = 0x00;
-};
-union PPUMASK {
-    struct {
-        u8 grayscale : 1;
-        u8 renderBackgroundLeft : 1;
-        u8 renderSpritesLeft : 1;
-        u8 renderBackground : 1;
-        u8 renderSprites : 1;
-        u8 enhanceRed : 1;
-        u8 enhanceGreen : 1;
-        u8 enhanceBlue : 1;
-    } bit;
-    u8 value = 0x00;
-};
-union PPUSTATUS {
-    struct {
-        u8 unused : 5;
-        u8 spriteOverflow : 1;
-        u8 spriteZeroHit : 1;
-        u8 vBlank : 1;
-    } bit;
-    u8 value = 0x00;
-};
-
-union LoopyRegister {
-    struct {
-        u16 coarseX : 5;
-        u16 coarseY : 5;
-        u16 nametableX : 1;
-        u16 nametableY : 1;
-        u16 fineY : 3;
-        u16 unused : 1;
-    } bit;
-    u16 value = 0x00;
-};
-
-struct SpriteEntry {
-    u8 y;
-    u8 tileIndex;
-    u8 attribute;
-    u8 x;
-};
-union OAM {
-    std::array<u8, 256>         data;
-    std::array<SpriteEntry, 64> entries;
-};
-union SecondaryOAM {
-    std::array<u8, 32>         data;
-    std::array<SpriteEntry, 8> entries;
-};
+#include <fstream>
 
 using namespace std;
 
-/*
-################################################################
-||                                                            ||
-||                             PPU                            ||
-||                                                            ||
-################################################################
-*/
 class PPU
 {
   public:
@@ -211,9 +138,9 @@ class PPU
     ||     Rendering Variables    ||
     ################################
     */
-    static constexpr u16 gRenderCycleStart = 1;
-    static constexpr u16 gRenderCycleEnd = 256;
-    static constexpr u16 gPreRenderScanline = 261;
+    static constexpr u16 gFetchStart = 1;
+    static constexpr u16 gFetchEnd = 256;
+    static constexpr u16 gPrerenderScanline = 261;
 
     u8  nametableByte = 0x00;
     u8  attributeByte = 0x00;
@@ -299,19 +226,20 @@ class PPU
     void       VblankPeriod();
 
     /*
+    ################################
+    ||            Utils           ||
+    ################################
+    */
+    bool InCycle( int left, int right ) const { return left <= cycle && cycle <= right; }
+    bool InScanline( int left, int right ) const { return left <= scanline && scanline <= right; }
+
+    /*
     ################################################################
     ||                                                            ||
     ||                    Inline Helper Methods                   ||
     ||                                                            ||
     ################################################################
     */
-    void OddFrameSkip()
-    {
-        bool isOddFrame = frame & 0x01;
-        if ( scanline == 0 && cycle == 0 && isOddFrame && IsRenderingEnabled() ) {
-            cycle = 1;
-        }
-    }
 
     void LoadBgShifters()
     {
@@ -367,7 +295,7 @@ class PPU
 
     void PrerenderScanline()
     {
-        if ( scanline != gPreRenderScanline ) {
+        if ( scanline != gPrerenderScanline ) {
             return;
         }
 
@@ -383,7 +311,8 @@ class PPU
             }
         }
 
-        if ( cycle >= gRenderCycleStart && cycle <= gRenderCycleEnd ) {
+        // if ( cycle >= gFetchStart && cycle <= gFetchEnd ) {
+        if ( InCycle( gFetchStart, gFetchEnd ) ) {
             FetchBgTileData();
 
             if ( cycle <= 64 )
@@ -405,8 +334,7 @@ class PPU
     void VisibleScanline()
     {
         if ( scanline <= 239 ) {
-            // cycle 0 is idle
-            if ( cycle >= gRenderCycleStart && cycle <= gRenderCycleEnd ) {
+            if ( cycle >= gFetchStart && cycle <= gFetchEnd ) {
                 FetchBgTileData();
                 UpdateFrameBuffer();
 
@@ -702,11 +630,11 @@ class PPU
              ( ppuMask.bit.renderBackground & ppuMask.bit.renderSprites ) ) {
 
             if ( !( ppuMask.bit.renderBackgroundLeft | ppuMask.bit.renderSpritesLeft ) ) {
-                if ( cycle >= 9 && cycle < gRenderCycleEnd ) {
+                if ( cycle >= 9 && cycle < gFetchEnd ) {
                     ppuStatus.bit.spriteZeroHit = 1;
                 }
             } else {
-                if ( cycle >= 1 && cycle < gRenderCycleEnd ) {
+                if ( cycle >= 1 && cycle < gFetchEnd ) {
                     ppuStatus.bit.spriteZeroHit = 1;
                 }
             }
@@ -805,7 +733,7 @@ class PPU
     void LoadSystemPalette( int paletteIdx = 0 )
     {
         std::string const palettePath = systemPalettePaths.at( paletteIdx );
-        nesPaletteRgbValues = utils::readPalette( palettePath );
+        nesPaletteRgbValues = ReadPalette( palettePath );
     }
 
     u8 GetPpuPaletteValue( u8 index ) { return paletteMemory.at( index ); }
@@ -955,5 +883,42 @@ class PPU
             }
         }
         return buffer;
+    }
+
+    static array<uint32_t, 64> ReadPalette( const string &filename )
+    {
+        array<uint32_t, 64> nesPalette{};
+
+        std::ifstream file( filename, std::ios::binary );
+        if ( !file ) {
+            std::cerr << "utils::readPalette: Failed to open palette file: " << filename << '\n';
+            throw std::runtime_error( "Failed to open palette file" );
+        }
+
+        file.seekg( 0, std::ios::end );
+        streamsize const fileSize = file.tellg();
+        if ( fileSize != 192 ) {
+            std::cerr << "utils::readPalette: Invalid palette file size: " << fileSize << '\n';
+            throw std::runtime_error( "Invalid palette file size" );
+        }
+
+        file.seekg( 0, std::ios::beg );
+
+        char buffer[192]; // NOLINT
+        if ( !file.read( buffer, 192 ) ) {
+            std::cerr << "utils::readPalette: Failed to read palette file: " << filename << '\n';
+            throw std::runtime_error( "Failed to read palette file" );
+        }
+
+        // Convert to 32-bit RGBA (SDL_PIXELFORMAT_RGBA32)
+        for ( int i = 0; i < 64; ++i ) {
+            uint8_t const red = buffer[( i * 3 ) + 0];
+            uint8_t const green = buffer[( i * 3 ) + 1];
+            uint8_t const blue = buffer[( i * 3 ) + 2];
+            uint8_t const alpha = 0xFF;
+            nesPalette[i] = ( alpha << 24 ) | ( blue << 16 ) | ( green << 8 ) | red;
+        }
+
+        return nesPalette;
     }
 };

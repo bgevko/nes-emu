@@ -5,9 +5,9 @@
 
 #include "bus.h"
 #include "cpu.h"
+#include "cpu-types.h"
 #include "utils.h"
 #include <string>
-#include <iostream>
 #include <stdexcept>
 
 /*
@@ -27,8 +27,8 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
     std::string output;
 
     u8 const           opcode = Read( _pc );
-    std::string const &name = gInstructionNames[opcode];
-    std::string const &addrMode = gAddressingModes[opcode];
+    std::string const &name = gInstructionNames.at( opcode );
+    std::string const &addrMode = gAddressingModes.at( opcode );
 
     // Program counter address
     // i.e. FFFF
@@ -38,7 +38,7 @@ std::string CPU::LogLineAtPC( bool verbose ) // NOLINT
         output += "  ";
         // Hex instruction
         // i.e. 4C F5 C5, this is the hex instruction
-        u8 const    bytes = gInstructionBytes[opcode];
+        u8 const    bytes = gInstructionBytes.at( opcode );
         std::string hexInstruction;
         for ( u8 i = 0; i < bytes; i++ ) {
             hexInstruction += utils::toHex( Read( _pc + i ), 2 ) + ' ';
@@ -262,39 +262,32 @@ void CPU::DecodeExecute()
     _didMesenTrace = false;
 
     // Fetch the next opcode and increment the program counter
-    u8 const opcode = Fetch();
+    _opcode = Fetch();
+    auto const &instruction = _opcodeTable.at( _opcode );
+    auto        instructionHandler = instruction.handler;
+    auto        addressingModeHandler = instruction.addrMode;
 
-    // Decode the opcode
-    auto const &instruction = _opcodeTable[opcode];
-    auto        instructionHandler = instruction.instructionMethod;
-    auto        addressingModeHandler = instruction.addressingModeMethod;
+    // Set the page cross penalty for the current instruction
+    // Used in addressing modes: ABSX, ABSY, INDY
+    _pageCrossPenalty = pageCrossPenalty( _opcode );
 
-    if ( instructionHandler != nullptr && addressingModeHandler != nullptr ) {
-        // Set the page cross penalty for the current instruction
-        // Used in addressing modes: ABSX, ABSY, INDY
-        _currentPageCrossPenalty = instruction.pageCrossPenalty;
+    // Write / modify instructions use a dummy read before writing, so
+    // we should set a flag for those
+    _isWriteModify = isWriteModify( _opcode );
 
-        // Write / modify instructions use a dummy read before writing, so
-        // we should set a flag for those
-        _isWriteModify = instruction.isWriteModify;
+    // Set current instr mnemonic globally
+    _instructionName = gInstructionNames.at( _opcode );
 
-        // Set current instr mnemonic globally
-        _instructionName = gInstructionNames[opcode];
+    // Set current address mode string globally
+    _addrMode = gAddressingModes.at( _opcode );
 
-        // Set current address mode string globally
-        _addrMode = gAddressingModes[opcode];
+    // Calculate the address using the addressing mode
+    u16 const address = ( this->*addressingModeHandler )();
 
-        // Calculate the address using the addressing mode
-        u16 const address = ( this->*addressingModeHandler )();
+    // Execute the instruction fetched from the opcode table
+    ( this->*instructionHandler )( address );
 
-        // Execute the instruction fetched from the opcode table
-        ( this->*instructionHandler )( address );
-
-        // Reset flags
-        _isWriteModify = false;
-        _didMesenTrace = false;
-    } else {
-        // Houston, we have a problem. No opcode was found.
-        std::cerr << "Bad opcode: " << std::hex << static_cast<int>( opcode ) << '\n';
-    }
+    // Reset flags
+    _isWriteModify = false;
+    _didMesenTrace = false;
 }

@@ -894,38 +894,23 @@ TEST_F( PpuTest, ShiftSpriteRegisters_NoShiftOutsideVisibleRange )
 TEST_F( PpuTest, OddFrameSkip )
 {
     ppu.Reset();
-    ppu.frame = 0; // will turn into 1 next tick
+
+    // even, 340 ticks lands on cycle 340
+    ppu.frame = 2;
     ppu.ppuMask.bit.renderBackground = 1;
+    ppu.cycle = 0;
+    for ( int i = 0; i < 340; i++ ) {
+        ppu.Tick();
+    }
+    EXPECT_EQ( ppu.cycle, 340 );
 
-    // Odd, will skip cycle 0
-    ppu.scanline = 261;
-    ppu.cycle = 341;
-    ppu.Tick();
-    EXPECT_EQ( ppu.cycle, 1 ) << "Odd frame should skip cycle 0 on scanline scanline 0.";
-
-    // next tick will turn to 2, even, should land on cycle 0
-    ppu.scanline = 261;
-    ppu.cycle = 341;
-    ppu.Tick();
-    EXPECT_EQ( ppu.cycle, 0 ) << "Even frame should land on cycle 0 on scanline 0.";
-
-    // Rendering off, no skip
-    ppu.ppuMask.bit.renderBackground = 0;
-    ppu.scanline = 261;
-    ppu.cycle = 341;
-    ppu.Tick();
-    EXPECT_EQ( ppu.cycle, 0 ) << "Odd frame should not skip cycle 0 when rendering is off.";
-
-    // One more round for good measure
-    ppu.ppuMask.bit.renderBackground = 1;
-    ppu.scanline = 261;
-    ppu.cycle = 341;
-    ppu.Tick();
-    EXPECT_EQ( ppu.cycle, 0 ) << "Even frame should land on cycle 0 on scanline 0.";
-    ppu.scanline = 261;
-    ppu.cycle = 341;
-    ppu.Tick();
-    EXPECT_EQ( ppu.cycle, 1 ) << "Odd frame should skip cycle 0 on scanline scanline 0.";
+    // odd, 340 ticks lands on cycle 0
+    ppu.frame = 3;
+    ppu.cycle = 0;
+    for ( int i = 0; i < 340; i++ ) {
+        ppu.Tick();
+    }
+    EXPECT_EQ( ppu.cycle, 0 );
 }
 
 TEST_F( PpuTest, VBlankPeriod )

@@ -20,6 +20,7 @@ SET(ROOT_DIR "${CMAKE_SOURCE_DIR}")
 set(ROM_DIR "${CMAKE_SOURCE_DIR}/roms")
 set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
 set(PALETTES_DIR "${CMAKE_SOURCE_DIR}/palettes")
+set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
 
 # Configure the config.h file from the template
 configure_file(
