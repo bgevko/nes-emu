@@ -134,7 +134,7 @@ class CpuViewerWindow : public UIComponent
         ImGui::PopFont();
         ImGui::SameLine();
         ImGui::Indent( 100 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetCycles() );
+        ImGui::Text( "%d", renderer->bus.ppu.cycle );
         ImGui::EndGroup();
 
         ImGui::BeginGroup();
@@ -143,7 +143,7 @@ class CpuViewerWindow : public UIComponent
         ImGui::PopFont();
         ImGui::SameLine();
         ImGui::Indent( 100 );
-        ImGui::Text( "%d", renderer->bus.ppu.GetScanline() );
+        ImGui::Text( "%d", renderer->bus.ppu.scanline );
         ImGui::EndGroup();
 
         ImGui::BeginGroup();
@@ -152,7 +152,7 @@ class CpuViewerWindow : public UIComponent
         ImGui::PopFont();
         ImGui::SameLine();
         ImGui::Indent( 100 );
-        ImGui::Text( U64_FORMAT_SPECIFIER, renderer->bus.ppu.GetFrame() );
+        ImGui::Text( U64_FORMAT_SPECIFIER, renderer->bus.ppu.frame );
         ImGui::EndGroup();
 
         ImGui::PopStyleColor();

@@ -1,6 +1,5 @@
 #include "ppu.h"
 #include "bus.h"
-#include "utils.h"
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
 #include <exception>
@@ -58,8 +57,8 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
             return ppuStatus.value;
         }
 
-        u8 const data = ( ppuStatus.value & 0xE0 ) | ( ppuDataBuffer & 0x1F );
-        ppuStatus.bit.verticalBlank = 0;
+        u8 const data = ( ppuStatus.value & 0xE0 ) | ( vramBuffer & 0x1F );
+        ppuStatus.bit.vBlank = 0;
         addrLatch = false;
         bus->cpu.SetReading2002( false );
         preventVBlank = false;
@@ -72,13 +71,17 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
            If called while renderingEnabled and in visible scanline range (0-239),
            Returns corrupted data (0xFF)
         */
+        u8 value = oam.data.at( oamAddr & 0xFF );
         if ( debugMode ) {
-            return oam.at( oamAddr & 0xFF );
+            return value;
         }
         if ( IsRenderingEnabled() && scanline >= 0 && scanline <= 239 ) {
             return 0xFF;
         }
-        return oam.at( oamAddr & 0xFF );
+        if ( ( oamAddr & 0x03 ) == 3 ) {
+            value &= 0xE3;
+        }
+        return value;
     }
 
     // 2007: PPU Data
@@ -86,21 +89,21 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
         /*
           Reads the data at the current vramAddr
           When reading from palette memory, (0x3F00-0x3FFF), direct data is returned
-          Otherwise, the data from the current ppuDataBuffer is returned, simulating
+          Otherwise, the data from the current vramBuffer is returned, simulating
           a delayed read by 1 cycle, and the vramAddr is then incremented by 1 or 32.
           1 if ppuCtrl increment mode is 0, 32 if 1.
-          The ppuDataBuffer is then updated with the data at the new vramAddr, in preparation
+          The vramBuffer is then updated with the data at the new vramAddr, in preparation
           for the next non-palette memory read.
          */
         // Debug mode has no side effects
         if ( debugMode ) {
-            return ppuDataBuffer;
+            return vramBuffer;
         }
 
-        u8 data = ppuDataBuffer;
-        ppuDataBuffer = Read( vramAddr.value );
+        u8 data = vramBuffer;
+        vramBuffer = ReadVram( vramAddr.value );
         if ( vramAddr.value >= 0x3F00 && vramAddr.value <= 0x3FFF ) {
-            data = ppuDataBuffer;
+            data = vramBuffer;
         }
 
         vramAddr.value += ppuCtrl.bit.vramIncrement ? 32 : 1;
@@ -117,7 +120,7 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
 ################################
 */
 
-void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
+void PPU::HandleCpuWrite( u16 address, u8 data )
 {
     /* @brief: CPU writes to the PPU
      */
@@ -172,7 +175,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
             if ( IsRenderingEnabled() && scanline >= 0 && scanline <= 239 ) {
                 return;
             }
-            oam.at( oamAddr & 0xFF ) = data;
+            oam.data.at( oamAddr & 0xFF ) = data;
             oamAddr = ( oamAddr + 1 ) & 0xFF;
             break;
         }
@@ -243,7 +246,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
               1 if ppuCtrl increment mode is 0, 32 if 1
             */
             //
-            Write( vramAddr.value, data );
+            WriteVram( vramAddr.value, data );
             vramAddr.value += ppuCtrl.bit.vramIncrement ? 32 : 1;
         }
         default:
@@ -259,7 +262,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
 ################################
 */
 
-[[nodiscard]] u8 PPU::Read( u16 address ) // NOLINT
+[[nodiscard]] u8 PPU::ReadVram( u16 address )
 {
     /*@brief: Internal PPU reads to the cartridge
      */
@@ -333,7 +336,7 @@ void PPU::HandleCpuWrite( u16 address, u8 data ) // NOLINT
 ||                            ||
 ################################
 */
-void PPU::Write( u16 address, u8 data ) // NOLINT
+void PPU::WriteVram( u16 address, u8 data )
 {
     /*@brief: Internal PPU reads to the cartridge
      */
@@ -378,144 +381,15 @@ void PPU::Write( u16 address, u8 data ) // NOLINT
         address &= 0x1F;
 
         // Handle mirroring of 3F10, 3F14, 3F18, 3F1C to 3F00, 3F04, 3F08, 3F0C
-        if ( address >= 0x10 && ( address & 0x03 ) == 0 ) {
+        if ( ( address & 0x03 ) == 0 ) {
+            // write to both the mirrored and original address
             address &= 0x0F;
+            paletteMemory.at( address ) = data;
+            paletteMemory.at( address + 0x10 ) = data;
+            return;
         }
 
         paletteMemory.at( address ) = data;
-    }
-}
-
-/*
-################################
-||                            ||
-||       PPU Cycle Tick       ||
-||                            ||
-################################
-*/
-void PPU::Tick() // NOLINT
-{
-    if ( isDisabled ) {
-        return;
-    }
-
-    if ( scanline >= -1 && scanline < 240 ) {
-
-        bool const oddFrameSkip = ( scanline == 0 && cycle == 0 && ( frame & 0x01 ) == 1 );
-        if ( oddFrameSkip && IsRenderingEnabled() ) {
-            cycle = 1;
-        }
-
-        // Pre-render scanline
-        if ( scanline == -1 && cycle == 1 ) {
-            ppuStatus.bit.verticalBlank = 0;
-            ppuStatus.bit.spriteOverflow = 0;
-            ppuStatus.bit.spriteZeroHit = 0;
-            for ( int i = 0; i < 8; i++ ) {
-                // TODO: Reset sprite shifters
-            }
-        }
-
-        if ( ( cycle >= 2 && cycle < 258 ) || ( cycle >= 321 && cycle < 338 ) ) {
-            UpdateShifters();
-            switch ( ( cycle - 1 ) % 8 ) {
-                case 0:
-                    LoadBgShifters();
-                    LoadNametableByte();
-                    break;
-                case 2:
-                    LoadAttributeByte();
-                    break;
-                case 4:
-                    LoadPatternPlane0Byte();
-                    break;
-                case 6:
-                    LoadPatternPlane1Byte();
-                    break;
-                case 7:
-                    IncrementScrollX();
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        if ( cycle == 256 ) {
-            IncrementScrollY();
-        }
-        if ( cycle == 257 ) {
-            LoadBgShifters();
-            TransferX();
-        }
-        // Dummy read at end of scanline
-        if ( cycle == 338 || cycle == 340 ) {
-            LoadNametableByte();
-        }
-        if ( scanline == -1 && cycle >= 280 && cycle < 305 ) {
-            TransferY();
-        }
-
-        if ( cycle == 257 && scanline >= 0 ) {
-            // TODO: sprite rendering
-        }
-    }
-
-    // Drawing
-    if ( scanline >= 0 && scanline < 240 && cycle >= 2 && cycle < 258 ) {
-        u32 const pixel = GetOutputPixel();
-        frameBuffer.at( bufferIdx ) = pixel;
-        IncBufferIdx();
-        if ( IsBufferFull() ) {
-            if ( onFrameReady != nullptr ) {
-                onFrameReady( frameBuffer.data() );
-            }
-            ClearFrameBuffer();
-        }
-    }
-
-    /*
-    ################################
-    ||        Vblank Start        ||
-    ################################
-    */
-    if ( scanline == 241 && scanline < 261 ) {
-        // If the CPU is reading register 2002 on cycle 0 of scanline 241
-        // Vblank will not be set until the next frame due to a hardware race condition bug
-        if ( cycle == 0 && bus->cpu.IsReading2002() ) {
-            preventVBlank = true;
-        }
-
-        // Set the Vblank flag on cycle 1
-        if ( scanline == 241 && cycle == 1 ) {
-
-            // Vblank and NMI
-            if ( !preventVBlank ) {
-                ppuStatus.bit.verticalBlank = 1;
-
-                // Trigger NMI if NMI is enabled
-                if ( ppuCtrl.bit.nmiEnable ) {
-                    nmiReady = true;
-                }
-            }
-            preventVBlank = false;
-        }
-    }
-
-    cycle++;
-
-    /*
-    ################################
-    ||       End Of Scanline      ||
-    ################################
-    */
-    if ( cycle > 340 ) {
-        cycle = 0;
-        scanline++;
-
-        if ( scanline > 260 ) {
-            scanline = -1;
-            frame++;
-        }
     }
 }
 
@@ -527,12 +401,123 @@ void PPU::Tick() // NOLINT
 ################################
 */
 
+void PPU::VBlank()
+{
+    if ( scanline == 241 ) {
+        // If the CPU is reading register 2002 on cycle 0 of scanline 241
+        // Vblank will not be set until the next frame due to a hardware race condition bug
+        if ( cycle == 0 && bus->cpu.IsReading2002() ) {
+            preventVBlank = true;
+        }
+
+        // Set the Vblank flag on cycle 1
+        if ( cycle == 1 ) {
+
+            if ( !preventVBlank ) {
+                ppuStatus.bit.vBlank = 1;
+
+                // Signal to trigger NMI if enabled
+                if ( ppuCtrl.bit.nmiEnable ) {
+                    nmiReady = true;
+                }
+            }
+            preventVBlank = false;
+        }
+    }
+}
+
+// Called each cycle between cycle 65 and 256 to evaluate sprites.
+void PPU::SpriteEvalForNextScanline()
+{
+    // Only run during visible scanlines (0–239) and cycles 65–256.
+    if ( !IsRenderingEnabled() || scanline > 239 || cycle < 65 || cycle > 256 )
+        return;
+
+    // Start
+    if ( cycle == 65 ) {
+        SpriteEvalForNextScanlineStart();
+    }
+
+    if ( cycle & 0x01 ) // Odd cycle: perform a read.
+    {
+        oamCopyBuffer = oam.data.at( oamAddr );
+    } else // Even cycle: process copying.
+    {
+        OamCopy();
+    }
+    oamAddr = ( spriteAddrLo & 0x03 ) | ( spriteAddrHi << 2 );
+
+    // End
+    if ( cycle == 256 ) {
+        SpriteEvalForNextScanlineEnd();
+    }
+}
+
+void PPU::OamCopy()
+{
+    if ( oamCopyDone ) {
+        // If copying is already finished, simply advance the sprite address.
+        spriteAddrHi = ( spriteAddrHi + 1 ) & 0x3F;
+        if ( secondaryOamAddr >= 0x20 ) {
+            oamCopyBuffer = secondaryOam.data.at( secondaryOamAddr & 0x1F );
+        }
+        return;
+    }
+
+    // Determine sprite height (8 or 16 pixels).
+    u8 spriteHeight = ( ppuCtrl.bit.spriteSize ? 16 : 8 );
+
+    // Check if the sprite (Y coordinate in oamCopyBuffer) is in range for the next scanline.
+    if ( !spriteInRange && ( ( scanline + 1 ) >= oamCopyBuffer ) &&
+         ( ( scanline + 1 ) < ( oamCopyBuffer + spriteHeight ) ) ) {
+        spriteInRange = true;
+    }
+
+    // If there's room in secondary OAM (32 bytes = 8 sprites * 4 bytes)
+    if ( secondaryOamAddr < 0x20 ) {
+        // Copy the current byte from primary OAM into secondary OAM.
+        secondaryOam.data.at( secondaryOamAddr ) = oam.data.at( oamAddr );
+
+        if ( spriteInRange ) {
+            // Mark sprite 0 as added on cycle 66 if applicable.
+            if ( cycle == 66 )
+                sprite0Added = true;
+
+            // Advance the low part of the sprite address and the secondary OAM pointer.
+            spriteAddrLo++;
+            secondaryOamAddr++;
+
+            // When 4 bytes (a complete sprite entry) have been copied, move to the next sprite.
+            if ( spriteAddrLo >= 4 ) {
+                spriteAddrHi = ( spriteAddrHi + 1 ) & 0x3F;
+                spriteAddrLo = 0;
+                if ( spriteAddrHi == 0 )
+                    oamCopyDone = true;
+            }
+
+            // Once a full sprite is copied, reset spriteInRange for the next sprite.
+            if ( ( secondaryOamAddr & 0x03 ) == 0 )
+                spriteInRange = false;
+        } else {
+            // Sprite not in range: skip copying and move to the next sprite.
+            spriteAddrHi = ( spriteAddrHi + 1 ) & 0x3F;
+            spriteAddrLo = 0;
+            if ( spriteAddrHi == 0 )
+                oamCopyDone = true;
+        }
+    } else {
+        // Secondary OAM is full; skip to the next sprite.
+        ppuStatus.bit.spriteOverflow = 1;
+        spriteAddrHi = ( spriteAddrHi + 1 ) & 0x3F;
+        spriteAddrLo = 0;
+        if ( spriteAddrHi == 0 )
+            oamCopyDone = true;
+    }
+}
+
 u16 PPU::ResolveNameTableAddress( u16 addr, int testMirrorMode ) const
 {
 
-    if ( bus == nullptr ) {
-        return 0x00;
-    }
     MirrorMode mirrorMode = GetMirrorMode();
 
     // override mirror mode for testing
@@ -598,4 +583,43 @@ u16 PPU::ResolveNameTableAddress( u16 addr, int testMirrorMode ) const
 MirrorMode PPU::GetMirrorMode() const
 {
     return bus->cartridge.GetMirrorMode();
+}
+
+/*
+################################
+||                            ||
+||       PPU Cycle Tick       ||
+||                            ||
+################################
+*/
+void PPU::Tick()
+{
+    if ( isDisabled ) {
+        return;
+    }
+    OddFrameSkip();
+
+    if ( InScanline( 0, 239 ) )
+        VisibleScanline();
+
+    UpdateFrameBuffer();
+
+    if ( scanline == 241 ) {
+        VBlank();
+        RenderFrameBuffer();
+    }
+
+    if ( scanline == 261 )
+        PrerenderScanline();
+
+    cycle++;
+
+    if ( cycle > 340 ) {
+        cycle = 0;
+        scanline++;
+        if ( scanline > 261 ) {
+            scanline = 0;
+            frame++;
+        }
+    }
 }

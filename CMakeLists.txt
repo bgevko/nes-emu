@@ -9,7 +9,8 @@ set( CMAKE_CXX_STANDARD_REQUIRED ON )
 project( nes_emu VERSION 0.1 LANGUAGES CXX )
 
 # Includes
-set(CORE_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(GENERAL_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(CORE_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/core)
 set(FRONTEND_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/include)
 set(UI_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/frontend/ui)
 set(TEST_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/tests/include)
@@ -19,6 +20,7 @@ SET(ROOT_DIR "${CMAKE_SOURCE_DIR}")
 set(ROM_DIR "${CMAKE_SOURCE_DIR}/roms")
 set(FONTS_DIR "${CMAKE_SOURCE_DIR}/fonts")
 set(PALETTES_DIR "${CMAKE_SOURCE_DIR}/palettes")
+set(TESTS_DIR "${CMAKE_SOURCE_DIR}/tests")
 
 # Configure the config.h file from the template
 configure_file(
@@ -38,7 +40,10 @@ include_directories("${CMAKE_BINARY_DIR}")
 file(GLOB CORE_SOURCES "core/*.cpp" "core/mappers/*.cpp")
 add_library(emu_core STATIC ${CORE_SOURCES})
 
-target_include_directories(emu_core PUBLIC ${CORE_INCLUDES})
+target_include_directories(emu_core PUBLIC
+  ${GENERAL_INCLUDES}
+  ${CORE_INCLUDES}
+)
 
 # Fmt library
 find_package(fmt CONFIG REQUIRED)
@@ -68,9 +73,12 @@ if(BUILD_FRONTEND)
   file(GLOB FRONTEND_SOURCES "frontend/*.cpp" "frontend/ui/*.cpp")
   add_executable(emu ${FRONTEND_SOURCES})
 
-  target_include_directories(emu PRIVATE ${CORE_INCLUDES})
-  target_include_directories(emu PRIVATE ${FRONTEND_INCLUDES})
-  target_include_directories(emu PRIVATE ${UI_INCLUDES})
+  target_include_directories(emu PRIVATE
+    ${GENERAL_INCLUDES}
+    ${CORE_INCLUDES}
+    ${FRONTEND_INCLUDES}
+    ${UI_INCLUDES}
+  )
   target_link_libraries(emu PRIVATE emu_core)
 
   # SDL
@@ -124,7 +132,11 @@ if(BUILD_TESTS)
   include(GoogleTest)
 
   # Define include directories for your project
-  set(ALL_INCLUDES ${CORE_INCLUDES} ${TEST_INCLUDES})
+  set(ALL_INCLUDES
+    ${GENERAL_INCLUDES}
+    ${CORE_INCLUDES}
+    ${TEST_INCLUDES}
+  )
 
   # Function to add test executables
   function(add_test_executable TARGET_NAME SOURCE_FILE)

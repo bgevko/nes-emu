@@ -9,5 +9,6 @@
 #define ROM_DIR "@ROM_DIR@"
 #define FONTS_DIR "@FONTS_DIR@"
 #define PALETTES_DIR "@PALETTES_DIR@"
+#define TESTS_DIR "@TESTS_DIR@"
 
 #endif // CONFIG_H

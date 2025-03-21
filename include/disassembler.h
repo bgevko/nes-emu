@@ -1,11 +1,8 @@
 #pragma once
-#include <cstdint>
 #include <string>
 #include "cpu.h"
 #include "utils.h"
 
-using u8 = uint8_t;
-using u16 = uint16_t;
 using str = std::string;
 
 using namespace std;

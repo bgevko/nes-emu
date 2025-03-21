@@ -140,7 +140,7 @@ class PaletteWindow : public UIComponent
         {
             ImGui::BeginGroup();
             u16 const paletteAddress = 0x3F00 + targetId;
-            u8 const  colorIndex = renderer->bus.ppu.Read( paletteAddress );
+            u8 const  colorIndex = renderer->bus.ppu.ReadVram( paletteAddress );
 
             ImGui::Text( "Index" );
             ImGui::SameLine();
@@ -207,7 +207,7 @@ class PaletteWindow : public UIComponent
                 ImGui::SameLine( 0.0f, 0.0f );
                 int const    cellIdx = rowStart + cell;
                 u16 const    paletteAddress = 0x3F00 + cellIdx;
-                u8 const     colorIndex = renderer->bus.ppu.Read( paletteAddress );
+                u8 const     colorIndex = renderer->bus.ppu.ReadVram( paletteAddress );
                 ImVec4 const paletteColor =
                     Rgba32ToImVec4( renderer->bus.ppu.GetMasterPaletteColor( colorIndex ) );
                 char label[3];

@@ -1,100 +1,11 @@
 #pragma once
 
 #include <array>
-#include <deque>
 #include <cstdint>
+#include <deque>
 #include <fmt/base.h>
 #include <string>
-
-// Aliases for integer types
-using u8 = uint8_t;
-using u16 = uint16_t;
-using u32 = uint32_t;
-using u64 = uint64_t;
-using s8 = int8_t;
-
-// Static arrays for opcode information
-// clang-format off
-const std::array<std::string, 256> gInstructionNames = {
-          //0      1        2        3        4        5        6        7        8        9        A       B        C        D        E        F
-    /*0*/"BRK",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "PHP",  "ORA",   "ASL",   "*ANC",  "*NOP",  "ORA",   "ASL",   "*SLO",
-    /*1*/"BPL",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "CLC",  "ORA",   "*NOP",  "*SLO",  "*NOP",  "ORA",   "ASL",   "*SLO",
-    /*2*/"JSR",   "AND",   "*JAM",  "*RLA",  "BIT",   "AND",   "ROL",   "*RLA",  "PLP",  "AND",   "ROL",   "*ANC",  "BIT",   "AND",   "ROL",   "*RLA",
-    /*3*/"BMI",   "AND",   "*JAM",  "*RLA",  "*NOP",  "AND",   "*ROL",  "*RLA",  "SEC",  "AND",   "*NOP",  "*RLA",  "*NOP",  "AND",   "ROL",   "*RLA",
-    /*4*/"RTI",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "PHA",  "EOR",   "LSR",   "*ALR",  "JMP",   "EOR",   "LSR",   "*SRE",
-    /*5*/"BVC",   "EOR",   "*JAM",  "*SRE",  "*NOP",  "EOR",   "*LSR",  "*SRE",  "CLI",  "EOR",   "*NOP",  "*SRE",  "*NOP",  "EOR",   "LSR",   "*SRE",
-    /*6*/"RTS",   "ADC",   "*JAM",  "*RRA",  "*NOP",  "ADC",   "*ROR",  "*RRA",  "PLA",  "ADC",   "ROR",   "*ARR",  "JMP",   "ADC",   "ROR",   "*RRA",
-    /*7*/"BVS",   "ADC",   "*JAM",  "*RRA",  "*NOP",  "ADC",   "*ROR",  "*RRA",  "SEI",  "ADC",   "*NOP",  "*RRA",  "*NOP",  "ADC",   "ROR",   "*RRA",
-    /*8*/"*NOP",  "STA",   "*NOP",  "*SAX",  "STY",   "STA",   "STX",   "*SAX",  "DEY",  "*NOP",  "TXA",   "*ANE",  "STY",   "STA",   "STX",   "*SAX",
-    /*9*/"BCC",   "STA",   "*JAM",  "*SHA",  "STY",   "STA",   "STX",   "*STX",  "TYA",  "STA",   "TXS",   "*TAS",  "*SHY",  "STA",   "*SHX",  "*SHA",
-    /*A*/"LDY",   "LDA",   "LDX",   "*LAX",  "LDY",   "LDA",   "LDX",   "*LAX",  "TAY",  "LDA",   "TAX",   "*LXA",  "LDY",   "LDA",   "LDX",   "*LAX",
-    /*B*/"BCS",   "LDA",   "*JAM",  "*LAX",  "LDY",   "LDA",   "LDX",   "*LAX",  "CLV",  "LDA",   "TSX",   "*LAS",  "LDY",   "LDA",   "LDX",   "*LAX",
-    /*C*/"CPY",   "CMP",   "*NOP",  "*DCP",  "CPY",   "CMP",   "DEC",   "*DCP",  "INY",  "CMP",   "DEX",   "*SBX",  "CPY",   "CMP",   "DEC",   "*DCP",
-    /*D*/"BNE",   "CMP",   "*JAM",  "*DCP",  "*NOP",  "CMP",   "*DEC",  "*DCP",  "CLD",  "CMP",   "*NOP",  "*DCP",  "*NOP",  "CMP",   "DEC",   "*DCP",
-    /*E*/"CPX",   "SBC",   "*NOP",  "*ISC",  "CPX",   "SBC",   "INC",   "*ISC",  "INX",  "SBC",   "NOP",   "*SBC",  "CPX",   "SBC",   "INC",   "*ISC",
-    /*F*/"BEQ",   "SBC",   "*JAM",  "*ISC",  "*NOP",  "SBC",   "*INC",  "*ISC",  "SED",  "SBC",   "*NOP",  "*ISC",  "*NOP",  "SBC",   "INC",   "*ISC"
-};
-
-const std::array<std::string, 256> gAddressingModes = {
-          //0      1        2        3        4        5        6        7        8        9        A       B        C        D        E        F
-     /*0*/"IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*1*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
-     /*2*/"ABS",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*3*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
-     /*4*/"IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*5*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
-     /*6*/"IMP",   "INDX",  "IMP",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "IND",   "ABS",   "ABS",   "ABS",
-     /*7*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
-     /*8*/"IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*9*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGY",  "ZPGY",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSY",  "ABSY",
-     /*A*/"IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*B*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGY",  "ZPGY",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSY",  "ABSY",
-     /*C*/"IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*D*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX",
-     /*E*/"IMM",   "INDX",  "IMM",   "INDX",  "ZPG",   "ZPG",   "ZPG",   "ZPG",   "IMP",  "IMM",   "IMP",   "IMM",   "ABS",   "ABS",   "ABS",   "ABS",
-     /*F*/"REL",   "INDY",  "IMP",   "INDY",  "ZPGX",  "ZPGX",  "ZPGX",  "ZPGX",  "IMP",  "ABSY",  "IMP",   "ABSY",  "ABSX",  "ABSX",  "ABSX",  "ABSX"
-};
-
-const std::array<u8, 256> gInstructionCycles = {
-          //0      1        2        3        4        5        6        7        8        9        A       B        C        D        E        F
-     /*0*/7,       6,       2,       8,       3,       3,       5,       5,       3,       2,       2,      2,       4,       4,       6,       6,
-     /*1*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7,
-     /*2*/6,       6,       2,       8,       3,       3,       5,       5,       4,       2,       2,      2,       4,       4,       6,       6,
-     /*3*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7,
-     /*4*/6,       6,       2,       8,       3,       3,       5,       5,       3,       2,       2,      2,       3,       4,       6,       6,
-     /*5*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7,
-     /*6*/6,       6,       2,       8,       3,       3,       5,       5,       4,       2,       2,      2,       5,       4,       6,       6,
-     /*7*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7,
-     /*8*/2,       6,       2,       6,       3,       3,       3,       3,       2,       2,       2,      2,       4,       4,       4,       4,
-     /*9*/2,       6,       2,       6,       4,       4,       4,       4,       2,       5,       2,      5,       5,       5,       5,       5,
-     /*A*/2,       6,       2,       6,       3,       3,       3,       3,       2,       2,       2,      2,       4,       4,       4,       4,
-     /*B*/2,       5,       2,       5,       4,       4,       4,       4,       2,       4,       2,      4,       4,       4,       4,       4,
-     /*C*/2,       6,       2,       8,       3,       3,       5,       5,       2,       2,       2,      2,       4,       4,       6,       6,
-     /*D*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7,
-     /*E*/2,       6,       2,       8,       3,       3,       5,       5,       2,       2,       2,      2,       4,       4,       6,       6,
-     /*F*/2,       5,       2,       8,       4,       4,       6,       6,       2,       4,       2,      7,       4,       4,       7,       7
-};
-
-const std::array<u8, 256> gInstructionBytes = {
-          //0      1        2        3        4        5        6        7        8        9        A       B        C        D        E        F
-     /*0*/1,       2,       1,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*1*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*2*/3,       2,       1,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*3*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*4*/1,       2,       1,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*5*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*6*/1,       2,       1,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*7*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*8*/2,       2,       2,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*9*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*A*/2,       2,       2,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*B*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*C*/2,       2,       2,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*D*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3,
-     /*E*/2,       2,       2,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
-     /*F*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3
-};
-// clang-format on
+#include "global-types.h"
 
 // Forward declaration for reads and writes
 class Bus;
@@ -105,6 +16,41 @@ class CPU
     explicit CPU( Bus *bus ) : _bus( bus )
     {
 
+        // clang-format off
+#define Imp( op )  Instruction { &CPU::op, &CPU::IMP }
+#define Imm( op )  Instruction { &CPU::op, &CPU::IMM }
+#define Zpg( op )  Instruction { &CPU::op, &CPU::ZPG }
+#define ZpgX( op ) Instruction { &CPU::op, &CPU::ZPGX }
+#define ZpgY( op ) Instruction { &CPU::op, &CPU::ZPGY }
+#define Abs( op )  Instruction { &CPU::op, &CPU::ABS }
+#define AbsX( op ) Instruction { &CPU::op, &CPU::ABSX }
+#define AbsY( op ) Instruction { &CPU::op, &CPU::ABSY }
+#define Ind( op )  Instruction { &CPU::op, &CPU::IND }
+#define IndX( op ) Instruction { &CPU::op, &CPU::INDX }
+#define IndY( op ) Instruction { &CPU::op, &CPU::INDY }
+#define Rel( op )  Instruction { &CPU::op, &CPU::REL }
+
+        _opcodeTable = {
+          //0        1          2          3          4           5          6          7          8         9          A         B          C           D          E          F
+    /*0*/ Imp(BRK),  IndX(ORA), Imp(JAM),  IndX(SLO), Zpg(NOP2),  Zpg(ORA),  Zpg(ASL),  Zpg(SLO),  Imp(PHP), Imm(ORA),  Imp(ASL), Imm(ANC),  Abs(NOP2),  Abs(ORA),  Abs(ASL),  Abs(SLO),
+    /*1*/ Rel(BPL),  IndY(ORA), Imp(JAM),  IndY(SLO), ZpgX(NOP2), ZpgX(ORA), ZpgX(ASL), ZpgX(SLO), Imp(CLC), AbsY(ORA), Imp(NOP), AbsY(SLO), AbsX(NOP2), AbsX(ORA), AbsX(ASL), AbsX(SLO),
+    /*2*/ Abs(JSR),  IndX(AND), Imp(JAM),  IndX(RLA), Zpg(BIT),   Zpg(AND),  Zpg(ROL),  Zpg(RLA),  Imp(PLP), Imm(AND),  Imp(ROL), Imm(ANC),  Abs(BIT),   Abs(AND),  Abs(ROL),  Abs(RLA),
+    /*3*/ Rel(BMI),  IndY(AND), Imp(JAM),  IndY(RLA), ZpgX(NOP2), ZpgX(AND), ZpgX(ROL), ZpgX(RLA), Imp(SEC), AbsY(AND), Imp(NOP), AbsY(RLA), AbsX(NOP2), AbsX(AND), AbsX(ROL), AbsX(RLA),
+    /*4*/ Imp(RTI),  IndX(EOR), Imp(JAM),  IndX(SRE), Zpg(NOP2),  Zpg(EOR),  Zpg(LSR),  Zpg(SRE),  Imp(PHA), Imm(EOR),  Imp(LSR), Imm(ALR),  Abs(JMP),   Abs(EOR),  Abs(LSR),  Abs(SRE),
+    /*5*/ Rel(BVC),  IndY(EOR), Imp(JAM),  IndY(SRE), ZpgX(NOP2), ZpgX(EOR), ZpgX(LSR), ZpgX(SRE), Imp(CLI), AbsY(EOR), Imp(NOP), AbsY(SRE), AbsX(NOP2), AbsX(EOR), AbsX(LSR), AbsX(SRE),
+    /*6*/ Imp(RTS),  IndX(ADC), Imp(JAM),  IndX(RRA), Zpg(NOP2),  Zpg(ADC),  Zpg(ROR),  Zpg(RRA),  Imp(PLA), Imm(ADC),  Imp(ROR), Imm(ARR),  Ind(JMP),   Abs(ADC),  Abs(ROR),  Abs(RRA),
+    /*7*/ Rel(BVS),  IndY(ADC), Imp(JAM),  IndY(RRA), ZpgX(NOP2), ZpgX(ADC), ZpgX(ROR), ZpgX(RRA), Imp(SEI), AbsY(ADC), Imp(NOP), AbsY(RRA), AbsX(NOP2), AbsX(ADC), AbsX(ROR), AbsX(RRA),
+    /*8*/ Imm(NOP2), IndX(STA), Imm(NOP2), IndX(SAX), Zpg(STY),   Zpg(STA),  Zpg(STX),  Zpg(SAX),  Imp(DEY), Imm(NOP2), Imp(TXA), Imm(ANE), Abs(STY),   Abs(STA),  Abs(STX),  Abs(SAX),
+    /*9*/ Rel(BCC),  IndY(STA), Imp(JAM),  IndY(XXX), ZpgX(STY),  ZpgX(STA), ZpgY(STX), ZpgY(SAX), Imp(TYA), AbsY(STA), Imp(TXS), AbsY(XXX), AbsX(XXX),  AbsX(STA), AbsY(XXX), AbsY(XXX),
+    /*A*/ Imm(LDY),  IndX(LDA), Imm(LDX),  IndX(LAX), Zpg(LDY),   Zpg(LDA),  Zpg(LDX),  Zpg(LAX),  Imp(TAY), Imm(LDA),  Imp(TAX), Imm(LXA),  Abs(LDY),   Abs(LDA),  Abs(LDX),  Abs(LAX),
+    /*B*/ Rel(BCS),  IndY(LDA), Imp(JAM),  IndY(LAX), ZpgX(LDY),  ZpgX(LDA), ZpgY(LDX), ZpgY(LAX), Imp(CLV), AbsY(LDA), Imp(TSX), AbsY(LAS), AbsX(LDY),  AbsX(LDA), AbsY(LDX), AbsY(LAX),
+    /*C*/ Imm(CPY),  IndX(CMP), Imm(NOP2), IndX(DCP), Zpg(CPY),   Zpg(CMP),  Zpg(DEC),  Zpg(DCP),  Imp(INY), Imm(CMP),  Imp(DEX), Imm(SBX),  Abs(CPY),   Abs(CMP),  Abs(DEC),  Abs(DCP),
+    /*D*/ Rel(BNE),  IndY(CMP), Imp(JAM),  IndY(DCP), ZpgX(NOP2), ZpgX(CMP), ZpgX(DEC), ZpgX(DCP), Imp(CLD), AbsY(CMP), Imp(NOP), AbsY(DCP), AbsX(NOP2), AbsX(CMP), AbsX(DEC), AbsX(DCP),
+    /*E*/ Imm(CPX),  IndX(SBC), Imm(NOP2), IndX(ISC), Zpg(CPX),   Zpg(SBC),  Zpg(INC),  Zpg(ISC),  Imp(INX), Imm(SBC),  Imp(NOP), Imm(SBC),  Abs(CPX),   Abs(SBC),  Abs(INC),  Abs(ISC),
+    /*F*/ Rel(BEQ),  IndY(SBC), Imp(JAM),  IndY(ISC), ZpgX(NOP2), ZpgX(SBC), ZpgX(INC), ZpgX(ISC), Imp(SED), AbsY(SBC), Imp(NOP), AbsY(ISC), AbsX(NOP2), AbsX(SBC), AbsX(INC), AbsX(ISC)
+        };
+        // clang-format on
+
         /*
         ################################################################
         ||                                                            ||
@@ -112,479 +58,479 @@ class CPU
         ||                                                            ||
         ################################################################
         */
-        // NOP
-        _opcodeTable[0xEA] = InstructionData{ &CPU::NOP, &CPU::IMP };
-
-        // LDA
-        _opcodeTable[0xA9] = InstructionData{ &CPU::LDA, &CPU::IMM };
-        _opcodeTable[0xA5] = InstructionData{ &CPU::LDA, &CPU::ZPG };
-        _opcodeTable[0xB5] = InstructionData{ &CPU::LDA, &CPU::ZPGX };
-        _opcodeTable[0xAD] = InstructionData{ &CPU::LDA, &CPU::ABS };
-        _opcodeTable[0xBD] = InstructionData{ &CPU::LDA, &CPU::ABSX };
-        _opcodeTable[0xB9] = InstructionData{ &CPU::LDA, &CPU::ABSY };
-        _opcodeTable[0xA1] = InstructionData{ &CPU::LDA, &CPU::INDX };
-        _opcodeTable[0xB1] = InstructionData{ &CPU::LDA, &CPU::INDY };
-
-        // LDX
-        _opcodeTable[0xA2] = InstructionData{ &CPU::LDX, &CPU::IMM };
-        _opcodeTable[0xA6] = InstructionData{ &CPU::LDX, &CPU::ZPG };
-        _opcodeTable[0xB6] = InstructionData{ &CPU::LDX, &CPU::ZPGY, true, true };
-        _opcodeTable[0xAE] = InstructionData{ &CPU::LDX, &CPU::ABS };
-        _opcodeTable[0xBE] = InstructionData{ &CPU::LDX, &CPU::ABSY };
-
-        // LDY
-        _opcodeTable[0xA0] = InstructionData{ &CPU::LDY, &CPU::IMM };
-        _opcodeTable[0xA4] = InstructionData{ &CPU::LDY, &CPU::ZPG };
-        _opcodeTable[0xB4] = InstructionData{ &CPU::LDY, &CPU::ZPGX };
-        _opcodeTable[0xAC] = InstructionData{ &CPU::LDY, &CPU::ABS };
-        _opcodeTable[0xBC] = InstructionData{ &CPU::LDY, &CPU::ABSX };
-
-        // STA
-        _opcodeTable[0x85] = InstructionData{ &CPU::STA, &CPU::ZPG };
-        _opcodeTable[0x95] = InstructionData{ &CPU::STA, &CPU::ZPGX };
-        _opcodeTable[0x8D] = InstructionData{ &CPU::STA, &CPU::ABS };
-        _opcodeTable[0x9D] = InstructionData{ &CPU::STA, &CPU::ABSX, false, true };
-        _opcodeTable[0x99] = InstructionData{ &CPU::STA, &CPU::ABSY, false, true };
-        _opcodeTable[0x81] = InstructionData{ &CPU::STA, &CPU::INDX, false };
-        _opcodeTable[0x91] = InstructionData{ &CPU::STA, &CPU::INDY, false, true };
-
-        // STX
-        _opcodeTable[0x86] = InstructionData{ &CPU::STX, &CPU::ZPG };
-        _opcodeTable[0x96] = InstructionData{ &CPU::STX, &CPU::ZPGY, true, true };
-        _opcodeTable[0x8E] = InstructionData{ &CPU::STX, &CPU::ABS };
-
-        // STY
-        _opcodeTable[0x84] = InstructionData{ &CPU::STY, &CPU::ZPG };
-        _opcodeTable[0x94] = InstructionData{ &CPU::STY, &CPU::ZPGX };
-        _opcodeTable[0x8C] = InstructionData{ &CPU::STY, &CPU::ABS };
-
-        // ADC
-        _opcodeTable[0x69] = InstructionData{ &CPU::ADC, &CPU::IMM };
-        _opcodeTable[0x65] = InstructionData{ &CPU::ADC, &CPU::ZPG };
-        _opcodeTable[0x75] = InstructionData{ &CPU::ADC, &CPU::ZPGX };
-        _opcodeTable[0x6D] = InstructionData{ &CPU::ADC, &CPU::ABS };
-        _opcodeTable[0x7D] = InstructionData{ &CPU::ADC, &CPU::ABSX };
-        _opcodeTable[0x79] = InstructionData{ &CPU::ADC, &CPU::ABSY };
-        _opcodeTable[0x61] = InstructionData{ &CPU::ADC, &CPU::INDX };
-        _opcodeTable[0x71] = InstructionData{ &CPU::ADC, &CPU::INDY };
-
-        // SBC
-        _opcodeTable[0xE9] = InstructionData{ &CPU::SBC, &CPU::IMM };
-        _opcodeTable[0xE5] = InstructionData{ &CPU::SBC, &CPU::ZPG };
-        _opcodeTable[0xF5] = InstructionData{ &CPU::SBC, &CPU::ZPGX };
-        _opcodeTable[0xED] = InstructionData{ &CPU::SBC, &CPU::ABS };
-        _opcodeTable[0xFD] = InstructionData{ &CPU::SBC, &CPU::ABSX };
-        _opcodeTable[0xF9] = InstructionData{ &CPU::SBC, &CPU::ABSY };
-        _opcodeTable[0xE1] = InstructionData{ &CPU::SBC, &CPU::INDX };
-        _opcodeTable[0xF1] = InstructionData{ &CPU::SBC, &CPU::INDY };
-
-        // INC
-        _opcodeTable[0xE6] = InstructionData{ &CPU::INC, &CPU::ZPG };
-        _opcodeTable[0xF6] = InstructionData{ &CPU::INC, &CPU::ZPGX };
-        _opcodeTable[0xEE] = InstructionData{ &CPU::INC, &CPU::ABS };
-        _opcodeTable[0xFE] = InstructionData{ &CPU::INC, &CPU::ABSX, false, true };
-
-        // DEC
-        _opcodeTable[0xC6] = InstructionData{ &CPU::DEC, &CPU::ZPG };
-        _opcodeTable[0xD6] = InstructionData{ &CPU::DEC, &CPU::ZPGX };
-        _opcodeTable[0xCE] = InstructionData{ &CPU::DEC, &CPU::ABS };
-        _opcodeTable[0xDE] = InstructionData{ &CPU::DEC, &CPU::ABSX, false, true };
-
-        // INX, INY, DEX, DEY
-        _opcodeTable[0xE8] = InstructionData{ &CPU::INX, &CPU::IMP };
-        _opcodeTable[0xC8] = InstructionData{ &CPU::INY, &CPU::IMP };
-        _opcodeTable[0xCA] = InstructionData{ &CPU::DEX, &CPU::IMP };
-        _opcodeTable[0x88] = InstructionData{ &CPU::DEY, &CPU::IMP };
-
-        // CLC
-        _opcodeTable[0x18] = InstructionData{ &CPU::CLC, &CPU::IMP };
-        _opcodeTable[0x58] = InstructionData{ &CPU::CLI, &CPU::IMP };
-        _opcodeTable[0xD8] = InstructionData{ &CPU::CLD, &CPU::IMP };
-        _opcodeTable[0xB8] = InstructionData{ &CPU::CLV, &CPU::IMP };
-
-        _opcodeTable[0x38] = InstructionData{ &CPU::SEC, &CPU::IMP };
-        _opcodeTable[0x78] = InstructionData{ &CPU::SEI, &CPU::IMP };
-        _opcodeTable[0xF8] = InstructionData{ &CPU::SED, &CPU::IMP };
-
-        // Branch
-        _opcodeTable[0x10] = InstructionData{ &CPU::BPL, &CPU::REL };
-        _opcodeTable[0x30] = InstructionData{ &CPU::BMI, &CPU::REL };
-        _opcodeTable[0x50] = InstructionData{ &CPU::BVC, &CPU::REL };
-        _opcodeTable[0x70] = InstructionData{ &CPU::BVS, &CPU::REL };
-        _opcodeTable[0x90] = InstructionData{ &CPU::BCC, &CPU::REL };
-        _opcodeTable[0xB0] = InstructionData{ &CPU::BCS, &CPU::REL };
-        _opcodeTable[0xD0] = InstructionData{ &CPU::BNE, &CPU::REL };
-        _opcodeTable[0xF0] = InstructionData{ &CPU::BEQ, &CPU::REL };
-
-        // CMP, CPX, CPY
-        _opcodeTable[0xC9] = InstructionData{ &CPU::CMP, &CPU::IMM };
-        _opcodeTable[0xC5] = InstructionData{ &CPU::CMP, &CPU::ZPG };
-        _opcodeTable[0xD5] = InstructionData{ &CPU::CMP, &CPU::ZPGX };
-        _opcodeTable[0xCD] = InstructionData{ &CPU::CMP, &CPU::ABS };
-        _opcodeTable[0xDD] = InstructionData{ &CPU::CMP, &CPU::ABSX };
-        _opcodeTable[0xD9] = InstructionData{ &CPU::CMP, &CPU::ABSY };
-        _opcodeTable[0xC1] = InstructionData{ &CPU::CMP, &CPU::INDX };
-        _opcodeTable[0xD1] = InstructionData{ &CPU::CMP, &CPU::INDY };
-        _opcodeTable[0xE0] = InstructionData{ &CPU::CPX, &CPU::IMM };
-        _opcodeTable[0xE4] = InstructionData{ &CPU::CPX, &CPU::ZPG };
-        _opcodeTable[0xEC] = InstructionData{ &CPU::CPX, &CPU::ABS };
-        _opcodeTable[0xC0] = InstructionData{ &CPU::CPY, &CPU::IMM };
-        _opcodeTable[0xC4] = InstructionData{ &CPU::CPY, &CPU::ZPG };
-        _opcodeTable[0xCC] = InstructionData{ &CPU::CPY, &CPU::ABS };
-
-        // PHA, PHP, PLA, PLP, TSX, TXS
-        _opcodeTable[0x48] = InstructionData{ &CPU::PHA, &CPU::IMP };
-        _opcodeTable[0x08] = InstructionData{ &CPU::PHP, &CPU::IMP };
-        _opcodeTable[0x68] = InstructionData{ &CPU::PLA, &CPU::IMP };
-        _opcodeTable[0x28] = InstructionData{ &CPU::PLP, &CPU::IMP };
-        _opcodeTable[0xBA] = InstructionData{ &CPU::TSX, &CPU::IMP };
-        _opcodeTable[0x9A] = InstructionData{ &CPU::TXS, &CPU::IMP };
-
-        // ASL, LSR
-        _opcodeTable[0x0A] = InstructionData{ &CPU::ASL, &CPU::IMP };
-        _opcodeTable[0x06] = InstructionData{ &CPU::ASL, &CPU::ZPG };
-        _opcodeTable[0xA9] = InstructionData{ &CPU::LDA, &CPU::IMM };
-        _opcodeTable[0xA5] = InstructionData{ &CPU::LDA, &CPU::ZPG };
-        _opcodeTable[0xB5] = InstructionData{ &CPU::LDA, &CPU::ZPGX };
-        _opcodeTable[0xAD] = InstructionData{ &CPU::LDA, &CPU::ABS };
-        _opcodeTable[0xBD] = InstructionData{ &CPU::LDA, &CPU::ABSX };
-        _opcodeTable[0xB9] = InstructionData{ &CPU::LDA, &CPU::ABSY };
-        _opcodeTable[0xA1] = InstructionData{ &CPU::LDA, &CPU::INDX };
-        _opcodeTable[0xB1] = InstructionData{ &CPU::LDA, &CPU::INDY };
-
-        // LDX
-        _opcodeTable[0xA2] = InstructionData{ &CPU::LDX, &CPU::IMM };
-        _opcodeTable[0xA6] = InstructionData{ &CPU::LDX, &CPU::ZPG };
-        _opcodeTable[0xB6] = InstructionData{ &CPU::LDX, &CPU::ZPGY, true, true };
-        _opcodeTable[0xAE] = InstructionData{ &CPU::LDX, &CPU::ABS };
-        _opcodeTable[0xBE] = InstructionData{ &CPU::LDX, &CPU::ABSY };
-
-        // LDY
-        _opcodeTable[0xA0] = InstructionData{ &CPU::LDY, &CPU::IMM };
-        _opcodeTable[0xA4] = InstructionData{ &CPU::LDY, &CPU::ZPG };
-        _opcodeTable[0xB4] = InstructionData{ &CPU::LDY, &CPU::ZPGX };
-        _opcodeTable[0xAC] = InstructionData{ &CPU::LDY, &CPU::ABS };
-        _opcodeTable[0xBC] = InstructionData{ &CPU::LDY, &CPU::ABSX };
-
-        // STA
-        _opcodeTable[0x85] = InstructionData{ &CPU::STA, &CPU::ZPG };
-        _opcodeTable[0x95] = InstructionData{ &CPU::STA, &CPU::ZPGX };
-        _opcodeTable[0x8D] = InstructionData{ &CPU::STA, &CPU::ABS };
-        _opcodeTable[0x9D] = InstructionData{ &CPU::STA, &CPU::ABSX, false, true };
-        _opcodeTable[0x99] = InstructionData{ &CPU::STA, &CPU::ABSY, false, true };
-        _opcodeTable[0x81] = InstructionData{ &CPU::STA, &CPU::INDX, false };
-        _opcodeTable[0x91] = InstructionData{ &CPU::STA, &CPU::INDY, false, true };
-
-        // STX
-        _opcodeTable[0x86] = InstructionData{ &CPU::STX, &CPU::ZPG };
-        _opcodeTable[0x96] = InstructionData{ &CPU::STX, &CPU::ZPGY, true, true };
-        _opcodeTable[0x8E] = InstructionData{ &CPU::STX, &CPU::ABS };
-
-        // STY
-        _opcodeTable[0x84] = InstructionData{ &CPU::STY, &CPU::ZPG };
-        _opcodeTable[0x94] = InstructionData{ &CPU::STY, &CPU::ZPGX };
-        _opcodeTable[0x8C] = InstructionData{ &CPU::STY, &CPU::ABS };
-
-        // ADC
-        _opcodeTable[0x69] = InstructionData{ &CPU::ADC, &CPU::IMM };
-        _opcodeTable[0x65] = InstructionData{ &CPU::ADC, &CPU::ZPG };
-        _opcodeTable[0x75] = InstructionData{ &CPU::ADC, &CPU::ZPGX };
-        _opcodeTable[0x6D] = InstructionData{ &CPU::ADC, &CPU::ABS };
-        _opcodeTable[0x7D] = InstructionData{ &CPU::ADC, &CPU::ABSX };
-        _opcodeTable[0x79] = InstructionData{ &CPU::ADC, &CPU::ABSY };
-        _opcodeTable[0x61] = InstructionData{ &CPU::ADC, &CPU::INDX };
-        _opcodeTable[0x71] = InstructionData{ &CPU::ADC, &CPU::INDY };
-
-        // SBC
-        _opcodeTable[0xE9] = InstructionData{ &CPU::SBC, &CPU::IMM };
-        _opcodeTable[0xE5] = InstructionData{ &CPU::SBC, &CPU::ZPG };
-        _opcodeTable[0xF5] = InstructionData{ &CPU::SBC, &CPU::ZPGX };
-        _opcodeTable[0xED] = InstructionData{ &CPU::SBC, &CPU::ABS };
-        _opcodeTable[0xFD] = InstructionData{ &CPU::SBC, &CPU::ABSX };
-        _opcodeTable[0xF9] = InstructionData{ &CPU::SBC, &CPU::ABSY };
-        _opcodeTable[0xE1] = InstructionData{ &CPU::SBC, &CPU::INDX };
-        _opcodeTable[0xF1] = InstructionData{ &CPU::SBC, &CPU::INDY };
-
-        // INC
-        _opcodeTable[0xE6] = InstructionData{ &CPU::INC, &CPU::ZPG };
-        _opcodeTable[0xF6] = InstructionData{ &CPU::INC, &CPU::ZPGX };
-        _opcodeTable[0xEE] = InstructionData{ &CPU::INC, &CPU::ABS };
-        _opcodeTable[0xFE] = InstructionData{ &CPU::INC, &CPU::ABSX, false, true };
-
-        // DEC
-        _opcodeTable[0xC6] = InstructionData{ &CPU::DEC, &CPU::ZPG };
-        _opcodeTable[0xD6] = InstructionData{ &CPU::DEC, &CPU::ZPGX };
-        _opcodeTable[0xCE] = InstructionData{ &CPU::DEC, &CPU::ABS };
-        _opcodeTable[0xDE] = InstructionData{ &CPU::DEC, &CPU::ABSX, false, true };
-
-        // INX, INY, DEX, DEY
-        _opcodeTable[0xE8] = InstructionData{ &CPU::INX, &CPU::IMP };
-        _opcodeTable[0xC8] = InstructionData{ &CPU::INY, &CPU::IMP };
-        _opcodeTable[0xCA] = InstructionData{ &CPU::DEX, &CPU::IMP };
-        _opcodeTable[0x88] = InstructionData{ &CPU::DEY, &CPU::IMP };
-
-        // CLC
-        _opcodeTable[0x18] = InstructionData{ &CPU::CLC, &CPU::IMP };
-        _opcodeTable[0x58] = InstructionData{ &CPU::CLI, &CPU::IMP };
-        _opcodeTable[0xD8] = InstructionData{ &CPU::CLD, &CPU::IMP };
-        _opcodeTable[0xB8] = InstructionData{ &CPU::CLV, &CPU::IMP };
-
-        _opcodeTable[0x38] = InstructionData{ &CPU::SEC, &CPU::IMP };
-        _opcodeTable[0x78] = InstructionData{ &CPU::SEI, &CPU::IMP };
-        _opcodeTable[0xF8] = InstructionData{ &CPU::SED, &CPU::IMP };
-
-        // Branch
-        _opcodeTable[0x10] = InstructionData{ &CPU::BPL, &CPU::REL };
-        _opcodeTable[0x30] = InstructionData{ &CPU::BMI, &CPU::REL };
-        _opcodeTable[0x50] = InstructionData{ &CPU::BVC, &CPU::REL };
-        _opcodeTable[0x70] = InstructionData{ &CPU::BVS, &CPU::REL };
-        _opcodeTable[0x90] = InstructionData{ &CPU::BCC, &CPU::REL };
-        _opcodeTable[0xB0] = InstructionData{ &CPU::BCS, &CPU::REL };
-        _opcodeTable[0xD0] = InstructionData{ &CPU::BNE, &CPU::REL };
-        _opcodeTable[0xF0] = InstructionData{ &CPU::BEQ, &CPU::REL };
-
-        // CMP, CPX, CPY
-        _opcodeTable[0xC9] = InstructionData{ &CPU::CMP, &CPU::IMM };
-        _opcodeTable[0xC5] = InstructionData{ &CPU::CMP, &CPU::ZPG };
-        _opcodeTable[0xD5] = InstructionData{ &CPU::CMP, &CPU::ZPGX };
-        _opcodeTable[0xCD] = InstructionData{ &CPU::CMP, &CPU::ABS };
-        _opcodeTable[0xDD] = InstructionData{ &CPU::CMP, &CPU::ABSX };
-        _opcodeTable[0xD9] = InstructionData{ &CPU::CMP, &CPU::ABSY };
-        _opcodeTable[0xC1] = InstructionData{ &CPU::CMP, &CPU::INDX };
-        _opcodeTable[0xD1] = InstructionData{ &CPU::CMP, &CPU::INDY };
-        _opcodeTable[0xE0] = InstructionData{ &CPU::CPX, &CPU::IMM };
-        _opcodeTable[0xE4] = InstructionData{ &CPU::CPX, &CPU::ZPG };
-        _opcodeTable[0xEC] = InstructionData{ &CPU::CPX, &CPU::ABS };
-        _opcodeTable[0xC0] = InstructionData{ &CPU::CPY, &CPU::IMM };
-        _opcodeTable[0xC4] = InstructionData{ &CPU::CPY, &CPU::ZPG };
-        _opcodeTable[0xCC] = InstructionData{ &CPU::CPY, &CPU::ABS };
-
-        // PHA, PHP, PLA, PLP, TSX, TXS
-        _opcodeTable[0x48] = InstructionData{ &CPU::PHA, &CPU::IMP };
-        _opcodeTable[0x08] = InstructionData{ &CPU::PHP, &CPU::IMP };
-        _opcodeTable[0x68] = InstructionData{ &CPU::PLA, &CPU::IMP };
-        _opcodeTable[0x28] = InstructionData{ &CPU::PLP, &CPU::IMP };
-        _opcodeTable[0xBA] = InstructionData{ &CPU::TSX, &CPU::IMP };
-        _opcodeTable[0x9A] = InstructionData{ &CPU::TXS, &CPU::IMP };
-
-        // ASL, LSR
-        _opcodeTable[0x0A] = InstructionData{ &CPU::ASL, &CPU::IMP };
-        _opcodeTable[0x06] = InstructionData{ &CPU::ASL, &CPU::ZPG };
-        _opcodeTable[0x16] = InstructionData{ &CPU::ASL, &CPU::ZPGX };
-        _opcodeTable[0x0E] = InstructionData{ &CPU::ASL, &CPU::ABS };
-        _opcodeTable[0x1E] = InstructionData{ &CPU::ASL, &CPU::ABSX, false, true };
-        _opcodeTable[0x4A] = InstructionData{ &CPU::LSR, &CPU::IMP };
-        _opcodeTable[0x46] = InstructionData{ &CPU::LSR, &CPU::ZPG };
-        _opcodeTable[0x56] = InstructionData{ &CPU::LSR, &CPU::ZPGX };
-        _opcodeTable[0x4E] = InstructionData{ &CPU::LSR, &CPU::ABS };
-        _opcodeTable[0x5E] = InstructionData{ &CPU::LSR, &CPU::ABSX, false, true };
-
-        // ROL, ROR
-        _opcodeTable[0x2A] = InstructionData{ &CPU::ROL, &CPU::IMP };
-        _opcodeTable[0x26] = InstructionData{ &CPU::ROL, &CPU::ZPG };
-        _opcodeTable[0x36] = InstructionData{ &CPU::ROL, &CPU::ZPGX };
-        _opcodeTable[0x2E] = InstructionData{ &CPU::ROL, &CPU::ABS };
-        _opcodeTable[0x3E] = InstructionData{ &CPU::ROL, &CPU::ABSX, false, true };
-        _opcodeTable[0x6A] = InstructionData{ &CPU::ROR, &CPU::IMP };
-        _opcodeTable[0x66] = InstructionData{ &CPU::ROR, &CPU::ZPG };
-        _opcodeTable[0x76] = InstructionData{ &CPU::ROR, &CPU::ZPGX };
-        _opcodeTable[0x6E] = InstructionData{ &CPU::ROR, &CPU::ABS };
-        _opcodeTable[0x7E] = InstructionData{ &CPU::ROR, &CPU::ABSX, false, true };
-
-        // JMP JSR, RTS, RTI, BRK
-        _opcodeTable[0x4C] = InstructionData{ &CPU::JMP, &CPU::ABS };
-        _opcodeTable[0x6C] = InstructionData{ &CPU::JMP, &CPU::IND };
-        _opcodeTable[0x20] = InstructionData{ &CPU::JSR, &CPU::ABS };
-        _opcodeTable[0x60] = InstructionData{ &CPU::RTS, &CPU::IMP };
-        _opcodeTable[0x00] = InstructionData{ &CPU::BRK, &CPU::IMP };
-        _opcodeTable[0x40] = InstructionData{ &CPU::RTI, &CPU::IMP };
-
-        // AND
-        _opcodeTable[0x29] = InstructionData{ &CPU::AND, &CPU::IMM };
-        _opcodeTable[0x25] = InstructionData{ &CPU::AND, &CPU::ZPG };
-        _opcodeTable[0x35] = InstructionData{ &CPU::AND, &CPU::ZPGX };
-        _opcodeTable[0x2D] = InstructionData{ &CPU::AND, &CPU::ABS };
-        _opcodeTable[0x3D] = InstructionData{ &CPU::AND, &CPU::ABSX };
-        _opcodeTable[0x39] = InstructionData{ &CPU::AND, &CPU::ABSY };
-        _opcodeTable[0x21] = InstructionData{ &CPU::AND, &CPU::INDX };
-        _opcodeTable[0x31] = InstructionData{ &CPU::AND, &CPU::INDY };
-
-        // ORA
-        _opcodeTable[0x09] = InstructionData{ &CPU::ORA, &CPU::IMM };
-        _opcodeTable[0x05] = InstructionData{ &CPU::ORA, &CPU::ZPG };
-        _opcodeTable[0x15] = InstructionData{ &CPU::ORA, &CPU::ZPGX };
-        _opcodeTable[0x0D] = InstructionData{ &CPU::ORA, &CPU::ABS };
-        _opcodeTable[0x1D] = InstructionData{ &CPU::ORA, &CPU::ABSX };
-        _opcodeTable[0x19] = InstructionData{ &CPU::ORA, &CPU::ABSY };
-        _opcodeTable[0x01] = InstructionData{ &CPU::ORA, &CPU::INDX };
-        _opcodeTable[0x11] = InstructionData{ &CPU::ORA, &CPU::INDY };
-
-        // EOR
-        _opcodeTable[0x49] = InstructionData{ &CPU::EOR, &CPU::IMM };
-        _opcodeTable[0x45] = InstructionData{ &CPU::EOR, &CPU::ZPG };
-        _opcodeTable[0x55] = InstructionData{ &CPU::EOR, &CPU::ZPGX };
-        _opcodeTable[0x4D] = InstructionData{ &CPU::EOR, &CPU::ABS };
-        _opcodeTable[0x5D] = InstructionData{ &CPU::EOR, &CPU::ABSX };
-        _opcodeTable[0x59] = InstructionData{ &CPU::EOR, &CPU::ABSY };
-        _opcodeTable[0x41] = InstructionData{ &CPU::EOR, &CPU::INDX };
-        _opcodeTable[0x51] = InstructionData{ &CPU::EOR, &CPU::INDY };
-
-        // BIT
-        _opcodeTable[0x24] = InstructionData{ &CPU::BIT, &CPU::ZPG };
-        _opcodeTable[0x2C] = InstructionData{ &CPU::BIT, &CPU::ABS };
-
-        // Transfer
-        _opcodeTable[0xAA] = InstructionData{ &CPU::TAX, &CPU::IMP };
-        _opcodeTable[0x8A] = InstructionData{ &CPU::TXA, &CPU::IMP };
-        _opcodeTable[0xA8] = InstructionData{ &CPU::TAY, &CPU::IMP };
-        _opcodeTable[0x98] = InstructionData{ &CPU::TYA, &CPU::IMP };
-
-        /*
-        ################################
-        ||       Illegal Opcodes      ||
-        ################################
-        */
-        // Jams (does nothing)
-        _opcodeTable[0x02] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x12] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x22] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x32] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x42] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x52] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x62] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x72] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0x92] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0xB2] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0xD2] = InstructionData{ &CPU::JAM, &CPU::IMP };
-        _opcodeTable[0xF2] = InstructionData{ &CPU::JAM, &CPU::IMP };
-
-        // NOP Implied
-        _opcodeTable[0x1A] = InstructionData{ &CPU::NOP, &CPU::IMP };
-        _opcodeTable[0x3A] = InstructionData{ &CPU::NOP, &CPU::IMP };
-        _opcodeTable[0x5A] = InstructionData{ &CPU::NOP, &CPU::IMP };
-        _opcodeTable[0x7A] = InstructionData{ &CPU::NOP, &CPU::IMP };
-        _opcodeTable[0xDA] = InstructionData{ &CPU::NOP, &CPU::IMP };
-        _opcodeTable[0xFA] = InstructionData{ &CPU::NOP, &CPU::IMP };
-
-        // NOP Immediate
-        _opcodeTable[0x80] = InstructionData{ &CPU::NOP2, &CPU::IMM };
-        _opcodeTable[0x82] = InstructionData{ &CPU::NOP2, &CPU::IMM };
-        _opcodeTable[0x89] = InstructionData{ &CPU::NOP2, &CPU::IMM };
-        _opcodeTable[0xC2] = InstructionData{ &CPU::NOP2, &CPU::IMM };
-        _opcodeTable[0xE2] = InstructionData{ &CPU::NOP2, &CPU::IMM };
-
-        // NOP Zero Page
-        _opcodeTable[0x04] = InstructionData{ &CPU::NOP2, &CPU::ZPG };
-        _opcodeTable[0x44] = InstructionData{ &CPU::NOP2, &CPU::ZPG };
-        _opcodeTable[0x64] = InstructionData{ &CPU::NOP2, &CPU::ZPG };
-
-        // NOP Zero Page X
-        _opcodeTable[0x14] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-        _opcodeTable[0x34] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-        _opcodeTable[0x54] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-        _opcodeTable[0x74] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-        _opcodeTable[0xD4] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-        _opcodeTable[0xF4] = InstructionData{ &CPU::NOP2, &CPU::ZPGX };
-
-        // NOP Absolute
-        _opcodeTable[0x0C] = InstructionData{ &CPU::NOP2, &CPU::ABS };
-        _opcodeTable[0x1C] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-        _opcodeTable[0x3C] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-        _opcodeTable[0x5C] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-        _opcodeTable[0x7C] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-        _opcodeTable[0xDC] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-        _opcodeTable[0xFC] = InstructionData{ &CPU::NOP2, &CPU::ABSX };
-
-        // SLO
-        _opcodeTable[0x07] = InstructionData{ &CPU::SLO, &CPU::ZPG };
-        _opcodeTable[0x17] = InstructionData{ &CPU::SLO, &CPU::ZPGX };
-        _opcodeTable[0x0F] = InstructionData{ &CPU::SLO, &CPU::ABS };
-        _opcodeTable[0x1F] = InstructionData{ &CPU::SLO, &CPU::ABSX, false, true };
-        _opcodeTable[0x1B] = InstructionData{ &CPU::SLO, &CPU::ABSY, false, true };
-        _opcodeTable[0x03] = InstructionData{ &CPU::SLO, &CPU::INDX };
-        _opcodeTable[0x13] = InstructionData{ &CPU::SLO, &CPU::INDY, false, true };
-
-        // RLA
-        _opcodeTable[0x27] = InstructionData{ &CPU::RLA, &CPU::ZPG };
-        _opcodeTable[0x37] = InstructionData{ &CPU::RLA, &CPU::ZPGX };
-        _opcodeTable[0x2F] = InstructionData{ &CPU::RLA, &CPU::ABS };
-        _opcodeTable[0x3F] = InstructionData{ &CPU::RLA, &CPU::ABSX, false, true };
-        _opcodeTable[0x3B] = InstructionData{ &CPU::RLA, &CPU::ABSY, false, true };
-        _opcodeTable[0x23] = InstructionData{ &CPU::RLA, &CPU::INDX };
-        _opcodeTable[0x33] = InstructionData{ &CPU::RLA, &CPU::INDY, false, true };
-
-        // SRE
-        _opcodeTable[0x47] = InstructionData{ &CPU::SRE, &CPU::ZPG };
-        _opcodeTable[0x57] = InstructionData{ &CPU::SRE, &CPU::ZPGX };
-        _opcodeTable[0x4F] = InstructionData{ &CPU::SRE, &CPU::ABS };
-        _opcodeTable[0x5F] = InstructionData{ &CPU::SRE, &CPU::ABSX, false, true };
-        _opcodeTable[0x5B] = InstructionData{ &CPU::SRE, &CPU::ABSY, false, true };
-        _opcodeTable[0x43] = InstructionData{ &CPU::SRE, &CPU::INDX };
-        _opcodeTable[0x53] = InstructionData{ &CPU::SRE, &CPU::INDY, false, true };
-
-        // RRA
-        _opcodeTable[0x67] = InstructionData{ &CPU::RRA, &CPU::ZPG };
-        _opcodeTable[0x77] = InstructionData{ &CPU::RRA, &CPU::ZPGX };
-        _opcodeTable[0x6F] = InstructionData{ &CPU::RRA, &CPU::ABS };
-        _opcodeTable[0x7F] = InstructionData{ &CPU::RRA, &CPU::ABSX, false, true };
-        _opcodeTable[0x7B] = InstructionData{ &CPU::RRA, &CPU::ABSY, false, true };
-        _opcodeTable[0x63] = InstructionData{ &CPU::RRA, &CPU::INDX };
-        _opcodeTable[0x73] = InstructionData{ &CPU::RRA, &CPU::INDY, false, true };
-
-        // SAX
-        _opcodeTable[0x87] = InstructionData{ &CPU::SAX, &CPU::ZPG };
-        _opcodeTable[0x97] = InstructionData{ &CPU::SAX, &CPU::ZPGY, true, true };
-        _opcodeTable[0x8F] = InstructionData{ &CPU::SAX, &CPU::ABS };
-        _opcodeTable[0x83] = InstructionData{ &CPU::SAX, &CPU::INDX };
-
-        // LAX
-        _opcodeTable[0xA7] = InstructionData{ &CPU::LAX, &CPU::ZPG };
-        _opcodeTable[0xB7] = InstructionData{ &CPU::LAX, &CPU::ZPGY, true, true };
-        _opcodeTable[0xAF] = InstructionData{ &CPU::LAX, &CPU::ABS };
-        _opcodeTable[0xBF] = InstructionData{ &CPU::LAX, &CPU::ABSY };
-        _opcodeTable[0xA3] = InstructionData{ &CPU::LAX, &CPU::INDX };
-        _opcodeTable[0xB3] = InstructionData{ &CPU::LAX, &CPU::INDY };
-
-        // DCP
-        _opcodeTable[0xC7] = InstructionData{ &CPU::DCP, &CPU::ZPG };
-        _opcodeTable[0xD7] = InstructionData{ &CPU::DCP, &CPU::ZPGX };
-        _opcodeTable[0xCF] = InstructionData{ &CPU::DCP, &CPU::ABS };
-        _opcodeTable[0xDF] = InstructionData{ &CPU::DCP, &CPU::ABSX, false, true };
-        _opcodeTable[0xDB] = InstructionData{ &CPU::DCP, &CPU::ABSY, false, true };
-        _opcodeTable[0xC3] = InstructionData{ &CPU::DCP, &CPU::INDX };
-        _opcodeTable[0xD3] = InstructionData{ &CPU::DCP, &CPU::INDY, false, true };
-
-        // ISC
-        _opcodeTable[0xE7] = InstructionData{ &CPU::ISC, &CPU::ZPG };
-        _opcodeTable[0xF7] = InstructionData{ &CPU::ISC, &CPU::ZPGX };
-        _opcodeTable[0xEF] = InstructionData{ &CPU::ISC, &CPU::ABS };
-        _opcodeTable[0xFF] = InstructionData{ &CPU::ISC, &CPU::ABSX, false, true };
-        _opcodeTable[0xFB] = InstructionData{ &CPU::ISC, &CPU::ABSY, false, true };
-        _opcodeTable[0xE3] = InstructionData{ &CPU::ISC, &CPU::INDX };
-        _opcodeTable[0xF3] = InstructionData{ &CPU::ISC, &CPU::INDY, false, true };
-
-        // SBC2
-        _opcodeTable[0xEB] = InstructionData{ &CPU::SBC, &CPU::IMM };
-
-        // ALR, ARR
-        _opcodeTable[0x4B] = InstructionData{ &CPU::ALR, &CPU::IMM };
-        _opcodeTable[0x6B] = InstructionData{ &CPU::ARR, &CPU::IMM };
-
-        // ANC
-        _opcodeTable[0x0B] = InstructionData{ &CPU::ANC, &CPU::IMM };
-        _opcodeTable[0x2B] = InstructionData{ &CPU::ANC, &CPU::IMM };
-
-        // LXA
-        _opcodeTable[0xAB] = InstructionData{ &CPU::LXA, &CPU::IMM };
-
-        // SBX
-        _opcodeTable[0xCB] = InstructionData{ &CPU::SBX, &CPU::IMM };
-
-        // LAS
-        _opcodeTable[0xBB] = InstructionData{ &CPU::LAS, &CPU::ABSY };
-
-        // ANE
-        _opcodeTable[0x8B] = InstructionData{ &CPU::ANE, &CPU::IMM };
+        // // NOP
+        // _opcodeTable[0xEA] = Instruction{ &CPU::NOP, &CPU::IMP };
+        //
+        // // LDA
+        // _opcodeTable[0xA9] = Instruction{ &CPU::LDA, &CPU::IMM };
+        // _opcodeTable[0xA5] = Instruction{ &CPU::LDA, &CPU::ZPG };
+        // _opcodeTable[0xB5] = Instruction{ &CPU::LDA, &CPU::ZPGX };
+        // _opcodeTable[0xAD] = Instruction{ &CPU::LDA, &CPU::ABS };
+        // _opcodeTable[0xBD] = Instruction{ &CPU::LDA, &CPU::ABSX };
+        // _opcodeTable[0xB9] = Instruction{ &CPU::LDA, &CPU::ABSY };
+        // _opcodeTable[0xA1] = Instruction{ &CPU::LDA, &CPU::INDX };
+        // _opcodeTable[0xB1] = Instruction{ &CPU::LDA, &CPU::INDY };
+        //
+        // // LDX
+        // _opcodeTable[0xA2] = Instruction{ &CPU::LDX, &CPU::IMM };
+        // _opcodeTable[0xA6] = Instruction{ &CPU::LDX, &CPU::ZPG };
+        // _opcodeTable[0xB6] = Instruction{ &CPU::LDX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0xAE] = Instruction{ &CPU::LDX, &CPU::ABS };
+        // _opcodeTable[0xBE] = Instruction{ &CPU::LDX, &CPU::ABSY };
+        //
+        // // LDY
+        // _opcodeTable[0xA0] = Instruction{ &CPU::LDY, &CPU::IMM };
+        // _opcodeTable[0xA4] = Instruction{ &CPU::LDY, &CPU::ZPG };
+        // _opcodeTable[0xB4] = Instruction{ &CPU::LDY, &CPU::ZPGX };
+        // _opcodeTable[0xAC] = Instruction{ &CPU::LDY, &CPU::ABS };
+        // _opcodeTable[0xBC] = Instruction{ &CPU::LDY, &CPU::ABSX };
+        //
+        // // STA
+        // _opcodeTable[0x85] = Instruction{ &CPU::STA, &CPU::ZPG };
+        // _opcodeTable[0x95] = Instruction{ &CPU::STA, &CPU::ZPGX };
+        // _opcodeTable[0x8D] = Instruction{ &CPU::STA, &CPU::ABS };
+        // _opcodeTable[0x9D] = Instruction{ &CPU::STA, &CPU::ABSX, false, true };
+        // _opcodeTable[0x99] = Instruction{ &CPU::STA, &CPU::ABSY, false, true };
+        // _opcodeTable[0x81] = Instruction{ &CPU::STA, &CPU::INDX, false };
+        // _opcodeTable[0x91] = Instruction{ &CPU::STA, &CPU::INDY, false, true };
+        //
+        // // STX
+        // _opcodeTable[0x86] = Instruction{ &CPU::STX, &CPU::ZPG };
+        // _opcodeTable[0x96] = Instruction{ &CPU::STX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0x8E] = Instruction{ &CPU::STX, &CPU::ABS };
+        //
+        // // STY
+        // _opcodeTable[0x84] = Instruction{ &CPU::STY, &CPU::ZPG };
+        // _opcodeTable[0x94] = Instruction{ &CPU::STY, &CPU::ZPGX };
+        // _opcodeTable[0x8C] = Instruction{ &CPU::STY, &CPU::ABS };
+        //
+        // // ADC
+        // _opcodeTable[0x69] = Instruction{ &CPU::ADC, &CPU::IMM };
+        // _opcodeTable[0x65] = Instruction{ &CPU::ADC, &CPU::ZPG };
+        // _opcodeTable[0x75] = Instruction{ &CPU::ADC, &CPU::ZPGX };
+        // _opcodeTable[0x6D] = Instruction{ &CPU::ADC, &CPU::ABS };
+        // _opcodeTable[0x7D] = Instruction{ &CPU::ADC, &CPU::ABSX };
+        // _opcodeTable[0x79] = Instruction{ &CPU::ADC, &CPU::ABSY };
+        // _opcodeTable[0x61] = Instruction{ &CPU::ADC, &CPU::INDX };
+        // _opcodeTable[0x71] = Instruction{ &CPU::ADC, &CPU::INDY };
+        //
+        // // SBC
+        // _opcodeTable[0xE9] = Instruction{ &CPU::SBC, &CPU::IMM };
+        // _opcodeTable[0xE5] = Instruction{ &CPU::SBC, &CPU::ZPG };
+        // _opcodeTable[0xF5] = Instruction{ &CPU::SBC, &CPU::ZPGX };
+        // _opcodeTable[0xED] = Instruction{ &CPU::SBC, &CPU::ABS };
+        // _opcodeTable[0xFD] = Instruction{ &CPU::SBC, &CPU::ABSX };
+        // _opcodeTable[0xF9] = Instruction{ &CPU::SBC, &CPU::ABSY };
+        // _opcodeTable[0xE1] = Instruction{ &CPU::SBC, &CPU::INDX };
+        // _opcodeTable[0xF1] = Instruction{ &CPU::SBC, &CPU::INDY };
+        //
+        // // INC
+        // _opcodeTable[0xE6] = Instruction{ &CPU::INC, &CPU::ZPG };
+        // _opcodeTable[0xF6] = Instruction{ &CPU::INC, &CPU::ZPGX };
+        // _opcodeTable[0xEE] = Instruction{ &CPU::INC, &CPU::ABS };
+        // _opcodeTable[0xFE] = Instruction{ &CPU::INC, &CPU::ABSX, false, true };
+        //
+        // // DEC
+        // _opcodeTable[0xC6] = Instruction{ &CPU::DEC, &CPU::ZPG };
+        // _opcodeTable[0xD6] = Instruction{ &CPU::DEC, &CPU::ZPGX };
+        // _opcodeTable[0xCE] = Instruction{ &CPU::DEC, &CPU::ABS };
+        // _opcodeTable[0xDE] = Instruction{ &CPU::DEC, &CPU::ABSX, false, true };
+        //
+        // // INX, INY, DEX, DEY
+        // _opcodeTable[0xE8] = Instruction{ &CPU::INX, &CPU::IMP };
+        // _opcodeTable[0xC8] = Instruction{ &CPU::INY, &CPU::IMP };
+        // _opcodeTable[0xCA] = Instruction{ &CPU::DEX, &CPU::IMP };
+        // _opcodeTable[0x88] = Instruction{ &CPU::DEY, &CPU::IMP };
+        //
+        // // CLC
+        // _opcodeTable[0x18] = Instruction{ &CPU::CLC, &CPU::IMP };
+        // _opcodeTable[0x58] = Instruction{ &CPU::CLI, &CPU::IMP };
+        // _opcodeTable[0xD8] = Instruction{ &CPU::CLD, &CPU::IMP };
+        // _opcodeTable[0xB8] = Instruction{ &CPU::CLV, &CPU::IMP };
+        //
+        // _opcodeTable[0x38] = Instruction{ &CPU::SEC, &CPU::IMP };
+        // _opcodeTable[0x78] = Instruction{ &CPU::SEI, &CPU::IMP };
+        // _opcodeTable[0xF8] = Instruction{ &CPU::SED, &CPU::IMP };
+        //
+        // // Branch
+        // _opcodeTable[0x10] = Instruction{ &CPU::BPL, &CPU::REL };
+        // _opcodeTable[0x30] = Instruction{ &CPU::BMI, &CPU::REL };
+        // _opcodeTable[0x50] = Instruction{ &CPU::BVC, &CPU::REL };
+        // _opcodeTable[0x70] = Instruction{ &CPU::BVS, &CPU::REL };
+        // _opcodeTable[0x90] = Instruction{ &CPU::BCC, &CPU::REL };
+        // _opcodeTable[0xB0] = Instruction{ &CPU::BCS, &CPU::REL };
+        // _opcodeTable[0xD0] = Instruction{ &CPU::BNE, &CPU::REL };
+        // _opcodeTable[0xF0] = Instruction{ &CPU::BEQ, &CPU::REL };
+        //
+        // // CMP, CPX, CPY
+        // _opcodeTable[0xC9] = Instruction{ &CPU::CMP, &CPU::IMM };
+        // _opcodeTable[0xC5] = Instruction{ &CPU::CMP, &CPU::ZPG };
+        // _opcodeTable[0xD5] = Instruction{ &CPU::CMP, &CPU::ZPGX };
+        // _opcodeTable[0xCD] = Instruction{ &CPU::CMP, &CPU::ABS };
+        // _opcodeTable[0xDD] = Instruction{ &CPU::CMP, &CPU::ABSX };
+        // _opcodeTable[0xD9] = Instruction{ &CPU::CMP, &CPU::ABSY };
+        // _opcodeTable[0xC1] = Instruction{ &CPU::CMP, &CPU::INDX };
+        // _opcodeTable[0xD1] = Instruction{ &CPU::CMP, &CPU::INDY };
+        // _opcodeTable[0xE0] = Instruction{ &CPU::CPX, &CPU::IMM };
+        // _opcodeTable[0xE4] = Instruction{ &CPU::CPX, &CPU::ZPG };
+        // _opcodeTable[0xEC] = Instruction{ &CPU::CPX, &CPU::ABS };
+        // _opcodeTable[0xC0] = Instruction{ &CPU::CPY, &CPU::IMM };
+        // _opcodeTable[0xC4] = Instruction{ &CPU::CPY, &CPU::ZPG };
+        // _opcodeTable[0xCC] = Instruction{ &CPU::CPY, &CPU::ABS };
+        //
+        // // PHA, PHP, PLA, PLP, TSX, TXS
+        // _opcodeTable[0x48] = Instruction{ &CPU::PHA, &CPU::IMP };
+        // _opcodeTable[0x08] = Instruction{ &CPU::PHP, &CPU::IMP };
+        // _opcodeTable[0x68] = Instruction{ &CPU::PLA, &CPU::IMP };
+        // _opcodeTable[0x28] = Instruction{ &CPU::PLP, &CPU::IMP };
+        // _opcodeTable[0xBA] = Instruction{ &CPU::TSX, &CPU::IMP };
+        // _opcodeTable[0x9A] = Instruction{ &CPU::TXS, &CPU::IMP };
+        //
+        // // ASL, LSR
+        // _opcodeTable[0x0A] = Instruction{ &CPU::ASL, &CPU::IMP };
+        // _opcodeTable[0x06] = Instruction{ &CPU::ASL, &CPU::ZPG };
+        // _opcodeTable[0xA9] = Instruction{ &CPU::LDA, &CPU::IMM };
+        // _opcodeTable[0xA5] = Instruction{ &CPU::LDA, &CPU::ZPG };
+        // _opcodeTable[0xB5] = Instruction{ &CPU::LDA, &CPU::ZPGX };
+        // _opcodeTable[0xAD] = Instruction{ &CPU::LDA, &CPU::ABS };
+        // _opcodeTable[0xBD] = Instruction{ &CPU::LDA, &CPU::ABSX };
+        // _opcodeTable[0xB9] = Instruction{ &CPU::LDA, &CPU::ABSY };
+        // _opcodeTable[0xA1] = Instruction{ &CPU::LDA, &CPU::INDX };
+        // _opcodeTable[0xB1] = Instruction{ &CPU::LDA, &CPU::INDY };
+        //
+        // // LDX
+        // _opcodeTable[0xA2] = Instruction{ &CPU::LDX, &CPU::IMM };
+        // _opcodeTable[0xA6] = Instruction{ &CPU::LDX, &CPU::ZPG };
+        // _opcodeTable[0xB6] = Instruction{ &CPU::LDX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0xAE] = Instruction{ &CPU::LDX, &CPU::ABS };
+        // _opcodeTable[0xBE] = Instruction{ &CPU::LDX, &CPU::ABSY };
+        //
+        // // LDY
+        // _opcodeTable[0xA0] = Instruction{ &CPU::LDY, &CPU::IMM };
+        // _opcodeTable[0xA4] = Instruction{ &CPU::LDY, &CPU::ZPG };
+        // _opcodeTable[0xB4] = Instruction{ &CPU::LDY, &CPU::ZPGX };
+        // _opcodeTable[0xAC] = Instruction{ &CPU::LDY, &CPU::ABS };
+        // _opcodeTable[0xBC] = Instruction{ &CPU::LDY, &CPU::ABSX };
+        //
+        // // STA
+        // _opcodeTable[0x85] = Instruction{ &CPU::STA, &CPU::ZPG };
+        // _opcodeTable[0x95] = Instruction{ &CPU::STA, &CPU::ZPGX };
+        // _opcodeTable[0x8D] = Instruction{ &CPU::STA, &CPU::ABS };
+        // _opcodeTable[0x9D] = Instruction{ &CPU::STA, &CPU::ABSX, false, true };
+        // _opcodeTable[0x99] = Instruction{ &CPU::STA, &CPU::ABSY, false, true };
+        // _opcodeTable[0x81] = Instruction{ &CPU::STA, &CPU::INDX, false };
+        // _opcodeTable[0x91] = Instruction{ &CPU::STA, &CPU::INDY, false, true };
+        //
+        // // STX
+        // _opcodeTable[0x86] = Instruction{ &CPU::STX, &CPU::ZPG };
+        // _opcodeTable[0x96] = Instruction{ &CPU::STX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0x8E] = Instruction{ &CPU::STX, &CPU::ABS };
+        //
+        // // STY
+        // _opcodeTable[0x84] = Instruction{ &CPU::STY, &CPU::ZPG };
+        // _opcodeTable[0x94] = Instruction{ &CPU::STY, &CPU::ZPGX };
+        // _opcodeTable[0x8C] = Instruction{ &CPU::STY, &CPU::ABS };
+        //
+        // // ADC
+        // _opcodeTable[0x69] = Instruction{ &CPU::ADC, &CPU::IMM };
+        // _opcodeTable[0x65] = Instruction{ &CPU::ADC, &CPU::ZPG };
+        // _opcodeTable[0x75] = Instruction{ &CPU::ADC, &CPU::ZPGX };
+        // _opcodeTable[0x6D] = Instruction{ &CPU::ADC, &CPU::ABS };
+        // _opcodeTable[0x7D] = Instruction{ &CPU::ADC, &CPU::ABSX };
+        // _opcodeTable[0x79] = Instruction{ &CPU::ADC, &CPU::ABSY };
+        // _opcodeTable[0x61] = Instruction{ &CPU::ADC, &CPU::INDX };
+        // _opcodeTable[0x71] = Instruction{ &CPU::ADC, &CPU::INDY };
+        //
+        // // SBC
+        // _opcodeTable[0xE9] = Instruction{ &CPU::SBC, &CPU::IMM };
+        // _opcodeTable[0xE5] = Instruction{ &CPU::SBC, &CPU::ZPG };
+        // _opcodeTable[0xF5] = Instruction{ &CPU::SBC, &CPU::ZPGX };
+        // _opcodeTable[0xED] = Instruction{ &CPU::SBC, &CPU::ABS };
+        // _opcodeTable[0xFD] = Instruction{ &CPU::SBC, &CPU::ABSX };
+        // _opcodeTable[0xF9] = Instruction{ &CPU::SBC, &CPU::ABSY };
+        // _opcodeTable[0xE1] = Instruction{ &CPU::SBC, &CPU::INDX };
+        // _opcodeTable[0xF1] = Instruction{ &CPU::SBC, &CPU::INDY };
+        //
+        // // INC
+        // _opcodeTable[0xE6] = Instruction{ &CPU::INC, &CPU::ZPG };
+        // _opcodeTable[0xF6] = Instruction{ &CPU::INC, &CPU::ZPGX };
+        // _opcodeTable[0xEE] = Instruction{ &CPU::INC, &CPU::ABS };
+        // _opcodeTable[0xFE] = Instruction{ &CPU::INC, &CPU::ABSX, false, true };
+        //
+        // // DEC
+        // _opcodeTable[0xC6] = Instruction{ &CPU::DEC, &CPU::ZPG };
+        // _opcodeTable[0xD6] = Instruction{ &CPU::DEC, &CPU::ZPGX };
+        // _opcodeTable[0xCE] = Instruction{ &CPU::DEC, &CPU::ABS };
+        // _opcodeTable[0xDE] = Instruction{ &CPU::DEC, &CPU::ABSX, false, true };
+        //
+        // // INX, INY, DEX, DEY
+        // _opcodeTable[0xE8] = Instruction{ &CPU::INX, &CPU::IMP };
+        // _opcodeTable[0xC8] = Instruction{ &CPU::INY, &CPU::IMP };
+        // _opcodeTable[0xCA] = Instruction{ &CPU::DEX, &CPU::IMP };
+        // _opcodeTable[0x88] = Instruction{ &CPU::DEY, &CPU::IMP };
+        //
+        // // CLC
+        // _opcodeTable[0x18] = Instruction{ &CPU::CLC, &CPU::IMP };
+        // _opcodeTable[0x58] = Instruction{ &CPU::CLI, &CPU::IMP };
+        // _opcodeTable[0xD8] = Instruction{ &CPU::CLD, &CPU::IMP };
+        // _opcodeTable[0xB8] = Instruction{ &CPU::CLV, &CPU::IMP };
+        //
+        // _opcodeTable[0x38] = Instruction{ &CPU::SEC, &CPU::IMP };
+        // _opcodeTable[0x78] = Instruction{ &CPU::SEI, &CPU::IMP };
+        // _opcodeTable[0xF8] = Instruction{ &CPU::SED, &CPU::IMP };
+        //
+        // // Branch
+        // _opcodeTable[0x10] = Instruction{ &CPU::BPL, &CPU::REL };
+        // _opcodeTable[0x30] = Instruction{ &CPU::BMI, &CPU::REL };
+        // _opcodeTable[0x50] = Instruction{ &CPU::BVC, &CPU::REL };
+        // _opcodeTable[0x70] = Instruction{ &CPU::BVS, &CPU::REL };
+        // _opcodeTable[0x90] = Instruction{ &CPU::BCC, &CPU::REL };
+        // _opcodeTable[0xB0] = Instruction{ &CPU::BCS, &CPU::REL };
+        // _opcodeTable[0xD0] = Instruction{ &CPU::BNE, &CPU::REL };
+        // _opcodeTable[0xF0] = Instruction{ &CPU::BEQ, &CPU::REL };
+        //
+        // // CMP, CPX, CPY
+        // _opcodeTable[0xC9] = Instruction{ &CPU::CMP, &CPU::IMM };
+        // _opcodeTable[0xC5] = Instruction{ &CPU::CMP, &CPU::ZPG };
+        // _opcodeTable[0xD5] = Instruction{ &CPU::CMP, &CPU::ZPGX };
+        // _opcodeTable[0xCD] = Instruction{ &CPU::CMP, &CPU::ABS };
+        // _opcodeTable[0xDD] = Instruction{ &CPU::CMP, &CPU::ABSX };
+        // _opcodeTable[0xD9] = Instruction{ &CPU::CMP, &CPU::ABSY };
+        // _opcodeTable[0xC1] = Instruction{ &CPU::CMP, &CPU::INDX };
+        // _opcodeTable[0xD1] = Instruction{ &CPU::CMP, &CPU::INDY };
+        // _opcodeTable[0xE0] = Instruction{ &CPU::CPX, &CPU::IMM };
+        // _opcodeTable[0xE4] = Instruction{ &CPU::CPX, &CPU::ZPG };
+        // _opcodeTable[0xEC] = Instruction{ &CPU::CPX, &CPU::ABS };
+        // _opcodeTable[0xC0] = Instruction{ &CPU::CPY, &CPU::IMM };
+        // _opcodeTable[0xC4] = Instruction{ &CPU::CPY, &CPU::ZPG };
+        // _opcodeTable[0xCC] = Instruction{ &CPU::CPY, &CPU::ABS };
+        //
+        // // PHA, PHP, PLA, PLP, TSX, TXS
+        // _opcodeTable[0x48] = Instruction{ &CPU::PHA, &CPU::IMP };
+        // _opcodeTable[0x08] = Instruction{ &CPU::PHP, &CPU::IMP };
+        // _opcodeTable[0x68] = Instruction{ &CPU::PLA, &CPU::IMP };
+        // _opcodeTable[0x28] = Instruction{ &CPU::PLP, &CPU::IMP };
+        // _opcodeTable[0xBA] = Instruction{ &CPU::TSX, &CPU::IMP };
+        // _opcodeTable[0x9A] = Instruction{ &CPU::TXS, &CPU::IMP };
+        //
+        // // ASL, LSR
+        // _opcodeTable[0x0A] = Instruction{ &CPU::ASL, &CPU::IMP };
+        // _opcodeTable[0x06] = Instruction{ &CPU::ASL, &CPU::ZPG };
+        // _opcodeTable[0x16] = Instruction{ &CPU::ASL, &CPU::ZPGX };
+        // _opcodeTable[0x0E] = Instruction{ &CPU::ASL, &CPU::ABS };
+        // _opcodeTable[0x1E] = Instruction{ &CPU::ASL, &CPU::ABSX, false, true };
+        // _opcodeTable[0x4A] = Instruction{ &CPU::LSR, &CPU::IMP };
+        // _opcodeTable[0x46] = Instruction{ &CPU::LSR, &CPU::ZPG };
+        // _opcodeTable[0x56] = Instruction{ &CPU::LSR, &CPU::ZPGX };
+        // _opcodeTable[0x4E] = Instruction{ &CPU::LSR, &CPU::ABS };
+        // _opcodeTable[0x5E] = Instruction{ &CPU::LSR, &CPU::ABSX, false, true };
+        //
+        // // ROL, ROR
+        // _opcodeTable[0x2A] = Instruction{ &CPU::ROL, &CPU::IMP };
+        // _opcodeTable[0x26] = Instruction{ &CPU::ROL, &CPU::ZPG };
+        // _opcodeTable[0x36] = Instruction{ &CPU::ROL, &CPU::ZPGX };
+        // _opcodeTable[0x2E] = Instruction{ &CPU::ROL, &CPU::ABS };
+        // _opcodeTable[0x3E] = Instruction{ &CPU::ROL, &CPU::ABSX, false, true };
+        // _opcodeTable[0x6A] = Instruction{ &CPU::ROR, &CPU::IMP };
+        // _opcodeTable[0x66] = Instruction{ &CPU::ROR, &CPU::ZPG };
+        // _opcodeTable[0x76] = Instruction{ &CPU::ROR, &CPU::ZPGX };
+        // _opcodeTable[0x6E] = Instruction{ &CPU::ROR, &CPU::ABS };
+        // _opcodeTable[0x7E] = Instruction{ &CPU::ROR, &CPU::ABSX, false, true };
+        //
+        // // JMP JSR, RTS, RTI, BRK
+        // _opcodeTable[0x4C] = Instruction{ &CPU::JMP, &CPU::ABS };
+        // _opcodeTable[0x6C] = Instruction{ &CPU::JMP, &CPU::IND };
+        // _opcodeTable[0x20] = Instruction{ &CPU::JSR, &CPU::ABS };
+        // _opcodeTable[0x60] = Instruction{ &CPU::RTS, &CPU::IMP };
+        // _opcodeTable[0x00] = Instruction{ &CPU::BRK, &CPU::IMP };
+        // _opcodeTable[0x40] = Instruction{ &CPU::RTI, &CPU::IMP };
+        //
+        // // AND
+        // _opcodeTable[0x29] = Instruction{ &CPU::AND, &CPU::IMM };
+        // _opcodeTable[0x25] = Instruction{ &CPU::AND, &CPU::ZPG };
+        // _opcodeTable[0x35] = Instruction{ &CPU::AND, &CPU::ZPGX };
+        // _opcodeTable[0x2D] = Instruction{ &CPU::AND, &CPU::ABS };
+        // _opcodeTable[0x3D] = Instruction{ &CPU::AND, &CPU::ABSX };
+        // _opcodeTable[0x39] = Instruction{ &CPU::AND, &CPU::ABSY };
+        // _opcodeTable[0x21] = Instruction{ &CPU::AND, &CPU::INDX };
+        // _opcodeTable[0x31] = Instruction{ &CPU::AND, &CPU::INDY };
+        //
+        // // ORA
+        // _opcodeTable[0x09] = Instruction{ &CPU::ORA, &CPU::IMM };
+        // _opcodeTable[0x05] = Instruction{ &CPU::ORA, &CPU::ZPG };
+        // _opcodeTable[0x15] = Instruction{ &CPU::ORA, &CPU::ZPGX };
+        // _opcodeTable[0x0D] = Instruction{ &CPU::ORA, &CPU::ABS };
+        // _opcodeTable[0x1D] = Instruction{ &CPU::ORA, &CPU::ABSX };
+        // _opcodeTable[0x19] = Instruction{ &CPU::ORA, &CPU::ABSY };
+        // _opcodeTable[0x01] = Instruction{ &CPU::ORA, &CPU::INDX };
+        // _opcodeTable[0x11] = Instruction{ &CPU::ORA, &CPU::INDY };
+        //
+        // // EOR
+        // _opcodeTable[0x49] = Instruction{ &CPU::EOR, &CPU::IMM };
+        // _opcodeTable[0x45] = Instruction{ &CPU::EOR, &CPU::ZPG };
+        // _opcodeTable[0x55] = Instruction{ &CPU::EOR, &CPU::ZPGX };
+        // _opcodeTable[0x4D] = Instruction{ &CPU::EOR, &CPU::ABS };
+        // _opcodeTable[0x5D] = Instruction{ &CPU::EOR, &CPU::ABSX };
+        // _opcodeTable[0x59] = Instruction{ &CPU::EOR, &CPU::ABSY };
+        // _opcodeTable[0x41] = Instruction{ &CPU::EOR, &CPU::INDX };
+        // _opcodeTable[0x51] = Instruction{ &CPU::EOR, &CPU::INDY };
+        //
+        // // BIT
+        // _opcodeTable[0x24] = Instruction{ &CPU::BIT, &CPU::ZPG };
+        // _opcodeTable[0x2C] = Instruction{ &CPU::BIT, &CPU::ABS };
+        //
+        // // Transfer
+        // _opcodeTable[0xAA] = Instruction{ &CPU::TAX, &CPU::IMP };
+        // _opcodeTable[0x8A] = Instruction{ &CPU::TXA, &CPU::IMP };
+        // _opcodeTable[0xA8] = Instruction{ &CPU::TAY, &CPU::IMP };
+        // _opcodeTable[0x98] = Instruction{ &CPU::TYA, &CPU::IMP };
+        //
+        // /*
+        // ################################
+        // ||       Illegal Opcodes      ||
+        // ################################
+        // */
+        // // Jams (does nothing)
+        // _opcodeTable[0x02] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x12] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x22] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x32] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x42] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x52] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x62] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x72] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0x92] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0xB2] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0xD2] = Instruction{ &CPU::JAM, &CPU::IMP };
+        // _opcodeTable[0xF2] = Instruction{ &CPU::JAM, &CPU::IMP };
+        //
+        // // NOP Implied
+        // _opcodeTable[0x1A] = Instruction{ &CPU::NOP, &CPU::IMP };
+        // _opcodeTable[0x3A] = Instruction{ &CPU::NOP, &CPU::IMP };
+        // _opcodeTable[0x5A] = Instruction{ &CPU::NOP, &CPU::IMP };
+        // _opcodeTable[0x7A] = Instruction{ &CPU::NOP, &CPU::IMP };
+        // _opcodeTable[0xDA] = Instruction{ &CPU::NOP, &CPU::IMP };
+        // _opcodeTable[0xFA] = Instruction{ &CPU::NOP, &CPU::IMP };
+        //
+        // // NOP Immediate
+        // _opcodeTable[0x80] = Instruction{ &CPU::NOP2, &CPU::IMM };
+        // _opcodeTable[0x82] = Instruction{ &CPU::NOP2, &CPU::IMM };
+        // _opcodeTable[0x89] = Instruction{ &CPU::NOP2, &CPU::IMM };
+        // _opcodeTable[0xC2] = Instruction{ &CPU::NOP2, &CPU::IMM };
+        // _opcodeTable[0xE2] = Instruction{ &CPU::NOP2, &CPU::IMM };
+        //
+        // // NOP Zero Page
+        // _opcodeTable[0x04] = Instruction{ &CPU::NOP2, &CPU::ZPG };
+        // _opcodeTable[0x44] = Instruction{ &CPU::NOP2, &CPU::ZPG };
+        // _opcodeTable[0x64] = Instruction{ &CPU::NOP2, &CPU::ZPG };
+        //
+        // // NOP Zero Page X
+        // _opcodeTable[0x14] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        // _opcodeTable[0x34] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        // _opcodeTable[0x54] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        // _opcodeTable[0x74] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        // _opcodeTable[0xD4] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        // _opcodeTable[0xF4] = Instruction{ &CPU::NOP2, &CPU::ZPGX };
+        //
+        // // NOP Absolute
+        // _opcodeTable[0x0C] = Instruction{ &CPU::NOP2, &CPU::ABS };
+        // _opcodeTable[0x1C] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        // _opcodeTable[0x3C] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        // _opcodeTable[0x5C] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        // _opcodeTable[0x7C] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        // _opcodeTable[0xDC] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        // _opcodeTable[0xFC] = Instruction{ &CPU::NOP2, &CPU::ABSX };
+        //
+        // // SLO
+        // _opcodeTable[0x07] = Instruction{ &CPU::SLO, &CPU::ZPG };
+        // _opcodeTable[0x17] = Instruction{ &CPU::SLO, &CPU::ZPGX };
+        // _opcodeTable[0x0F] = Instruction{ &CPU::SLO, &CPU::ABS };
+        // _opcodeTable[0x1F] = Instruction{ &CPU::SLO, &CPU::ABSX, false, true };
+        // _opcodeTable[0x1B] = Instruction{ &CPU::SLO, &CPU::ABSY, false, true };
+        // _opcodeTable[0x03] = Instruction{ &CPU::SLO, &CPU::INDX };
+        // _opcodeTable[0x13] = Instruction{ &CPU::SLO, &CPU::INDY, false, true };
+        //
+        // // RLA
+        // _opcodeTable[0x27] = Instruction{ &CPU::RLA, &CPU::ZPG };
+        // _opcodeTable[0x37] = Instruction{ &CPU::RLA, &CPU::ZPGX };
+        // _opcodeTable[0x2F] = Instruction{ &CPU::RLA, &CPU::ABS };
+        // _opcodeTable[0x3F] = Instruction{ &CPU::RLA, &CPU::ABSX, false, true };
+        // _opcodeTable[0x3B] = Instruction{ &CPU::RLA, &CPU::ABSY, false, true };
+        // _opcodeTable[0x23] = Instruction{ &CPU::RLA, &CPU::INDX };
+        // _opcodeTable[0x33] = Instruction{ &CPU::RLA, &CPU::INDY, false, true };
+        //
+        // // SRE
+        // _opcodeTable[0x47] = Instruction{ &CPU::SRE, &CPU::ZPG };
+        // _opcodeTable[0x57] = Instruction{ &CPU::SRE, &CPU::ZPGX };
+        // _opcodeTable[0x4F] = Instruction{ &CPU::SRE, &CPU::ABS };
+        // _opcodeTable[0x5F] = Instruction{ &CPU::SRE, &CPU::ABSX, false, true };
+        // _opcodeTable[0x5B] = Instruction{ &CPU::SRE, &CPU::ABSY, false, true };
+        // _opcodeTable[0x43] = Instruction{ &CPU::SRE, &CPU::INDX };
+        // _opcodeTable[0x53] = Instruction{ &CPU::SRE, &CPU::INDY, false, true };
+        //
+        // // RRA
+        // _opcodeTable[0x67] = Instruction{ &CPU::RRA, &CPU::ZPG };
+        // _opcodeTable[0x77] = Instruction{ &CPU::RRA, &CPU::ZPGX };
+        // _opcodeTable[0x6F] = Instruction{ &CPU::RRA, &CPU::ABS };
+        // _opcodeTable[0x7F] = Instruction{ &CPU::RRA, &CPU::ABSX, false, true };
+        // _opcodeTable[0x7B] = Instruction{ &CPU::RRA, &CPU::ABSY, false, true };
+        // _opcodeTable[0x63] = Instruction{ &CPU::RRA, &CPU::INDX };
+        // _opcodeTable[0x73] = Instruction{ &CPU::RRA, &CPU::INDY, false, true };
+        //
+        // // SAX
+        // _opcodeTable[0x87] = Instruction{ &CPU::SAX, &CPU::ZPG };
+        // _opcodeTable[0x97] = Instruction{ &CPU::SAX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0x8F] = Instruction{ &CPU::SAX, &CPU::ABS };
+        // _opcodeTable[0x83] = Instruction{ &CPU::SAX, &CPU::INDX };
+        //
+        // // LAX
+        // _opcodeTable[0xA7] = Instruction{ &CPU::LAX, &CPU::ZPG };
+        // _opcodeTable[0xB7] = Instruction{ &CPU::LAX, &CPU::ZPGY, true, true };
+        // _opcodeTable[0xAF] = Instruction{ &CPU::LAX, &CPU::ABS };
+        // _opcodeTable[0xBF] = Instruction{ &CPU::LAX, &CPU::ABSY };
+        // _opcodeTable[0xA3] = Instruction{ &CPU::LAX, &CPU::INDX };
+        // _opcodeTable[0xB3] = Instruction{ &CPU::LAX, &CPU::INDY };
+        //
+        // // DCP
+        // _opcodeTable[0xC7] = Instruction{ &CPU::DCP, &CPU::ZPG };
+        // _opcodeTable[0xD7] = Instruction{ &CPU::DCP, &CPU::ZPGX };
+        // _opcodeTable[0xCF] = Instruction{ &CPU::DCP, &CPU::ABS };
+        // _opcodeTable[0xDF] = Instruction{ &CPU::DCP, &CPU::ABSX, false, true };
+        // _opcodeTable[0xDB] = Instruction{ &CPU::DCP, &CPU::ABSY, false, true };
+        // _opcodeTable[0xC3] = Instruction{ &CPU::DCP, &CPU::INDX };
+        // _opcodeTable[0xD3] = Instruction{ &CPU::DCP, &CPU::INDY, false, true };
+        //
+        // // ISC
+        // _opcodeTable[0xE7] = Instruction{ &CPU::ISC, &CPU::ZPG };
+        // _opcodeTable[0xF7] = Instruction{ &CPU::ISC, &CPU::ZPGX };
+        // _opcodeTable[0xEF] = Instruction{ &CPU::ISC, &CPU::ABS };
+        // _opcodeTable[0xFF] = Instruction{ &CPU::ISC, &CPU::ABSX, false, true };
+        // _opcodeTable[0xFB] = Instruction{ &CPU::ISC, &CPU::ABSY, false, true };
+        // _opcodeTable[0xE3] = Instruction{ &CPU::ISC, &CPU::INDX };
+        // _opcodeTable[0xF3] = Instruction{ &CPU::ISC, &CPU::INDY, false, true };
+        //
+        // // SBC2
+        // _opcodeTable[0xEB] = Instruction{ &CPU::SBC, &CPU::IMM };
+        //
+        // // ALR, ARR
+        // _opcodeTable[0x4B] = Instruction{ &CPU::ALR, &CPU::IMM };
+        // _opcodeTable[0x6B] = Instruction{ &CPU::ARR, &CPU::IMM };
+        //
+        // // ANC
+        // _opcodeTable[0x0B] = Instruction{ &CPU::ANC, &CPU::IMM };
+        // _opcodeTable[0x2B] = Instruction{ &CPU::ANC, &CPU::IMM };
+        //
+        // // LXA
+        // _opcodeTable[0xAB] = Instruction{ &CPU::LXA, &CPU::IMM };
+        //
+        // // SBX
+        // _opcodeTable[0xCB] = Instruction{ &CPU::SBX, &CPU::IMM };
+        //
+        // // LAS
+        // _opcodeTable[0xBB] = Instruction{ &CPU::LAS, &CPU::ABSY };
+        //
+        // // ANE
+        // _opcodeTable[0x8B] = Instruction{ &CPU::ANE, &CPU::IMM };
     }
 
     /*
@@ -765,7 +711,7 @@ class CPU
     };
 
   private:
-    friend class CPUTestFixture; // Sometimes used for testing private methods
+    friend class CpuTest; // Sometimes used for testing private methods
 
     /*
     ################################
@@ -786,11 +732,12 @@ class CPU
     ################################
     */
     bool        _didVblank = false;
-    bool        _currentPageCrossPenalty = true;
+    bool        _pageCrossPenalty = true;
     bool        _isWriteModify = false;
     bool        _reading2002 = false;
     std::string _instructionName;
     std::string _addrMode;
+    u8          _opcode = 0x00;
 
     /*
     ################################
@@ -817,17 +764,14 @@ class CPU
     ||        Opcode Table        ||
     ################################
     */
-    struct InstructionData {
-        void ( CPU::*instructionMethod )( u16 ){}; // Pointer to the instruction helper method
-        u16 ( CPU::*addressingModeMethod )(){};    // Pointer to the address mode helper method
-        bool pageCrossPenalty =
-            true; // Whether the instruction takes an extra cycle if a page boundary is crossed
-        bool isWriteModify = false; // Write/modify instructions use a dummy read before writing
+    struct Instruction {
+        void ( CPU::*handler )( u16 ){}; // Pointer to the instruction helper method
+        u16 ( CPU::*addrMode )(){};      // Pointer to the address mode helper method
     };
 
     // Opcode table
-    std::array<InstructionData, 256> _opcodeTable;
-    InstructionData                  GetInstruction( u8 opcode ) { return _opcodeTable[opcode]; }
+    std::array<Instruction, 256> _opcodeTable;
+    Instruction                  GetInstruction( u8 opcode ) { return _opcodeTable[opcode]; }
 
     /*
     ################################################################
@@ -1093,7 +1037,7 @@ class CPU
 
         // If the final address crosses a page boundary, an additional cycle is required
         // Instructions that should ignore this: ASL, ROL, LSR, ROR, STA, DEC, INC
-        if ( _currentPageCrossPenalty && ( finalAddress & 0xFF00 ) != ( address & 0xFF00 ) ) {
+        if ( _pageCrossPenalty && ( finalAddress & 0xFF00 ) != ( address & 0xFF00 ) ) {
             Tick();
         }
 
@@ -1118,7 +1062,7 @@ class CPU
 
         // If the final address crosses a page boundary, an additional cycle is required
         // Instructions that should ignore this: STA
-        if ( _currentPageCrossPenalty && ( finalAddress & 0xFF00 ) != ( address & 0xFF00 ) ) {
+        if ( _pageCrossPenalty && ( finalAddress & 0xFF00 ) != ( address & 0xFF00 ) ) {
             Tick();
         }
         if ( _isWriteModify ) {
@@ -1189,7 +1133,7 @@ class CPU
 
         // If the final address crosses a page boundary, an additional cycle is required
         // Instructions that should ignore this: STA
-        if ( _currentPageCrossPenalty && ( address & 0xFF00 ) != ( ptrHigh << 8 ) ) {
+        if ( _pageCrossPenalty && ( address & 0xFF00 ) != ( ptrHigh << 8 ) ) {
             Tick();
         }
 
@@ -2651,5 +2595,12 @@ class CPU
         _a = result;
 
         SetZeroAndNegativeFlags( _a );
+    }
+
+    void XXX( const u16 address ) // NOLINT
+    {
+        // unimplemented
+        (void) address;
+        fmt::print( "Unimplemented opcode: {}", _opcode );
     }
 };

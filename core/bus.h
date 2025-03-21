@@ -5,11 +5,6 @@
 #include <array>
 #include <cstdint>
 
-using u8 = uint8_t;
-using u16 = uint16_t;
-using u64 = uint64_t;
-using s16 = int16_t;
-
 class Cartridge;
 class CPU;
 class PPU;
@@ -35,10 +30,10 @@ class Bus
     ||         Bus Methods        ||
     ################################
     */
-    [[nodiscard]] u8 Read( uint16_t address, bool debugMode = false );
-    void             Write( u16 address, u8 data );
-    bool             Clock();
-    void             ProcessDma();
+    u8   Read( uint16_t address, bool debugMode = false );
+    void Write( u16 address, u8 data );
+    bool Clock();
+    void ProcessDma();
 
     /*
     ################################
@@ -49,8 +44,8 @@ class Bus
     u16  dmaAddr = 0x00;
     u16  dmaOffset = 0x00;
     u64  systemClock = 0;
-    u8   controllerState[2];
-    u8   controller[2];
+    u8   controllerState[2]{};
+    u8   controller[2]{};
 
     /*
     ################################

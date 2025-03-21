@@ -97,21 +97,13 @@ class Renderer
     std::array<u32, 61440> nametable2Buffer{};
     std::array<u32, 61440> nametable3Buffer{};
 
-    std::array<std::string, 10> testRoms = {
-        std::string( ROM_DIR ) + "/palette.nes",
-        std::string( ROM_DIR ) + "/color_test.nes",
-        std::string( ROM_DIR ) + "/nestest.nes",
-        std::string( ROM_DIR ) + "/mario.nes",
-        std::string( ROM_DIR ) + "/custom.nes",
-        std::string( ROM_DIR ) + "/scanline.nes",
-        std::string( ROM_DIR ) + "/blargg_palette_ram.nes",
-        std::string( ROM_DIR ) + "/dk.nes",
-        std::string( ROM_DIR ) + "/ice_climber.nes",
-        std::string( ROM_DIR ) + "/ducktales.nes",
-
-    };
-    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, PALETTE_RAM, DK };
-    u8 romSelected = RomSelected::NESTEST;
+#define ROM( x ) ( std::string( ROM_DIR ) + "/" + ( x ) )
+    std::vector<std::string> testRoms = {
+        ROM( "palette.nes" ),   ROM( "color_test.nes" ),    ROM( "nestest.nes" ), ROM( "mario.nes" ),
+        ROM( "custom.nes" ),    ROM( "scanline.nes" ),      ROM( "dk.nes" ),      ROM( "ice_climber.nes" ),
+        ROM( "ducktales.nes" ), ROM( "instr_test-v5.nes" ), ROM( "sprite.nes" ) };
+    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, DK, V5, SPRITE };
+    u8 romSelected = RomSelected::PALETTE;
 
     /*
     ################################
@@ -120,6 +112,8 @@ class Renderer
     */
     UIManager ui;
     Bus       bus;
+    CPU      &cpu = bus.cpu;
+    PPU      &ppu = bus.ppu;
 
     Renderer() : ui( this ) { InitEmulator(); }
 
@@ -135,18 +129,16 @@ class Renderer
     {
         auto romFile = testRoms.at( romSelected );
         bus.cartridge.LoadRom( romFile );
-        bus.cpu.Reset();
-        bus.ppu.onFrameReady = [this]( const u32 *frameBuffer ) {
-            this->ProcessPpuFrameBuffer( frameBuffer );
-        };
-        currentFrame = bus.ppu.GetFrame();
+        cpu.Reset();
+        ppu.onFrameReady = [this]( const u32 *frameBuffer ) { this->ProcessPpuFrameBuffer( frameBuffer ); };
+        currentFrame = ppu.frame;
     }
 
     void LoadNewCartridge( const std::string &newRomFile )
     {
         bus.cartridge.LoadRom( newRomFile );
         bus.DebugReset();
-        currentFrame = bus.ppu.GetFrame();
+        currentFrame = ppu.frame;
         frameCount = 0;
     }
 
@@ -556,31 +548,31 @@ class Renderer
     */
     void ExecuteFrame()
     {
-        while ( currentFrame == bus.ppu.GetFrame() ) {
+        while ( currentFrame == ppu.frame ) {
             if ( paused ) {
                 break;
             }
             bus.Clock();
         }
-        currentFrame = bus.ppu.GetFrame();
+        currentFrame = ppu.frame;
     }
 
     void UpdateUiWindows() {}
     void UpdatePatternTableTextures()
     {
         if ( updatePatternTables ) {
-            patternTable0Buffer = bus.ppu.GetPatternTable( 0 );
-            patternTable1Buffer = bus.ppu.GetPatternTable( 1 );
+            patternTable0Buffer = ppu.GetPatternTable( 0 );
+            patternTable1Buffer = ppu.GetPatternTable( 1 );
         }
     }
 
     void UpdateNametableTextures()
     {
         if ( updateNametables ) {
-            nametable0Buffer = bus.ppu.GetNametable( 0 );
-            nametable1Buffer = bus.ppu.GetNametable( 1 );
-            nametable2Buffer = bus.ppu.GetNametable( 2 );
-            nametable3Buffer = bus.ppu.GetNametable( 3 );
+            nametable0Buffer = ppu.GetNametable( 0 );
+            nametable1Buffer = ppu.GetNametable( 1 );
+            nametable2Buffer = ppu.GetNametable( 2 );
+            nametable3Buffer = ppu.GetNametable( 3 );
         }
     }
 
@@ -637,7 +629,7 @@ class Renderer
 
     void CalculateFps()
     {
-        u64 const framesRendered = bus.ppu.GetFrame();
+        u64 const framesRendered = ppu.frame;
         u16 const framesThisSecond = framesRendered - frameCount;
         frameCount = framesRendered;
         fps = framesThisSecond;

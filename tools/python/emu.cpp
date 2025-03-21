@@ -1,4 +1,3 @@
-
 #include "bus.h"
 #include <fmt/base.h>
 #include <pybind11/pybind11.h>
@@ -57,16 +56,16 @@ class Emulator
     */
     u8  GetNmi() const { return ppu.GetCtrlNmiEnable(); }
     u8  GetVblank() const { return ppu.GetStatusVblank(); }
-    s16 GetScanline() const { return ppu.GetScanline(); }
-    u16 GetPpuCycles() const { return ppu.GetCycles(); }
-    u64 GetFrame() const { return ppu.GetFrame(); }
+    u16 GetScanline() const { return ppu.scanline; }
+    u16 GetPpuCycles() const { return ppu.cycle; }
+    u64 GetFrame() const { return ppu.frame; }
 
     /*
     ################################
     ||         PPU Setters        ||
     ################################
     */
-    void SetScanline( s16 value ) { ppu.SetScanline( value ); }
+    void SetScanline( s16 value ) { ppu.scanline = value; }
     void SetPpuCycles( s16 value ) { ppu.SetCycles( value ); }
 
     /*
@@ -115,7 +114,7 @@ class Emulator
     }
 
     u8 Read( u16 addr ) const { return bus.cpu.Read( addr ); }
-    u8 PpuRead( u16 addr ) { return bus.ppu.Read( addr ); }
+    u8 PpuRead( u16 addr ) { return bus.ppu.ReadVram( addr ); }
 
     void EnableMesenTrace( int n = 100 )
     {

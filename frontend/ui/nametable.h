@@ -167,7 +167,7 @@ class NametableWindow : public UIComponent
         ImGui::Text( "Tile Index" );
         ImGui::SameLine();
         ImGui::Indent( indentSpacing );
-        int const tileValue = renderer->bus.ppu.Read( targetAddr );
+        int const tileValue = renderer->bus.ppu.ReadVram( targetAddr );
         ImGui::Text( "$%02X (%d)", tileValue, tileValue );
 
         ImGui::Unindent( indentSpacing );
