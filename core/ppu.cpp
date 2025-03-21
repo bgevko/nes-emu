@@ -1,6 +1,5 @@
 #include "ppu.h"
 #include "bus.h"
-#include "utils.h"
 #include "cartridge.h" // NOLINT
 #include "mappers/mapper-base.h"
 #include <exception>
@@ -402,10 +401,9 @@ void PPU::WriteVram( u16 address, u8 data )
 ################################
 */
 
-void PPU::VblankPeriod()
+void PPU::VBlank()
 {
-    // Scanlines 240-260
-    if ( scanline == 241 && scanline <= 260 ) {
+    if ( scanline == 241 ) {
         // If the CPU is reading register 2002 on cycle 0 of scanline 241
         // Vblank will not be set until the next frame due to a hardware race condition bug
         if ( cycle == 0 && bus->cpu.IsReading2002() ) {
@@ -413,7 +411,7 @@ void PPU::VblankPeriod()
         }
 
         // Set the Vblank flag on cycle 1
-        if ( scanline == 241 && cycle == 1 ) {
+        if ( cycle == 1 ) {
 
             if ( !preventVBlank ) {
                 ppuStatus.bit.vBlank = 1;
@@ -599,13 +597,19 @@ void PPU::Tick()
     if ( isDisabled ) {
         return;
     }
-    VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
-    PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
+    if ( InScanline( 0, 239 ) )
+        VisibleScanline();
 
-    RenderFrameBuffer();
+    UpdateFrameBuffer();
 
-    VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
-    PrerenderScanline(); // Scanline 261
+    if ( scanline == 241 ) {
+        VBlank();
+        RenderFrameBuffer();
+    }
+
+    if ( scanline == 261 )
+        PrerenderScanline();
+
     cycle++;
 
     u8 oddFrameOffset = ( frame & 0x01 ) == 1 ? 1 : 0;

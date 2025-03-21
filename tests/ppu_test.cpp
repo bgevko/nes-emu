@@ -813,7 +813,7 @@ TEST_F( PpuTest, IncrementCoarseY )
     EXPECT_EQ( ppu.vramAddr.bit.nametableY, 1 );
 }
 
-TEST_F( PpuTest, ShiftBgRegisters )
+TEST_F( PpuTest, ShiftBackgrounds )
 {
     // Write to enable mask render background
     ppu.ppuMask.bit.renderBackground = 1;
@@ -824,7 +824,7 @@ TEST_F( PpuTest, ShiftBgRegisters )
     ppu.bgAttributeShiftLow = 0b0000000010101010;
     ppu.bgAttributeShiftHigh = 0b1111111101010101;
 
-    ppu.ShiftBgRegisters();
+    ppu.ShiftBackgrounds();
 
     // Verify each register has been shifted left by one bit
     EXPECT_EQ( ppu.bgPatternShiftLow, 0b0000000111111110 );
@@ -833,7 +833,7 @@ TEST_F( PpuTest, ShiftBgRegisters )
     EXPECT_EQ( ppu.bgAttributeShiftHigh, 0b1111111010101010 );
 }
 
-TEST_F( PpuTest, ShiftSpriteRegisters )
+TEST_F( PpuTest, ShiftSprites )
 {
     ppu.scanline = 120;
     ppu.cycle = 128;
@@ -847,7 +847,7 @@ TEST_F( PpuTest, ShiftSpriteRegisters )
 
     // Verify behavior for each sprite
     // Sprites with XCounter = 0 should shift left
-    ppu.ShiftSpriteRegisters();
+    ppu.ShiftSprites();
     EXPECT_EQ( ppu.spriteShiftLow.at( 0 ), 0b00000010 );
     EXPECT_EQ( ppu.spriteShiftHigh.at( 0 ), 0b00000000 );
     EXPECT_EQ( ppu.spriteShiftLow.at( 3 ), 0b00000010 );
@@ -871,7 +871,7 @@ TEST_F( PpuTest, ShiftSpriteRegisters )
     EXPECT_EQ( ppu.spriteShiftHigh.at( 7 ), 0b10000000 ); // unchanged
 }
 
-TEST_F( PpuTest, ShiftSpriteRegisters_NoShiftOutsideVisibleRange )
+TEST_F( PpuTest, ShiftSprites_NoShiftOutsideVisibleRange )
 {
     // Scanline and cycle outside visible rendering range
     ppu.scanline = 240;
@@ -882,7 +882,7 @@ TEST_F( PpuTest, ShiftSpriteRegisters_NoShiftOutsideVisibleRange )
         ppu.spriteShiftHigh.at( i ) = 0x01;
     }
 
-    ppu.ShiftSpriteRegisters();
+    ppu.ShiftSprites();
 
     // Expect no shifts to occur
     for ( int i = 0; i < 8; ++i ) {
@@ -940,22 +940,6 @@ TEST_F( PpuTest, TransferAddressX )
     ppu.TransferAddressX();
     EXPECT_EQ( ppu.vramAddr.bit.nametableX, 1 );
     EXPECT_EQ( ppu.vramAddr.bit.coarseX, 1 );
-}
-
-TEST_F( PpuTest, UpdateFrameBuffer_IsBufferFull )
-{
-    // Should not be full
-    ppu.Reset();
-    bool &isFull = ppu.isBufferFull;
-    EXPECT_FALSE( isFull );
-
-    // One entry before full
-    for ( int i = 0; i < 61439; i++ ) {
-        ppu.UpdateFrameBuffer( 0x00 );
-    }
-    EXPECT_FALSE( isFull );
-    ppu.UpdateFrameBuffer( 0x00 );
-    EXPECT_TRUE( isFull );
 }
 
 TEST_F( PpuTest, PrerenderScanline )

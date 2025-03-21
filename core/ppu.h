@@ -138,8 +138,6 @@ class PPU
     ||     Rendering Variables    ||
     ################################
     */
-    static constexpr u16 gFetchStart = 1;
-    static constexpr u16 gFetchEnd = 256;
     static constexpr u16 gPrerenderScanline = 261;
 
     u8  nametableByte = 0x00;
@@ -193,21 +191,7 @@ class PPU
     array<u32, gBufferSize> frameBuffer{};
     array<u32, gBufferSize> GetFrameBuffer() const { return frameBuffer; }
 
-    u32  bufferIdx = 0;
-    bool isBufferFull = false;
-    void ClearFrameBuffer()
-    {
-        frameBuffer.fill( 0x00000000 );
-        isBufferFull = false;
-    }
-    void IncBufferIdx()
-    {
-        bufferIdx++;
-        if ( bufferIdx == gBufferSize ) {
-            isBufferFull = true;
-            bufferIdx = 0;
-        }
-    }
+    void ClearFrameBuffer() { frameBuffer.fill( 0x00000000 ); }
 
     /*
     ################################
@@ -223,7 +207,7 @@ class PPU
     void       Tick();
     void       SpriteEvalForNextScanline();
     void       OamCopy();
-    void       VblankPeriod();
+    void       VBlank();
 
     /*
     ################################
@@ -255,13 +239,13 @@ class PPU
 
     void UpdateShifters()
     {
-        ShiftBgRegisters();
-        if ( cycle >= 1 && cycle < 258 ) {
-            ShiftSpriteRegisters();
+        ShiftBackgrounds();
+        if ( InCycle( 1, 258 ) ) {
+            ShiftSprites();
         }
     }
 
-    void ShiftBgRegisters()
+    void ShiftBackgrounds()
     {
         if ( ppuMask.bit.renderBackground ) {
             bgPatternShiftLow <<= 1;
@@ -271,7 +255,7 @@ class PPU
         }
     }
 
-    void ShiftSpriteRegisters()
+    void ShiftSprites()
     {
         if ( ppuMask.bit.renderSprites ) {
             for ( int i = 0; i < spriteCount; i++ ) {
@@ -287,7 +271,7 @@ class PPU
 
     void ClearSecondaryOam()
     {
-        if ( scanline <= 239 && ( cycle >= 1 && cycle <= 64 ) ) {
+        if ( scanline <= 239 && ( InCycle( 1, 64 ) ) ) {
             // Cycle 1-64: Initialize secondary OAM to 0xFF, every other cycle
             secondaryOam.data.at( ( cycle - 1 ) >> 1 ) = 0xFF;
         }
@@ -311,18 +295,10 @@ class PPU
             }
         }
 
-        // if ( cycle >= gFetchStart && cycle <= gFetchEnd ) {
-        if ( InCycle( gFetchStart, gFetchEnd ) ) {
-            FetchBgTileData();
-
-            if ( cycle <= 64 )
-                ClearSecondaryOam();
-            else
-                SpriteEvalForNextScanline();
-        }
+        VisibleScanline();
 
         // Transfer from temp to vramAddr on cycles 280-304
-        if ( cycle >= 280 && cycle <= 304 ) {
+        if ( InCycle( 280, 304 ) ) {
             TransferAddressY();
         }
 
@@ -333,45 +309,33 @@ class PPU
 
     void VisibleScanline()
     {
-        if ( scanline <= 239 ) {
-            if ( cycle >= gFetchStart && cycle <= gFetchEnd ) {
-                FetchBgTileData();
-                UpdateFrameBuffer();
+        if ( InCycle( 1, 256 ) ) {
+            FetchBgTileData();
 
-                if ( cycle <= 64 )
-                    ClearSecondaryOam();
-                else
-                    SpriteEvalForNextScanline();
-            }
+            if ( cycle <= 64 )
+                ClearSecondaryOam();
+            else
+                SpriteEvalForNextScanline();
         }
-    }
 
-    void PostVisibleScanline()
-    {
-        // Activity beyond the visible scanline, scanline 0-239 and prerender scanline 261
-        if ( scanline <= 239 ) {
-            if ( cycle == 256 ) {
-                IncrementCoarseY();
-            }
-            if ( cycle == 257 ) {
-                LoadBgShifters();
-                TransferAddressX();
-            }
+        if ( cycle == 257 ) {
+            LoadBgShifters();
+            TransferAddressX();
+        }
 
-            // Cycles 321-336 will fetch the first two tiles for the next scanline
-            if ( cycle >= 321 && cycle < 338 ) {
-                FetchBgTileData();
-            }
+        // Fetch sprite data
+        if ( cycle == 261 ) {
+            FetchSpriteData();
+        }
 
-            // Unused fetches
-            if ( cycle == 338 || cycle == 340 ) {
-                FetchNametableByte();
-            }
+        // Cycles 321-336 will fetch the first two tiles for the next scanline
+        if ( InCycle( 321, 336 ) ) {
+            FetchBgTileData();
+        }
 
-            // Fetch sprite data
-            if ( cycle == 261 ) {
-                FetchSpriteData();
-            }
+        // Unused fetches
+        if ( cycle == 338 || cycle == 340 ) {
+            FetchNametableByte();
         }
     }
 
@@ -397,6 +361,8 @@ class PPU
                 break;
             case 7:
                 IncrementCoarseX();
+                if ( cycle == 256 )
+                    IncrementCoarseY();
                 break;
             default:
         }
@@ -630,11 +596,11 @@ class PPU
              ( ppuMask.bit.renderBackground & ppuMask.bit.renderSprites ) ) {
 
             if ( !( ppuMask.bit.renderBackgroundLeft | ppuMask.bit.renderSpritesLeft ) ) {
-                if ( cycle >= 9 && cycle < gFetchEnd ) {
+                if ( cycle >= 9 && cycle < 256 ) {
                     ppuStatus.bit.spriteZeroHit = 1;
                 }
             } else {
-                if ( cycle >= 1 && cycle < gFetchEnd ) {
+                if ( cycle >= 1 && cycle < 256 ) {
                     ppuStatus.bit.spriteZeroHit = 1;
                 }
             }
@@ -649,20 +615,20 @@ class PPU
 
     void UpdateFrameBuffer( int debugValue = -1 )
     {
-        if ( debugValue > -1 ) {
-            frameBuffer.at( bufferIdx ) = debugValue;
-        } else {
-            frameBuffer.at( bufferIdx ) = GetOutputPixel();
+        if ( InScanline( 0, 239 ) && InCycle( 1, 256 ) ) {
+            u16 const bufferIdx = ( scanline * 256 ) + ( cycle - 1 );
+            if ( debugValue > -1 ) {
+                frameBuffer.at( bufferIdx ) = debugValue;
+            } else {
+                frameBuffer.at( bufferIdx ) = GetOutputPixel();
+            }
         }
-        IncBufferIdx();
     }
 
     void RenderFrameBuffer()
     {
-        if ( isBufferFull ) {
-            if ( onFrameReady ) {
-                onFrameReady( frameBuffer.data() );
-            }
+        if ( onFrameReady ) {
+            onFrameReady( frameBuffer.data() );
         }
     }
 
@@ -704,7 +670,6 @@ class PPU
         fineX = 0x00;
         nameTables.fill( 0x00 );
         paletteMemory = defaultPalette;
-        bufferIdx = 0;
         ClearFrameBuffer();
     }
 
