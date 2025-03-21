@@ -59,7 +59,7 @@ u8 PPU::HandleCpuRead( u16 address, bool debugMode )
         }
 
         u8 const data = ( ppuStatus.value & 0xE0 ) | ( vramBuffer & 0x1F );
-        ppuStatus.bit.verticalBlank = 0;
+        ppuStatus.bit.vBlank = 0;
         addrLatch = false;
         bus->cpu.SetReading2002( false );
         preventVBlank = false;
@@ -406,23 +406,21 @@ void PPU::Tick()
     if ( isDisabled ) {
         return;
     }
-
-    ShiftBgRegisters();    // Every dot
     VisibleScanline();     // Scanlines: 0-239, Cycles: 1-256
     PostVisibleScanline(); // Scanlines: 0-239, 261, Cycles: 257-340
 
-    UpdateFrameBuffer();
+    RenderFrameBuffer();
 
     VblankPeriod();      // Scanlines: 241-260, vblank on cycle 1
     PrerenderScanline(); // Scanline 261
     cycle++;
-    bool const oddFrame = frame & 0x01;
-    if ( cycle > 340 || ( scanline == 261 && cycle > ( oddFrame ? 339 : 340 ) ) ) {
+    if ( cycle >= 341 ) {
         cycle = 0;
         scanline++;
         if ( scanline > 261 ) {
             scanline = 0;
             frame++;
+            OddFrameSkip();
         }
     }
 }
@@ -449,7 +447,7 @@ void PPU::VblankPeriod()
         if ( scanline == 241 && cycle == 1 ) {
 
             if ( !preventVBlank ) {
-                ppuStatus.bit.verticalBlank = 1;
+                ppuStatus.bit.vBlank = 1;
 
                 // Signal to trigger NMI if enabled
                 if ( ppuCtrl.bit.nmiEnable ) {
@@ -553,9 +551,6 @@ void PPU::OamCopy()
 u16 PPU::ResolveNameTableAddress( u16 addr, int testMirrorMode ) const
 {
 
-    if ( bus == nullptr ) {
-        return 0x00;
-    }
     MirrorMode mirrorMode = GetMirrorMode();
 
     // override mirror mode for testing

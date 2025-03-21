@@ -99,11 +99,11 @@ class Renderer
 
 #define ROM( x ) ( std::string( ROM_DIR ) + "/" + ( x ) )
     std::vector<std::string> testRoms = {
-        ROM( "palette.nes" ),   ROM( "color_test.nes" ),   ROM( "nestest.nes" ), ROM( "mario.nes" ),
-        ROM( "custom.nes" ),    ROM( "scanline.nes" ),     ROM( "dk.nes" ),      ROM( "ice_climber.nes" ),
-        ROM( "ducktales.nes" ), ROM( "instr_test-v5.nes" ) };
-    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, DK, V5 };
-    u8 romSelected = RomSelected::NESTEST;
+        ROM( "palette.nes" ),   ROM( "color_test.nes" ),    ROM( "nestest.nes" ), ROM( "mario.nes" ),
+        ROM( "custom.nes" ),    ROM( "scanline.nes" ),      ROM( "dk.nes" ),      ROM( "ice_climber.nes" ),
+        ROM( "ducktales.nes" ), ROM( "instr_test-v5.nes" ), ROM( "sprite.nes" ) };
+    enum RomSelected : u8 { PALETTE, COLOR_TEST, NESTEST, MARIO, CUSTOM, SCANLINE, DK, V5, SPRITE };
+    u8 romSelected = RomSelected::MARIO;
 
     /*
     ################################
@@ -625,6 +625,8 @@ class Renderer
         glTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, nesWidth, nesHeight, GL_RGBA, GL_UNSIGNED_BYTE,
                          frameBuffer );
         glBindTexture( GL_TEXTURE_2D, 0 );
+
+        ppu.ClearFrameBuffer();
     }
 
     void CalculateFps()
