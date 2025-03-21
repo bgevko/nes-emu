@@ -277,6 +277,14 @@ class PPU
         }
     }
 
+    void OddFrameSkip()
+    {
+        bool isOddFrame = frame & 0x01;
+        if ( isOddFrame && scanline == 0 && cycle == 0 ) {
+            cycle = 1;
+        }
+    }
+
     void PrerenderScanline()
     {
         if ( scanline != gPrerenderScanline ) {

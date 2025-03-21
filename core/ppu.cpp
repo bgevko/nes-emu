@@ -597,6 +597,8 @@ void PPU::Tick()
     if ( isDisabled ) {
         return;
     }
+    OddFrameSkip();
+
     if ( InScanline( 0, 239 ) )
         VisibleScanline();
 
@@ -612,8 +614,7 @@ void PPU::Tick()
 
     cycle++;
 
-    u8 oddFrameOffset = ( frame & 0x01 ) == 1 ? 1 : 0;
-    if ( cycle > ( 340 - oddFrameOffset ) ) {
+    if ( cycle > 340 ) {
         cycle = 0;
         scanline++;
         if ( scanline > 261 ) {
