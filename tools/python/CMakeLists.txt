@@ -13,3 +13,4 @@ target_link_libraries(emu PRIVATE fmt::fmt)
 
 # Place the module in the same directory as this CMakeLists.txt
 set_target_properties(emu PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+

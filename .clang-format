@@ -1,7 +1,7 @@
-IndentWidth: 4
+IndentWidth: 2
 UseTab: Never
-ColumnLimit: 110 # Maximimum line length
-SortIncludes: false
+ColumnLimit: 120 # Maximimum line length
+SortIncludes: "Never"
 IncludeBlocks: Preserve
 
 SpacesInParentheses: true # ( a + b ) instead of (a + b)
@@ -30,7 +30,7 @@ BreakBeforeBraces: Linux
 #     }
 # }
 
-AlignConsecutiveDeclarations: true
+AlignConsecutiveDeclarations: Consecutive
 # Example:
 # int    a   = 5;
 # float  b   = 10.0;
@@ -53,15 +53,13 @@ ReflowComments: true
 # // automatically like this
 
 IndentCaseLabels: true
-# Example:
-# switch (value) {
-#     case 1:
-#         break;
-# }
-# versus
-# switch (value) {
-# case1:
-#   break;
+AllowShortCaseExpressionOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: true
+  AlignCaseColons: true
 
 AlignAfterOpenBracket: Align
 # Aligns arguments if using line break

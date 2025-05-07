@@ -3,10 +3,8 @@
 #include <string>
 #include <bitset>
 
-// Static arrays for opcode information
 // clang-format off
 #include <array>
-#include <unordered_set>
 const std::array<std::string, 256> gInstructionNames = {
           //0      1        2        3        4        5        6        7        8        9        A       B        C        D        E        F
     /*0*/"BRK",   "ORA",   "*JAM",  "*SLO",  "*NOP",  "ORA",   "*ASL",  "*SLO",  "PHP",  "ORA",   "ASL",   "*ANC",  "*NOP",  "ORA",   "ASL",   "*SLO",
@@ -86,29 +84,7 @@ const std::array<u8, 256> gInstructionBytes = {
      /*E*/2,       2,       2,       2,       2,       2,       2,       2,       1,       2,       1,      2,       3,       3,       3,       3,
      /*F*/2,       2,       1,       2,       2,       2,       2,       2,       1,       3,       1,      3,       3,       3,       3,       3
 };
-// clang-format on
 
-inline const std::unordered_set<std::string> &getOpcodeNameSet()
-{
-    static const std::unordered_set<std::string> nameSet = {
-        "ADC", "AND", "ASL", "BCC", "BCS", "BEQ", "BIT", "BMI", "BNE", "BPL", "BRK", "BVC", "BVS", "CLC",
-        "CLD", "CLI", "CLV", "CMP", "CPX", "CPY", "DEC", "DEX", "DEY", "EOR", "INC", "INX", "INY", "JMP",
-        "JSR", "LDA", "LDX", "LDY", "LSR", "NOP", "ORA", "PHA", "PHP", "PLA", "PLP", "ROL", "ROR", "RTI",
-        "RTS", "SBC", "SEC", "SED", "SEI", "STA", "STX", "STY", "TAX", "TAY", "TSX", "TXA", "TXS", "TYA",
-        // Illegal
-        "*ALR", "*ANC", "*ARR", "*DCP", "*ISC", "*JAM", "*LAX", "*LXA", "*NOP", "*RLA", "*RRA", "*SAX",
-        "*SBC", "*SBX", "*SLO", "*SRE", "*LAS", "*ANE" };
-    return nameSet;
-}
-
-inline const std::unordered_set<std::string> &getAddrModeSet()
-{
-    static const std::unordered_set<std::string> addrModeSet = {
-        "IMP", "IMM", "ZPG", "ZPGX", "ZPGY", "ABS", "ABSX", "ABSY", "IND", "INDX", "INDY", "REL" };
-    return addrModeSet;
-}
-
-// clang-format off
 inline const std::bitset<256> noPageCrossPenaltyOpcodes = []() {
     std::bitset<256> bs;
     bs.set( 0x9D ); bs.set( 0x99 ); bs.set( 0x81 ); bs.set( 0x91 ); bs.set( 0xFE ); bs.set( 0xDE );
@@ -131,12 +107,12 @@ inline const std::bitset<256> writeModifyOpcodes = []() {
 }();
 // clang-format on
 
-inline bool pageCrossPenalty( uint8_t opcode )
+inline bool isPageCrossPenalty( u8 opcode )
 {
-    return !noPageCrossPenaltyOpcodes.test( opcode );
+  return !noPageCrossPenaltyOpcodes.test( opcode );
 }
 
-inline bool isWriteModify( uint8_t opcode )
+inline bool isWriteModify( u8 opcode )
 {
-    return writeModifyOpcodes.test( opcode );
+  return writeModifyOpcodes.test( opcode );
 }
